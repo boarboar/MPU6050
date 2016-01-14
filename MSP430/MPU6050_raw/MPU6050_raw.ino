@@ -31,6 +31,24 @@ THE SOFTWARE.
 ===============================================
 */
 
+/*
+ FS_SEL | Full Scale Range   | LSB Sensitivity (dividers)
+ -------+--------------------+----------------
+ 0      | +/- 250 degrees/s  | 131 LSB/deg/s
+ 1      | +/- 500 degrees/s  | 65.5 LSB/deg/s
+ 2      | +/- 1000 degrees/s | 32.8 LSB/deg/s
+ 3      | +/- 2000 degrees/s | 16.4 LSB/deg/s
+ 
+  AFS_SEL | Full Scale Range | LSB Sensitivity (dividers)
+ --------+------------------+----------------
+ 0       | +/- 2g           | 8192 LSB/mg
+ 1       | +/- 4g           | 4096 LSB/mg
+ 2       | +/- 8g           | 2048 LSB/mg
+ 3       | +/- 16g          | 1024 LSB/mg
+ 
+ */
+ 
+
 // I2Cdev and MPU6050 must be installed as libraries, or else the .cpp/.h files
 // for both classes must be in the include path of your project
 #include "I2Cdev.h"
@@ -120,6 +138,12 @@ void setup() {
     Serial.print(accelgyro.getZGyroOffset()); Serial.print("\t"); // 0
     Serial.print("\n");
     */
+
+
+    //accelgyro.getFullScaleAccelRange() 	//AFS_SEL
+    //accelgyro.getFullScaleGyroRange() 	//FS_SEL
+
+    Serial.print("AFS_SEL:\t"); Serial.print(accelgyro.getFullScaleAccelRange()); Serial.print("\tFS_SEL:\t"); Serial.println(accelgyro.getFullScaleGyroRange());
 
     // calibrate 
     Serial.println("Calibrating...");
