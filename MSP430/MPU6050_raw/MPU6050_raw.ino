@@ -49,9 +49,15 @@ THE SOFTWARE.
 MPU6050 accelgyro;
 //MPU6050 accelgyro(0x69); // <-- use for AD0 high
 
+int16_t base_ax, base_ay, base_az;
+int16_t base_gx, base_gy, base_gz;
+
+
 int16_t ax, ay, az;
 int16_t gx, gy, gz;
 
+int32_t dwax, dway, dwaz;
+int32_t dwgx, dwgy, dwgz;
 
 
 // uncomment "OUTPUT_READABLE_ACCELGYRO" if you want to see a tab-separated
@@ -67,6 +73,8 @@ int16_t gx, gy, gz;
 
 
 #define LED_PIN RED_LED
+#define BLINK() { blinkState = !blinkState; digitalWrite(LED_PIN, blinkState); }
+
 bool blinkState = false;
 
 void setup() {
@@ -113,11 +121,22 @@ void setup() {
     Serial.print("\n");
     */
 
+    // calibrate 
+    Serial.println("Calibrating...");
+    calibrate(4);
+    Serial.print("Base:\t");
+        Serial.print(base_ax); Serial.print("\t");
+        Serial.print(base_ay); Serial.print("\t");
+        Serial.print(base_az); Serial.print("\t");
+        Serial.print(base_gx); Serial.print("\t");
+        Serial.print(base_gy); Serial.print("\t");
+        Serial.println(base_gz);
     // configure Arduino LED for
     pinMode(LED_PIN, OUTPUT);
 }
 
 void loop() {
+  /*
     // read raw accel/gyro measurements from device
     accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
 
@@ -148,4 +167,35 @@ void loop() {
     // blink LED to indicate activity
     blinkState = !blinkState;
     digitalWrite(LED_PIN, blinkState);
+    */
+    
+}
+
+void calibrate(uint16_t nsamp) {
+    if(!nsamp) return;
+    uint16_t isamp=nsamp;
+    dwax=dway=dwaz=dwgx=dwgy=dwgz=0;
+    while(nsamp--) {
+      accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+      dwax+=ax; dway+=ay; dwaz+=az;
+      dwgx+=gx; dwgy+=gy; dwgz+=gz;
+#ifdef OUTPUT_READABLE_ACCELGYRO
+        // display tab-separated accel/gyro x/y/z values
+        Serial.print("a/g:\t");
+        Serial.print(ax); Serial.print("\t");
+        Serial.print(ay); Serial.print("\t");
+        Serial.print(az); Serial.print("\t");
+        Serial.print(gx); Serial.print("\t");
+        Serial.print(gy); Serial.print("\t");
+        Serial.println(gz);
+#endif
+      BLINK();
+      delay(1);
+    }
+    base_ax=dwax/nsamp;
+    base_ay=dway/nsamp;
+    base_az=dwaz/nsamp;
+    base_gx=dwgx/nsamp;
+    base_gy=dwgy/nsamp;
+    base_gz=dwgz/nsamp;
 }
