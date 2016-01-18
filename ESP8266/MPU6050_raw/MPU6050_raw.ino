@@ -56,18 +56,22 @@ THE SOFTWARE.
 #include "Wire.h"
 
 
-// uncomment "OUTPUT_READABLE_ACCELGYRO" if you want to see a tab-separated
-// list of the accel X/Y/Z and then gyro X/Y/Z values in decimal. Easy to read,
-// not so easy to parse, and slow(er) over UART.
 #define OUTPUT_READABLE_ACCELGYRO
+#define OUTPUT_READABLE_ROTATION
+#define OUTPUT_READABLE_ACCEL
+#define OUTPUT_READABLE_VELOCITY
+#define OUTPUT_READABLE_DISPLACEMENT
+
 
 //#define LED_PIN RED_LED
 //#define BLINK() { blinkState = !blinkState; digitalWrite(LED_PIN, blinkState); }
 #define BLINK()
 
-#define NCALIB 10
-#define SCALE_A (2*8192/10)
-#define SCALE_G 131
+#define NCALIB 32
+#define SCALE_A (2*8192) // 1g = (9.80665 m/s^2)
+#define SCALE_G 131      // 
+#define G_FORCE 9.80665
+
 // class default I2C address is 0x68
 // specific I2C addresses may be passed as a parameter here
 // AD0 low = 0x68 (default for InvenSense evaluation board)
@@ -93,9 +97,10 @@ uint32_t t;
 
 void setup() {
     // join I2C bus (I2Cdev library doesn't do this automatically)
-    Wire.pins(0, 2); // sda, sdl
-    Wire.begin();
-
+    //Wire.pins(0, 2); // sda, sdl
+    //Wire.begin();
+    Wire.begin(0, 2); // sda, sdl
+    
     // initialize serial communication
     Serial.begin(115200);
 
@@ -141,7 +146,7 @@ void setup() {
 
     // calibrate 
     Serial.print("Calibrating");
-    calibrate(20);
+    calibrate(NCALIB);
     
     Serial.print("Base:\t");
     Serial.print(base_ax); Serial.print("\t"); Serial.print(base_ay); Serial.print("\t"); Serial.print(base_az); Serial.print("\t");
@@ -163,22 +168,40 @@ void loop() {
     gx-=base_gx; gy-=base_gy; gz-=base_gz;
     uint32_t t1=millis(); 
     float dt=(t1-t)/1000.0;
-    t = t1;
     rx+=(float)gx/SCALE_G*dt; ry+=(float)gy/SCALE_G*dt; rz+=(float)gz/SCALE_G*dt;
-    vx+=(float)ax/SCALE_A*dt; vy+=(float)ay/SCALE_A*dt; vz+=(float)az/SCALE_A*dt; 
-    x+=vx*dt; y+=vy*dt; z+=vz*dt;
-    #ifdef OUTPUT_READABLE_ACCELGYRO
+    float vx0=vx, vy0=vy, vz0=vz;
+    float arx=(float)ax/SCALE_A*G_FORCE, ary=(float)ay/SCALE_A*G_FORCE, arz=(float)az/SCALE_A*G_FORCE;
+    vx+=arx*G_FORCE*dt; vy+=ary*dt; vz+=arz*dt; 
+    x+=vx0*dt+arx*dt*dt/2; y+=vy0*dt+ary*dt*dt/2; z+=vz0*dt+arz*dt*dt/2;
+    // integration - better to make average (val0+val)/2 ...
+    Serial.print("a/g:\tDT=");Serial.print(t1-t);Serial.print(":\t"); 
+#ifdef OUTPUT_READABLE_ACCELGYRO
         // display tab-separated accel/gyro x/y/z values
-    Serial.print("a/g:\tDT=");Serial.print((int16_t)(dt*1000)); Serial.print("\t A=(");
+    Serial.print("A=(");
     Serial.print(ax); Serial.print("\t");Serial.print(ay); Serial.print("\t");Serial.print(az);Serial.print(")\t G=(");
-    Serial.print(gx); Serial.print("\t");Serial.print(gy); Serial.print("\t");Serial.print(gz);Serial.print(")\t V=(");
-    Serial.print((int16_t)(vx*10)); Serial.print("\t");Serial.print((int16_t)(vy*10)); Serial.print("\t");Serial.print((int16_t)(vz*10));Serial.print(")\t R=("); //cm/s
-    Serial.print((int16_t)rx); Serial.print("\t");Serial.print((int16_t)ry); Serial.print("\t");Serial.print((int16_t)rz);Serial.print(")\t X=("); //deg
-    Serial.print((int16_t)(x*10)); Serial.print("\t");Serial.print((int16_t)(y*10)); Serial.print("\t");Serial.print((int16_t)(z*10)); ;Serial.println(")"); //cm
-    #endif
+    Serial.print(gx); Serial.print("\t");Serial.print(gy); Serial.print("\t");Serial.print(gz);Serial.print(")\t");
+#endif
+#ifdef OUTPUT_READABLE_ACCEL
+    Serial.print("A=(");
+    Serial.print((int16_t)arx); Serial.print("\t");Serial.print((int16_t)ary); Serial.print("\t");Serial.print((int16_t)arz);Serial.print(") m/s^2\t"); //deg
+#endif
+#ifdef OUTPUT_READABLE_ROTATION
+    Serial.print("R=(");
+    Serial.print((int16_t)rx); Serial.print("\t");Serial.print((int16_t)ry); Serial.print("\t");Serial.print((int16_t)rz);Serial.print(") deg\t");
+#endif
+#ifdef OUTPUT_READABLE_VELOCITY
+    Serial.print("V=(");
+    Serial.print((int16_t)(vx*10)); Serial.print("\t");Serial.print((int16_t)(vy*10)); Serial.print("\t");Serial.print((int16_t)(vz*10));Serial.print(") cm/s\t"); //cm/s
+#endif    
+#ifdef OUTPUT_READABLE_DISPLACEMENT
+    Serial.print("D=(");    
+    Serial.print((int16_t)(x*10)); Serial.print("\t");Serial.print((int16_t)(y*10)); Serial.print("\t");Serial.print((int16_t)(z*10)); ;Serial.print(") cm"); //cm    
+#endif
 
+    Serial.println(""); 
     BLINK();
-    delay(100);
+    
+    t = t1;
 }
 
 void calibrate(uint16_t nsamp) {
