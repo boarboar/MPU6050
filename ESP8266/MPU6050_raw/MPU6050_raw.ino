@@ -93,6 +93,8 @@ float vx, vy, vz, x, y, z, rx, ry, rz;
 
 uint32_t t;
 
+uint32_t t_out;
+
 //bool blinkState = false;
 
 void setup() {
@@ -159,6 +161,7 @@ void setup() {
     vx=vy=vz=0.0;
     rx=ry=rz=0.0;
     t=millis();
+    t_out=millis();
 }
 
 void loop() {
@@ -171,36 +174,38 @@ void loop() {
     rx+=(float)gx/SCALE_G*dt; ry+=(float)gy/SCALE_G*dt; rz+=(float)gz/SCALE_G*dt;
     float vx0=vx, vy0=vy, vz0=vz;
     float arx=(float)ax/SCALE_A*G_FORCE, ary=(float)ay/SCALE_A*G_FORCE, arz=(float)az/SCALE_A*G_FORCE;
-    vx+=arx*G_FORCE*dt; vy+=ary*dt; vz+=arz*dt; 
+    vx+=arx*dt; vy+=ary*dt; vz+=arz*dt; 
     x+=vx0*dt+arx*dt*dt/2; y+=vy0*dt+ary*dt*dt/2; z+=vz0*dt+arz*dt*dt/2;
     // integration - better to make average (val0+val)/2 ...
-    Serial.print("a/g:\tDT=");Serial.print(t1-t);Serial.print(":\t"); 
+    if(millis()-t_out>=1000) {    // output
+      Serial.print("a/g:\tDT=");Serial.print(t1-t);Serial.print(":\t"); 
 #ifdef OUTPUT_READABLE_ACCELGYRO
         // display tab-separated accel/gyro x/y/z values
-    Serial.print("A=(");
-    Serial.print(ax); Serial.print("\t");Serial.print(ay); Serial.print("\t");Serial.print(az);Serial.print(")\t G=(");
-    Serial.print(gx); Serial.print("\t");Serial.print(gy); Serial.print("\t");Serial.print(gz);Serial.print(")\t");
+      Serial.print("A=(");
+      Serial.print(ax); Serial.print("\t");Serial.print(ay); Serial.print("\t");Serial.print(az);Serial.print(")\t G=(");
+      Serial.print(gx); Serial.print("\t");Serial.print(gy); Serial.print("\t");Serial.print(gz);Serial.print(")\t");
 #endif
 #ifdef OUTPUT_READABLE_ACCEL
-    Serial.print("A=(");
-    Serial.print((int16_t)arx); Serial.print("\t");Serial.print((int16_t)ary); Serial.print("\t");Serial.print((int16_t)arz);Serial.print(") m/s^2\t"); //deg
+      Serial.print("A=(");
+      Serial.print((int16_t)arx); Serial.print("\t");Serial.print((int16_t)ary); Serial.print("\t");Serial.print((int16_t)arz);Serial.print(") m/s^2\t"); //deg
 #endif
 #ifdef OUTPUT_READABLE_ROTATION
-    Serial.print("R=(");
-    Serial.print((int16_t)rx); Serial.print("\t");Serial.print((int16_t)ry); Serial.print("\t");Serial.print((int16_t)rz);Serial.print(") deg\t");
+      Serial.print("R=(");
+      Serial.print((int16_t)rx); Serial.print("\t");Serial.print((int16_t)ry); Serial.print("\t");Serial.print((int16_t)rz);Serial.print(") deg\t");
 #endif
 #ifdef OUTPUT_READABLE_VELOCITY
-    Serial.print("V=(");
-    Serial.print((int16_t)(vx*10)); Serial.print("\t");Serial.print((int16_t)(vy*10)); Serial.print("\t");Serial.print((int16_t)(vz*10));Serial.print(") cm/s\t"); //cm/s
+      Serial.print("V=(");
+      Serial.print((int16_t)(vx*10)); Serial.print("\t");Serial.print((int16_t)(vy*10)); Serial.print("\t");Serial.print((int16_t)(vz*10));Serial.print(") cm/s\t"); //cm/s
 #endif    
 #ifdef OUTPUT_READABLE_DISPLACEMENT
-    Serial.print("D=(");    
-    Serial.print((int16_t)(x*10)); Serial.print("\t");Serial.print((int16_t)(y*10)); Serial.print("\t");Serial.print((int16_t)(z*10)); ;Serial.print(") cm"); //cm    
+      Serial.print("D=(");    
+      Serial.print((int16_t)(x*10)); Serial.print("\t");Serial.print((int16_t)(y*10)); Serial.print("\t");Serial.print((int16_t)(z*10)); ;Serial.print(") cm"); //cm    
 #endif
-
-    Serial.println(""); 
+      Serial.println(""); 
+      t_out=millis();
+    }
     BLINK();
-    
+    delay(5);
     t = t1;
 }
 
