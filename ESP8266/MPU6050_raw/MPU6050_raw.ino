@@ -95,6 +95,8 @@ uint32_t t;
 
 uint32_t t_out;
 
+int16_t dry_reads=0;
+
 //bool blinkState = false;
 
 void setup() {
@@ -113,30 +115,6 @@ void setup() {
     // verify connection
     Serial.println("Testing device connections...");
     Serial.println(accelgyro.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed");
-
-    // use the code below to change accel/gyro offset values
-    /*
-    Serial.println("Updating internal sensor offsets...");
-    // -76	-2359	1688	0	0	0
-    Serial.print(accelgyro.getXAccelOffset()); Serial.print("\t"); // -76
-    Serial.print(accelgyro.getYAccelOffset()); Serial.print("\t"); // -2359
-    Serial.print(accelgyro.getZAccelOffset()); Serial.print("\t"); // 1688
-    Serial.print(accelgyro.getXGyroOffset()); Serial.print("\t"); // 0
-    Serial.print(accelgyro.getYGyroOffset()); Serial.print("\t"); // 0
-    Serial.print(accelgyro.getZGyroOffset()); Serial.print("\t"); // 0
-    Serial.print("\n");
-    accelgyro.setXGyroOffset(220);
-    accelgyro.setYGyroOffset(76);
-    accelgyro.setZGyroOffset(-85);
-    Serial.print(accelgyro.getXAccelOffset()); Serial.print("\t"); // -76
-    Serial.print(accelgyro.getYAccelOffset()); Serial.print("\t"); // -2359
-    Serial.print(accelgyro.getZAccelOffset()); Serial.print("\t"); // 1688
-    Serial.print(accelgyro.getXGyroOffset()); Serial.print("\t"); // 0
-    Serial.print(accelgyro.getYGyroOffset()); Serial.print("\t"); // 0
-    Serial.print(accelgyro.getZGyroOffset()); Serial.print("\t"); // 0
-    Serial.print("\n");
-    */
-
 
     //accelgyro.getFullScaleAccelRange() 	//AFS_SEL
     //accelgyro.getFullScaleGyroRange() 	//FS_SEL
@@ -177,6 +155,12 @@ void loop() {
     vx+=arx*dt; vy+=ary*dt; vz+=arz*dt; 
     x+=vx0*dt+arx*dt*dt/2; y+=vy0*dt+ary*dt*dt/2; z+=vz0*dt+arz*dt*dt/2;
     // integration - better to make average (val0+val)/2 ...
+    
+    if(accelgyro.getIntDataReadyStatus()) {
+      Serial.print("============DRS SET after drs "); Serial.println(dry_reads);
+      dry_reads=0;
+    } else dry_reads++;
+    
     if(millis()-t_out>=1000) {    // output
       Serial.print("a/g:\tDT=");Serial.print(t1-t);Serial.print(":\t"); 
 #ifdef OUTPUT_READABLE_ACCELGYRO
