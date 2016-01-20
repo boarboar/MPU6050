@@ -31,19 +31,19 @@
 #include "MPU6050.h"
 #include "Wire.h"
 
-//#define OUTPUT_READABLE
+#define OUTPUT_READABLE
 //#define OUTPUT_READABLE_ACCELGYRO
 //#define OUTPUT_READABLE_ROTATION
 //#define OUTPUT_READABLE_ACCEL
-#define OUTPUT_READABLE_VELOCITY
-//#define OUTPUT_READABLE_DISPLACEMENT
+//#define OUTPUT_READABLE_VELOCITY
+#define OUTPUT_READABLE_DISPLACEMENT
 
 
 //#define LED_PIN RED_LED
 //#define BLINK() { blinkState = !blinkState; digitalWrite(LED_PIN, blinkState); }
 #define BLINK()
 
-#define NCALIB 32
+#define NCALIB 100
 #define SCALE_A (2*8192) // 1g = (9.80665 m/s^2)
 #define SCALE_G 131      // 
 #define G_FORCE 9.80665
@@ -126,7 +126,7 @@ void loop() {
     volatile uint8_t mpuIntStatus=accelgyro.getIntDataReadyStatus();
     volatile uint16_t fifoCount=accelgyro.getFIFOCount(); 
     if(mpuIntStatus) {
-      Serial.print("======DRS SET after drs: "); Serial.print(dry_reads);Serial.print("\t, ST= "), Serial.print(mpuIntStatus); Serial.print("\t, FC= "), Serial.println(fifoCount);   
+      //Serial.print("======DRS SET after drs: "); Serial.print(dry_reads);Serial.print("\t, ST= "), Serial.print(mpuIntStatus); Serial.print("\t, FC= "), Serial.println(fifoCount);   
       dry_reads=0;
     } else { dry_reads++; return; }
    
@@ -198,7 +198,7 @@ void calibrate(uint16_t nsamp) {
 #endif
       BLINK();
       Serial.print(".");
-      delay(10);
+      delay(1);
     }
     Serial.println();
     base_ax=dwax/nsamp;
