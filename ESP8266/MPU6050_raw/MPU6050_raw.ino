@@ -7,30 +7,6 @@
 //                 - added seamless Fastwire support
 //      2011-10-07 - initial release
 
-/* ============================================
-I2Cdev device library code is placed under the MIT license
-Copyright (c) 2011 Jeff Rowberg
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-===============================================
-*/
-
 /*
  FS_SEL | Full Scale Range   | LSB Sensitivity (dividers)
  -------+--------------------+----------------
@@ -55,7 +31,7 @@ THE SOFTWARE.
 #include "MPU6050.h"
 #include "Wire.h"
 
-
+//#define OUTPUT_READABLE
 //#define OUTPUT_READABLE_ACCELGYRO
 //#define OUTPUT_READABLE_ROTATION
 //#define OUTPUT_READABLE_ACCEL
@@ -124,6 +100,10 @@ void setup() {
 
     Serial.print("AFS_SEL:\t"); Serial.print(accelgyro.getFullScaleAccelRange()); Serial.print("\tFS_SEL:\t"); Serial.println(accelgyro.getFullScaleGyroRange());
 
+    Serial.println("Setting int status...");
+    accelgyro.setIntDataReadyEnabled(true); // ???
+    Serial.print("INTEN:\t"); Serial.println(accelgyro.getIntDataReadyEnabled());
+
     // calibrate 
     Serial.print("Calibrating");
     calibrate(NCALIB);
@@ -143,24 +123,28 @@ void setup() {
 }
 
 void loop() {
+    volatile uint8_t mpuIntStatus=accelgyro.getIntDataReadyStatus();
+    volatile uint16_t fifoCount=accelgyro.getFIFOCount(); 
+    if(mpuIntStatus) {
+      Serial.print("======DRS SET after drs: "); Serial.print(dry_reads);Serial.print("\t, ST= "), Serial.print(mpuIntStatus); Serial.print("\t, FC= "), Serial.println(fifoCount);   
+      dry_reads=0;
+    } else { dry_reads++; return; }
+   
     // read raw accel/gyro measurements from device
     accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
     ax-=base_ax; ay-=base_ay; az-=base_az;
     gx-=base_gx; gy-=base_gy; gz-=base_gz;
     uint32_t t1=millis(); 
     float dt=(t1-t)/1000.0;
-    rx+=(float)gx/SCALE_G*dt; ry+=(float)gy/SCALE_G*dt; rz+=(float)gz/SCALE_G*dt;
+    rx+=(float)gx/SCALE_G*dt; ry+=(float)gy/SCALE_G*dt; rz+=(float)gz/SCALE_G*dt; //GYRO
+    
     float vx0=vx, vy0=vy, vz0=vz;
     float arx=(float)ax/SCALE_A*G_FORCE, ary=(float)ay/SCALE_A*G_FORCE, arz=(float)az/SCALE_A*G_FORCE;
     vx+=arx*dt; vy+=ary*dt; vz+=arz*dt; 
-    x+=vx0*dt+arx*dt*dt/2; y+=vy0*dt+ary*dt*dt/2; z+=vz0*dt+arz*dt*dt/2;
+    //x+=vx0*dt+arx*dt*dt/2; y+=vy0*dt+ary*dt*dt/2; z+=vz0*dt+arz*dt*dt/2;
+    x+=vx*dt; y+=vy*dt; z+=vz*dt;
     // integration - better to make average (val0+val)/2 ...
-    
-    if(accelgyro.getIntDataReadyStatus()) {
-      Serial.print("============DRS SET after drs "); Serial.println(dry_reads);
-      dry_reads=0;
-    } else dry_reads++;
-    
+#ifdef OUTPUT_READABLE    
     if(millis()-t_out>=1000) {    // output
       Serial.print("a/g:\tDT=");Serial.print(t1-t);Serial.print(":\t"); 
 #ifdef OUTPUT_READABLE_ACCELGYRO
@@ -185,11 +169,12 @@ void loop() {
       Serial.print("D=(");    
       Serial.print((int16_t)(x*10)); Serial.print("\t");Serial.print((int16_t)(y*10)); Serial.print("\t");Serial.print((int16_t)(z*10)); ;Serial.print(") cm"); //cm    
 #endif
-      Serial.println(""); 
+      Serial.println("");       
       t_out=millis();
     }
+#endif    
     BLINK();
-    delay(5);
+    //delay(5);
     t = t1;
 }
 
