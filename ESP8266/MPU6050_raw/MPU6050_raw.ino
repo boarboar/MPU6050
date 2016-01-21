@@ -34,9 +34,9 @@
 #define OUTPUT_READABLE
 //#define OUTPUT_READABLE_ACCELGYRO
 //#define OUTPUT_READABLE_ROTATION
-//#define OUTPUT_READABLE_ACCEL
+#define OUTPUT_READABLE_ACCEL
 //#define OUTPUT_READABLE_VELOCITY
-#define OUTPUT_READABLE_DISPLACEMENT
+//#define OUTPUT_READABLE_DISPLACEMENT
 
 
 //#define LED_PIN RED_LED
@@ -65,17 +65,19 @@ int16_t gx, gy, gz;
 int32_t dwax, dway, dwaz;
 int32_t dwgx, dwgy, dwgz;
 
-float vx, vy, vz, x, y, z, rx, ry, rz;
+float vx, vy, vz, x, y, z, rx, ry, rz, acx, acy, acz;
 
 uint32_t t;
 
 uint32_t t_out;
 
 int16_t dry_reads=0;
+int16_t dry_max=0;
 
 //bool blinkState = false;
 
 void setup() {
+    delay(1000);
     // join I2C bus (I2Cdev library doesn't do this automatically)
     //Wire.pins(0, 2); // sda, sdl
     //Wire.begin();
@@ -102,8 +104,10 @@ void setup() {
 
     Serial.println("Setting int status...");
     accelgyro.setIntDataReadyEnabled(true); // ???
+    accelgyro.setInterruptLatchClear(1); //???   
     Serial.print("INTEN:\t"); Serial.println(accelgyro.getIntDataReadyEnabled());
-
+    Serial.print("RATE:\t"); Serial.println(accelgyro.getRate());
+    Serial.print("DLPF:\t"); Serial.println(accelgyro.getDLPFMode());
     // calibrate 
     Serial.print("Calibrating");
     calibrate(NCALIB);
@@ -112,20 +116,26 @@ void setup() {
     Serial.print(base_ax); Serial.print("\t"); Serial.print(base_ay); Serial.print("\t"); Serial.print(base_az); Serial.print("\t");
     Serial.print(base_gx); Serial.print("\t"); Serial.print(base_gy); Serial.print("\t"); Serial.println(base_gz);
     Serial.print("NormA:"); Serial.println(sqrt(base_ax*base_ax+base_ay*base_ay+base_az*base_az));
+
+    delay(5000);
         
     // configure Arduino LED for
     //pinMode(LED_PIN, OUTPUT);
     x=y=z=0.0;
     vx=vy=vz=0.0;
     rx=ry=rz=0.0;
+    acx=acy=acz=0.0;
     t=millis();
     t_out=millis();
 }
 
 void loop() {
+    static const float acc_lpf_factor = 4.0f;
+  
     volatile uint8_t mpuIntStatus=accelgyro.getIntDataReadyStatus();
     volatile uint16_t fifoCount=accelgyro.getFIFOCount(); 
     if(mpuIntStatus) {
+      if(dry_reads > dry_max)  dry_max=dry_reads;
       //Serial.print("======DRS SET after drs: "); Serial.print(dry_reads);Serial.print("\t, ST= "), Serial.print(mpuIntStatus); Serial.print("\t, FC= "), Serial.println(fifoCount);   
       dry_reads=0;
     } else { dry_reads++; return; }
@@ -137,16 +147,37 @@ void loop() {
     uint32_t t1=millis(); 
     float dt=(t1-t)/1000.0;
     rx+=(float)gx/SCALE_G*dt; ry+=(float)gy/SCALE_G*dt; rz+=(float)gz/SCALE_G*dt; //GYRO
+
+/*
+ * 
+ * static const float altitude_lpf = 0.995f; 
+
+    // Fist subtract 1g datasheet value, so it is reading 0g when it is flat, then the value is actually converted into g's, then into m/s^2 and finally into cm/s^2
+    static const float gravitationalAcceleration = 9.80665f; // See: https://en.wikipedia.org/wiki/Gravitational_acceleration
+    altitude->acceleration = (float)(accInertialFrame.axis.Z - mpu6500->accScaleFactor) / mpu6500->accScaleFactor * gravitationalAcceleration * 100.0f;
+
+    float accDt = altitude->acceleration * dt; // Limit number of multiplications
+    float accVelocity = altitude->velocity + accDt; // Estimate velocity using acceleration
+    float accAltitude = altitude->altitude + altitude->velocity * dt + 0.5f * accDt * dt; // Estimate altitude using acceleration
+
+        altitude->altitudeLpf = altitude_lpf * altitude->altitudeLpf + (1.0f - altitude_lpf) * altitude->altitude; // Low-pass filter altitude estimate
+ * 
+ */
+    // Apply low pass filter
+    acx = acx * (1.0f - (1.0f / acc_lpf_factor)) + (float)ax * (1.0f / acc_lpf_factor); 
+    acy = acy * (1.0f - (1.0f / acc_lpf_factor)) + (float)ay * (1.0f / acc_lpf_factor); 
+    acz = acz * (1.0f - (1.0f / acc_lpf_factor)) + (float)az * (1.0f / acc_lpf_factor); 
     
     float vx0=vx, vy0=vy, vz0=vz;
-    float arx=(float)ax/SCALE_A*G_FORCE, ary=(float)ay/SCALE_A*G_FORCE, arz=(float)az/SCALE_A*G_FORCE;
+    float arx=(float)acx/SCALE_A*G_FORCE, ary=(float)acy/SCALE_A*G_FORCE, arz=(float)acz/SCALE_A*G_FORCE;
     vx+=arx*dt; vy+=ary*dt; vz+=arz*dt; 
-    //x+=vx0*dt+arx*dt*dt/2; y+=vy0*dt+ary*dt*dt/2; z+=vz0*dt+arz*dt*dt/2;
-    x+=vx*dt; y+=vy*dt; z+=vz*dt;
-    // integration - better to make average (val0+val)/2 ...
+    x+=vx0*dt+arx*dt*dt*0.5; y+=vy0*dt+ary*dt*dt*0.5; z+=vz0*dt+arz*dt*dt*0.5;
+    //x+=vx*dt; y+=vy*dt; z+=vz*dt;
+    // try to apply LPF to coord, not acccel?
+    // integration - better to make average (val0+val)/2 ... - this is LPF
 #ifdef OUTPUT_READABLE    
     if(millis()-t_out>=1000) {    // output
-      Serial.print("a/g:\tDT=");Serial.print(t1-t);Serial.print(":\t"); 
+      Serial.print("a/g:\tDT=");Serial.print(t1-t);Serial.print(":\tDRM="); Serial.print(dry_max); Serial.print(":\t");
 #ifdef OUTPUT_READABLE_ACCELGYRO
         // display tab-separated accel/gyro x/y/z values
       Serial.print("A=(");
@@ -155,7 +186,7 @@ void loop() {
 #endif
 #ifdef OUTPUT_READABLE_ACCEL
       Serial.print("A=(");
-      Serial.print((int16_t)arx); Serial.print("\t");Serial.print((int16_t)ary); Serial.print("\t");Serial.print((int16_t)arz);Serial.print(") m/s^2\t"); //deg
+      Serial.print((int16_t)(arx*100)); Serial.print("\t");Serial.print((int16_t)(ary*100)); Serial.print("\t");Serial.print((int16_t)(arz*100));Serial.print(") cm/s^2\t"); //cm
 #endif
 #ifdef OUTPUT_READABLE_ROTATION
       Serial.print("R=(");
@@ -163,11 +194,11 @@ void loop() {
 #endif
 #ifdef OUTPUT_READABLE_VELOCITY
       Serial.print("V=(");
-      Serial.print((int16_t)(vx*10)); Serial.print("\t");Serial.print((int16_t)(vy*10)); Serial.print("\t");Serial.print((int16_t)(vz*10));Serial.print(") cm/s\t"); //cm/s
+      Serial.print((int16_t)(vx*100)); Serial.print("\t");Serial.print((int16_t)(vy*100)); Serial.print("\t");Serial.print((int16_t)(vz*100));Serial.print(") cm/s\t"); //cm/s
 #endif    
 #ifdef OUTPUT_READABLE_DISPLACEMENT
       Serial.print("D=(");    
-      Serial.print((int16_t)(x*10)); Serial.print("\t");Serial.print((int16_t)(y*10)); Serial.print("\t");Serial.print((int16_t)(z*10)); ;Serial.print(") cm"); //cm    
+      Serial.print((int16_t)(x*100)); Serial.print("\t");Serial.print((int16_t)(y*100)); Serial.print("\t");Serial.print((int16_t)(z*100)); ;Serial.print(") cm"); //cm    
 #endif
       Serial.println("");       
       t_out=millis();
