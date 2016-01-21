@@ -34,8 +34,8 @@
 #define OUTPUT_READABLE
 //#define OUTPUT_READABLE_ACCELGYRO
 //#define OUTPUT_READABLE_ROTATION
-#define OUTPUT_READABLE_ACCEL
-//#define OUTPUT_READABLE_VELOCITY
+//#define OUTPUT_READABLE_ACCEL
+#define OUTPUT_READABLE_VELOCITY
 //#define OUTPUT_READABLE_DISPLACEMENT
 
 
@@ -43,7 +43,7 @@
 //#define BLINK() { blinkState = !blinkState; digitalWrite(LED_PIN, blinkState); }
 #define BLINK()
 
-#define NCALIB 100
+#define NCALIB 200
 #define SCALE_A (2*8192) // 1g = (9.80665 m/s^2)
 #define SCALE_G 131      // 
 #define G_FORCE 9.80665
@@ -105,9 +105,9 @@ void setup() {
     Serial.println("Setting int status...");
     accelgyro.setIntDataReadyEnabled(true); // ???
     accelgyro.setInterruptLatchClear(1); //???   
-    Serial.print("INTEN:\t"); Serial.println(accelgyro.getIntDataReadyEnabled());
-    Serial.print("RATE:\t"); Serial.println(accelgyro.getRate());
-    Serial.print("DLPF:\t"); Serial.println(accelgyro.getDLPFMode());
+    Serial.print("INTEN:\t"); Serial.println(accelgyro.getIntDataReadyEnabled()); //1
+    Serial.print("RATE:\t"); Serial.println(accelgyro.getRate()); //0
+    Serial.print("DLPF:\t"); Serial.println(accelgyro.getDLPFMode()); //0
     // calibrate 
     Serial.print("Calibrating");
     calibrate(NCALIB);
@@ -130,7 +130,7 @@ void setup() {
 }
 
 void loop() {
-    static const float acc_lpf_factor = 4.0f;
+    static const float acc_lpf_factor = 400.0f;
   
     volatile uint8_t mpuIntStatus=accelgyro.getIntDataReadyStatus();
     volatile uint16_t fifoCount=accelgyro.getFIFOCount(); 
