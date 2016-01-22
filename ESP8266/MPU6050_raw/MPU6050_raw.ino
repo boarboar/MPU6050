@@ -1,12 +1,3 @@
-// I2C device class (I2Cdev) demonstration Arduino sketch for MPU6050 class
-// 10/7/2011 by Jeff Rowberg <jeff@rowberg.net>
-// Updates should (hopefully) always be available at https://github.com/jrowberg/i2cdevlib
-//
-// Changelog:
-//      2013-05-08 - added multiple output formats
-//                 - added seamless Fastwire support
-//      2011-10-07 - initial release
-
 /*
  FS_SEL | Full Scale Range   | LSB Sensitivity (dividers)
  -------+--------------------+----------------
@@ -44,8 +35,8 @@
 #define BLINK()
 
 #define NCALIB 200
-#define SCALE_A (2*8192) // 1g = (9.80665 m/s^2)
-#define SCALE_G 131      // 
+#define SCALE_A (2.0*8192.0) // 1g = (9.80665 m/s^2)
+#define SCALE_G 131.0      // 
 #define G_FORCE 9.80665
 
 // class default I2C address is 0x68
@@ -130,8 +121,6 @@ void setup() {
 }
 
 void loop() {
-    static const float acc_lpf_factor = 400.0f;
-  
     volatile uint8_t mpuIntStatus=accelgyro.getIntDataReadyStatus();
     volatile uint16_t fifoCount=accelgyro.getFIFOCount(); 
     if(mpuIntStatus) {
@@ -163,15 +152,28 @@ void loop() {
         altitude->altitudeLpf = altitude_lpf * altitude->altitudeLpf + (1.0f - altitude_lpf) * altitude->altitude; // Low-pass filter altitude estimate
  * 
  */
+ /*
     // Apply low pass filter
+    static const float acc_lpf_factor = 400.0f;
     acx = acx * (1.0f - (1.0f / acc_lpf_factor)) + (float)ax * (1.0f / acc_lpf_factor); 
     acy = acy * (1.0f - (1.0f / acc_lpf_factor)) + (float)ay * (1.0f / acc_lpf_factor); 
     acz = acz * (1.0f - (1.0f / acc_lpf_factor)) + (float)az * (1.0f / acc_lpf_factor); 
+    float arx=(float)acx/SCALE_A*G_FORCE, ary=(float)acy/SCALE_A*G_FORCE, arz=(float)acz/SCALE_A*G_FORCE;
+   */
+
+    float arx=(float)ax/SCALE_A*G_FORCE, ary=(float)acy/SCALE_A*G_FORCE, arz=(float)acz/SCALE_A*G_FORCE;
     
     float vx0=vx, vy0=vy, vz0=vz;
-    float arx=(float)acx/SCALE_A*G_FORCE, ary=(float)acy/SCALE_A*G_FORCE, arz=(float)acz/SCALE_A*G_FORCE;
     vx+=arx*dt; vy+=ary*dt; vz+=arz*dt; 
-    x+=vx0*dt+arx*dt*dt*0.5; y+=vy0*dt+ary*dt*dt*0.5; z+=vz0*dt+arz*dt*dt*0.5;
+    float xp = x+vx0*dt+arx*dt*dt*0.5; 
+    float yp = y+vy0*dt+ary*dt*dt*0.5; 
+    float zp = z+vz0*dt+arz*dt*dt*0.5;
+    static const float disp_lpf = 0.995f; 
+    x = disp_lpf * x + (1.0f - disp_lpf) * xp; // Low-pass filter altitude estimate
+    y = disp_lpf * y + (1.0f - disp_lpf) * yp; // Low-pass filter altitude estimate 
+    z = disp_lpf * z + (1.0f - disp_lpf) * zp; // Low-pass filter altitude estimate
+    
+    
     //x+=vx*dt; y+=vy*dt; z+=vz*dt;
     // try to apply LPF to coord, not acccel?
     // integration - better to make average (val0+val)/2 ... - this is LPF
@@ -229,7 +231,7 @@ void calibrate(uint16_t nsamp) {
 #endif
       BLINK();
       Serial.print(".");
-      delay(1);
+      delay(5);
     }
     Serial.println();
     base_ax=dwax/nsamp;
