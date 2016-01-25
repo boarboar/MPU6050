@@ -31,6 +31,7 @@ void setup() {
 
 void loop() {
   uint8_t i;
+  /*
   //check if there are any new clients
   if (server.hasClient()){
     for(i = 0; i < MAX_SRV_CLIENTS; i++){
@@ -46,15 +47,38 @@ void loop() {
     WiFiClient serverClient = server.available();
     serverClient.stop();
   }
-  //check clients for data
-  for(i = 0; i < MAX_SRV_CLIENTS; i++){
-    if (serverClients[i] && serverClients[i].connected()){
-      if(serverClients[i].available()){
+  */
+
+  //check if there are a new client // one by one...
+  if (server.hasClient()){    
+    i=0;
+    while(i < MAX_SRV_CLIENTS && serverClients[i] && serverClients[i].connected()) i++;
+    if(i==MAX_SRV_CLIENTS) {
+      //no free/disconnected spot so reject
+      WiFiClient serverClient = server.available();
+      serverClient.stop();
+      Serial.println("No slots, rejected");        
+    } else {
+      if(serverClients[i]) serverClients[i].stop();
+      serverClients[i] = server.available();
+      Serial.print("New client: "); Serial.print(i);
+    }
+  }  
+   
+  //check clients for aliveness and data
+  for(i = 0; i < MAX_SRV_CLIENTS; i++){    
+    if (serverClients[i]) {
+      if(!serverClients[i].connected()){
+        serverClients[i].stop(); // after that, inner _client=0, and bool should return 0
+        Serial.print("Client discon: "); Serial.print(i);
+      } else if(serverClients[i].available()){
         //get data from the telnet client and push it to the UART
+        //TODO - some reasonable limitation on a number of bytes read at onec to be set...
         while(serverClients[i].available()) Serial.write(serverClients[i].read());
       }
-    }
+    }    
   }
+  
   //check UART for data
   if(Serial.available()){
     size_t len = Serial.available();
