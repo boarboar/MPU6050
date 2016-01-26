@@ -7,6 +7,7 @@ public:
   virtual ~CmdSession();   
   virtual void stop();
   boolean input();
+  boolean cmd();
 protected:
   static const uint16_t CMDLEN=63;  
   int16_t sessionId;

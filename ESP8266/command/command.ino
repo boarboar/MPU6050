@@ -11,7 +11,8 @@ WiFiServer server(23);
 CmdSession serverClients[MAX_SRV_CLIENTS];
 
 void setup() {
-  delay(5000);
+  delay(2000);
+  Serial.println("Start");
   Serial.begin(115200);
   WiFi.begin(ssid, password);
   Serial.print("\nConnecting to "); Serial.println(ssid);
@@ -46,7 +47,7 @@ void loop() {
     } else {
       if(serverClients[i]) serverClients[i].stop();
       serverClients[i] = server.available(); // copy constructor be called?
-      Serial.print("New client: "); Serial.println(i);
+      //Serial.print("New client: "); Serial.println(i);
     }
   }  
    
@@ -55,14 +56,15 @@ void loop() {
     if (serverClients[i]) {
       if(!serverClients[i].connected()){
         serverClients[i].stop(); // after that, inner _client=0, and bool should return 0
-        Serial.print("Client discon: "); Serial.println(i);
+        //Serial.print("Client discon: "); Serial.println(i);
       } /* 
       else if(serverClients[i].available()){
         //get data from the telnet client and push it to the UART      
         //while(serverClients[i].available()) Serial.write(serverClients[i].read());
       } */
       else if(serverClients[i].input()) {
-        Serial.println("DO CMD");
+        //Serial.println("DO CMD");
+        serverClients[i].cmd();
       }
     }    
   }
