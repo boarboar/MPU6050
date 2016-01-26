@@ -1,4 +1,5 @@
 #include <ESP8266WiFi.h>
+#include "session.h"
 
 //how many clients should be able to telnet to this ESP8266
 #define MAX_SRV_CLIENTS 1
@@ -6,7 +7,8 @@ const char* ssid = "NETGEAR";
 const char* password = "boarboar";
 
 WiFiServer server(23);
-WiFiClient serverClients[MAX_SRV_CLIENTS];
+//WiFiClient serverClients[MAX_SRV_CLIENTS];
+CmdSession serverClients[MAX_SRV_CLIENTS];
 
 void setup() {
   delay(5000);
@@ -31,23 +33,6 @@ void setup() {
 
 void loop() {
   uint8_t i;
-  /*
-  //check if there are any new clients
-  if (server.hasClient()){
-    for(i = 0; i < MAX_SRV_CLIENTS; i++){
-      //find free/disconnected spot
-      if (!serverClients[i] || !serverClients[i].connected()){
-        if(serverClients[i]) serverClients[i].stop();
-        serverClients[i] = server.available();
-        Serial.print("New client: "); Serial.print(i);
-        continue;
-      }
-    }
-    //no free/disconnected spot so reject
-    WiFiClient serverClient = server.available();
-    serverClient.stop();
-  }
-  */
 
   //check if there are a new client // one by one...
   if (server.hasClient()){    
@@ -60,8 +45,8 @@ void loop() {
       Serial.println("No slots, rejected");        
     } else {
       if(serverClients[i]) serverClients[i].stop();
-      serverClients[i] = server.available();
-      Serial.print("New client: "); Serial.print(i);
+      serverClients[i] = server.available(); // copy constructor be called?
+      Serial.print("New client: "); Serial.println(i);
     }
   }  
    
@@ -70,11 +55,14 @@ void loop() {
     if (serverClients[i]) {
       if(!serverClients[i].connected()){
         serverClients[i].stop(); // after that, inner _client=0, and bool should return 0
-        Serial.print("Client discon: "); Serial.print(i);
-      } else if(serverClients[i].available()){
-        //get data from the telnet client and push it to the UART
-        //TODO - some reasonable limitation on a number of bytes read at onec to be set...
-        while(serverClients[i].available()) Serial.write(serverClients[i].read());
+        Serial.print("Client discon: "); Serial.println(i);
+      } /* 
+      else if(serverClients[i].available()){
+        //get data from the telnet client and push it to the UART      
+        //while(serverClients[i].available()) Serial.write(serverClients[i].read());
+      } */
+      else if(serverClients[i].input()) {
+        Serial.println("DO CMD");
       }
     }    
   }
