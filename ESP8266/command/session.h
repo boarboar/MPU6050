@@ -11,7 +11,8 @@ public:
 protected:
   static const uint16_t CMDLEN=63;  
   int16_t sessionId;
-  char buf[CMDLEN+1];
+  //char buf[CMDLEN+1];
+  uint8_t buf[CMDLEN+1];
   uint8_t bufptr;
   static int16_t sessionCounter;
 };
