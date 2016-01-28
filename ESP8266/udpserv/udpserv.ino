@@ -37,20 +37,22 @@ void setup() {
 
 void loop() {
   if(!isConnected) return;
+  uint32_t m1=millis();
   int packetSize = udp_rcv.parsePacket();
-  Serial.print("psz: "); 
+  //Serial.print("psz: "); 
   if (packetSize) {
-    Serial.print("From: "); Serial.print(udp_rcv.remoteIP());
-    Serial.print(":"); Serial.print(udp_rcv.remotePort());
     int len = udp_rcv.read(packetBuffer, 255);
-    Serial.print(" len: "); Serial.print(len);
     if(len>254) len=254;
-    packetBuffer[len] = 0;
-    Serial.print(" Val: "); Serial.println(packetBuffer);
-    
+    packetBuffer[len] = 0;    
     udp_snd.beginPacket(udp_rcv.remoteIP(), udp_rcv.remotePort());
     udp_snd.write(packetBuffer, len);
     udp_snd.endPacket();
+    uint32_t m2=millis();
+    Serial.print("From: "); Serial.print(udp_rcv.remoteIP());
+    Serial.print(":"); Serial.print(udp_rcv.remotePort());
+    Serial.print(" len: "); Serial.print(len);
+    Serial.print(" T: "); Serial.print(m2-m1);
+    Serial.print(" Val: "); Serial.println(packetBuffer);
 
     print_sys_info();
   }
