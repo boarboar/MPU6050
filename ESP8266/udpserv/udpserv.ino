@@ -1,15 +1,24 @@
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
+#include "cmd.h"
 
 void print_sys_info();
+void doCycle(uint16_t);
 
 const char* ssid = "NETGEAR";
 const char* password = "boarboar";
 const int udp_port = 4444;
+const int BUF_SZ = 255;
+const int CYCLE_TO = 10;
 bool isConnected=false;
-char packetBuffer[255];
+char packetBuffer[BUF_SZ];
 WiFiUDP udp_rcv;
 WiFiUDP udp_snd;
+uint32_t last_cycle;
+
+uint32_t cnt[4]={0,0,0,0};
+
+CmdProc cmd;
 
 void setup() {
   delay(2000);
@@ -33,32 +42,55 @@ void setup() {
     Serial.println("Failed to init UDP socket!");
   }  
   print_sys_info();
+
+  last_cycle=millis();
 }
 
 void loop() {
-  if(!isConnected) return;
-  uint32_t m1=millis();
-  int packetSize = udp_rcv.parsePacket();
-  //Serial.print("psz: "); 
-  if (packetSize) {
-    int len = udp_rcv.read(packetBuffer, 255);
-    if(len>254) len=254;
-    packetBuffer[len] = 0;    
-    udp_snd.beginPacket(udp_rcv.remoteIP(), udp_rcv.remotePort());
-    udp_snd.write(packetBuffer, len);
-    udp_snd.endPacket();
-    uint32_t m2=millis();
-    Serial.print("From: "); Serial.print(udp_rcv.remoteIP());
-    Serial.print(":"); Serial.print(udp_rcv.remotePort());
-    Serial.print(" len: "); Serial.print(len);
-    Serial.print(" T: "); Serial.print(m2-m1);
-    Serial.print(" Val: "); Serial.println(packetBuffer);
+  if(isConnected) {
+    uint32_t m1=millis();
+    int packetSize = udp_rcv.parsePacket(); 
+    if (packetSize) {
+      int len = udp_rcv.read(packetBuffer, BUF_SZ);
+      if(len>BUF_SZ-1) len=BUF_SZ-1;
+      packetBuffer[len] = 0;    
+      // echo
+      udp_snd.beginPacket(udp_rcv.remoteIP(), udp_rcv.remotePort());
+      udp_snd.write(packetBuffer, len);
+      udp_snd.endPacket();
 
-    print_sys_info();
+      // dbg out
+      uint32_t m2=millis();
+      Serial.print("From: "); Serial.print(udp_rcv.remoteIP());
+      Serial.print(":"); Serial.print(udp_rcv.remotePort());
+      Serial.print(" len: "); Serial.print(len);
+      Serial.print(" T: "); Serial.print(m2-m1);
+      Serial.print(" Val: "); Serial.println(packetBuffer);
+      //
+
+      cmd.doCmd(packetBuffer);
+
+      print_sys_info();
+    }
   }
-  delay(10);
+  uint32_t t = millis();
+  if(t-last_cycle >= CYCLE_TO) {
+    doCycle(t-last_cycle);
+    last_cycle = t;
+  }
+  //delay(10);
 }
 
+void doCycle(uint16_t dt) {
+  if(dt<=CYCLE_TO) cnt[0]++;
+  else if(dt<=CYCLE_TO<<1) cnt[1]++;
+  else if(dt<=CYCLE_TO<<2) cnt[2]++;
+  else cnt[3]++;
+}
 void print_sys_info() {
   Serial.print("Heap sz: "); Serial.println(ESP.getFreeHeap());
+  Serial.print("TO<="); Serial.print(CYCLE_TO); Serial.print(": "); Serial.print(cnt[0]);
+  Serial.print(" TO<="); Serial.print(CYCLE_TO<<1); Serial.print(": "); Serial.print(cnt[1]);
+  Serial.print(" TO<="); Serial.print(CYCLE_TO<<2); Serial.print(": "); Serial.print(cnt[2]);
+  Serial.print(" TO>"); Serial.print(CYCLE_TO<<2); Serial.print(": "); Serial.println(cnt[3]);
 }
