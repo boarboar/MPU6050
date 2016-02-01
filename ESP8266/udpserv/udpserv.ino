@@ -1,6 +1,7 @@
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
 #include "cmd.h"
+#include "stat.h"
 
 void print_sys_info();
 void doCycle();
@@ -12,12 +13,11 @@ const int BUF_SZ = 255;
 const int CYCLE_TO = 2;
 bool isConnected=false;
 char packetBuffer[BUF_SZ];
-//char packetBufferOut[BUF_SZ];
 WiFiUDP udp_rcv;
 WiFiUDP udp_snd;
 uint32_t last_cycle;
 
-uint32_t cnt[4]={0,0,0,0};
+//uint32_t cnt[4]={0,0,0,0};
 
 CmdProc cmd;
 
@@ -86,15 +86,15 @@ void doCycle() {
   uint16_t dt=t-last_cycle;
   if(dt < CYCLE_TO) return;
   last_cycle = t;
-  if(dt<=CYCLE_TO) cnt[0]++;
-  else if(dt<=CYCLE_TO<<1) cnt[1]++;
-  else if(dt<=CYCLE_TO<<2) cnt[2]++;
-  else cnt[3]++;
+  if(dt<=CYCLE_TO) Stat::StatStore.cnt[0]++;
+  else if(dt<=CYCLE_TO<<1) Stat::StatStore.cnt[1]++;
+  else if(dt<=CYCLE_TO<<2) Stat::StatStore.cnt[2]++;
+  else Stat::StatStore.cnt[3]++;
 }
 void print_sys_info() {
   Serial.print("Heap sz: "); Serial.println(ESP.getFreeHeap());
-  Serial.print("TO<="); Serial.print(CYCLE_TO); Serial.print(": "); Serial.print(cnt[0]);
-  Serial.print(" TO<="); Serial.print(CYCLE_TO<<1); Serial.print(": "); Serial.print(cnt[1]);
-  Serial.print(" TO<="); Serial.print(CYCLE_TO<<2); Serial.print(": "); Serial.print(cnt[2]);
-  Serial.print(" TO>"); Serial.print(CYCLE_TO<<2); Serial.print(": "); Serial.println(cnt[3]);
+  Serial.print("TO<="); Serial.print(CYCLE_TO); Serial.print(": "); Serial.print(Stat::StatStore.cnt[0]);
+  Serial.print(" TO<="); Serial.print(CYCLE_TO<<1); Serial.print(": "); Serial.print(Stat::StatStore.cnt[1]);
+  Serial.print(" TO<="); Serial.print(CYCLE_TO<<2); Serial.print(": "); Serial.print(Stat::StatStore.cnt[2]);
+  Serial.print(" TO>"); Serial.print(CYCLE_TO<<2); Serial.print(": "); Serial.println(Stat::StatStore.cnt[3]);
 }

@@ -2,29 +2,30 @@
 #include <ArduinoJson.h>
 
 #include "cmd.h"
+#include "stat.h"
+
+typedef int16_t (*VFP)(JsonObject&,JsonObject&);
 
 int16_t _doCmd(JsonObject&,JsonObject&);
-void c_info(JsonObject&,JsonObject&);
-void c_reset(JsonObject&,JsonObject&);
-
-typedef void (*VFP)(JsonObject&,JsonObject&);
-
-const int BUF_SZ = 255; 
-const char *CMDS="I\0R\0";
-enum CMDS_ID {CMD_INFO=0, CMD_RESET=1, CMD_NOCMD=2};
-//void (*vf)()[2]={c_info, c_reset};
+int16_t c_info(JsonObject&,JsonObject&);
+int16_t c_reset(JsonObject&,JsonObject&);
+int16_t c_setsyslog(JsonObject&,JsonObject&);
 
 VFP cmd_imp[2]={c_info, c_reset};
 
-// {"i":id,"c":"cmd","p1":param}
-// {"i":1,"c":"I"}
+const int BUF_SZ = 255; 
+const char *CMDS="INFO\0RST\0SYSL\0";
+enum CMDS_ID {CMD_INFO=0, CMD_RESET=1, CMD_SETSYSLOG=2, CMD_NOCMD=3};
+// {"I":1,"C":"INFO"}
+// {"I":1,"C":"RST"}
+// {"I":1,"C":"SYSL", "ADDR":"ipaddr", "PORT":port}
    
 int16_t CmdProc::doCmd(char *buf) {  
   if(!buf) return 0;
   char bufout[BUF_SZ];
  {
   StaticJsonBuffer<JSON_OBJECT_SIZE(4)> jsonBufferIn;
-  StaticJsonBuffer<JSON_OBJECT_SIZE(4)> jsonBufferOut;
+  StaticJsonBuffer<JSON_OBJECT_SIZE(4)+ JSON_ARRAY_SIZE(4)> jsonBufferOut;
   JsonObject& root = jsonBufferIn.parseObject(buf);
   JsonObject& rootOut = jsonBufferOut.createObject();
   _doCmd(root, rootOut);
@@ -38,43 +39,60 @@ int16_t CmdProc::doCmd(char *buf) {
 int16_t _doCmd(JsonObject& root, JsonObject& rootOut) {  
   if (!root.success()) {
     Serial.println("parseObject() failed");
-    rootOut["i"] = -1;
-    rootOut["r"] = -1;
+    rootOut["I"] = -1;
+    rootOut["R"] = -1;
     return 0;
   }
 
-  long id = root["i"];
-  const char* cmd = root["c"];
+  long id = root["I"];
+  const char* cmd = root["C"];
   
   Serial.print("Id: "); Serial.print(id);
-  rootOut["i"] = id;
+  rootOut["I"] = id;
   if(!cmd || !*cmd) {
-    rootOut["r"] = -2;
+    rootOut["R"] = -2;
     return 0;
   }
   if(cmd) {
     Serial.print(" Cmd:"); Serial.println(cmd);
-    rootOut["r"] = 0;
-    rootOut["c"] = cmd;
+    //rootOut["R"] = 0;
+    rootOut["C"] = cmd;
     const char *p=CMDS;
     uint8_t i=0;
     while(*p && strcmp(p, cmd)) { p+=strlen(p)+1; i++; }
-    if(i>=CMD_NOCMD) { rootOut["r"] = -2; return 0;}
-    (*(cmd_imp[i]))(root, rootOut);
+    if(i>=CMD_NOCMD) { rootOut["R"] = -2; return 0;}
+    rootOut["R"] = (*(cmd_imp[i]))(root, rootOut);
   }      
   return 0;
 }
 
-void c_info(JsonObject& root, JsonObject& rootOut) {
+int16_t c_info(JsonObject& root, JsonObject& rootOut) {
   Serial.println("INFO"); 
   rootOut["fhs"]=ESP.getFreeHeap();
   rootOut["fss"]=ESP.getFreeSketchSpace();
+  JsonArray& data = rootOut.createNestedArray("to");
+  data.add(Stat::StatStore.cnt[0]);
+  data.add(Stat::StatStore.cnt[1]);
+  data.add(Stat::StatStore.cnt[2]);
+  data.add(Stat::StatStore.cnt[3]);
+  return 0;
 }
 
-void c_reset(JsonObject& root, JsonObject& rootOut) {
+int16_t c_reset(JsonObject& root, JsonObject& rootOut) {
   Serial.println("RST"); 
   delay(1000);
   ESP.restart();
+  return 0;
+}
+
+int16_t c_setsyslog(JsonObject& root, JsonObject& rootOut) {
+    long port = root["PORT"];
+    const char* addr = root["ADDR"];
+    if(port==0 || addr==NULL || !*addr) {
+       return -3;      
+    }
+    Serial.print("SET_SYSL:"); Serial.print(addr); Serial.print(":"); Serial.println(port); 
+    return 0;
 }
 
 
