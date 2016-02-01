@@ -11,21 +11,23 @@ int16_t c_info(JsonObject&,JsonObject&);
 int16_t c_reset(JsonObject&,JsonObject&);
 int16_t c_setsyslog(JsonObject&,JsonObject&);
 
-VFP cmd_imp[2]={c_info, c_reset};
+VFP cmd_imp[3]={c_info, c_reset, c_setsyslog};
 
 const int BUF_SZ = 255; 
 const char *CMDS="INFO\0RST\0SYSL\0";
 enum CMDS_ID {CMD_INFO=0, CMD_RESET=1, CMD_SETSYSLOG=2, CMD_NOCMD=3};
 // {"I":1,"C":"INFO"}
 // {"I":1,"C":"RST"}
-// {"I":1,"C":"SYSL", "ADDR":"ipaddr", "PORT":port}
+// {"I":1,"C":"SYSL", "ADDR":"192.168.1.1", "PORT":4444}
    
 int16_t CmdProc::doCmd(char *buf) {  
   if(!buf) return 0;
   char bufout[BUF_SZ];
  {
-  StaticJsonBuffer<JSON_OBJECT_SIZE(4)> jsonBufferIn;
-  StaticJsonBuffer<JSON_OBJECT_SIZE(4)+ JSON_ARRAY_SIZE(4)> jsonBufferOut;
+  //StaticJsonBuffer<JSON_OBJECT_SIZE(4)> jsonBufferIn;
+  //StaticJsonBuffer<JSON_OBJECT_SIZE(4)+ JSON_ARRAY_SIZE(4)> jsonBufferOut;
+  StaticJsonBuffer<200> jsonBufferIn;
+  StaticJsonBuffer<200> jsonBufferOut;
   JsonObject& root = jsonBufferIn.parseObject(buf);
   JsonObject& rootOut = jsonBufferOut.createObject();
   _doCmd(root, rootOut);
