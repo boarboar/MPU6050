@@ -9,17 +9,15 @@ void doCycle();
 const char* ssid = "NETGEAR";
 const char* password = "boarboar";
 const int udp_port = 4444;
-const int BUF_SZ = 255;
+//const int BUF_SZ = 255;
 const int CYCLE_TO = 2;
-bool isConnected=false;
-char packetBuffer[BUF_SZ];
-WiFiUDP udp_rcv;
-WiFiUDP udp_snd;
+//bool isConnected=false;
+//char packetBuffer[BUF_SZ];
+//WiFiUDP udp_rcv;
+//WiFiUDP udp_snd;
 uint32_t last_cycle;
 
-//uint32_t cnt[4]={0,0,0,0};
-
-CmdProc cmd;
+//CmdProc cmd;
 
 void setup() {
   delay(2000);
@@ -34,8 +32,8 @@ void setup() {
     ESP.reset();
   }
 
-  if(udp_rcv.begin(udp_port)) {
-    isConnected=true;
+  if(/*udp_rcv.begin(udp_port)*/CmdProc::Cmd.init(udp_port)) {
+    //isConnected=true;
     Serial.print("Ready! Listening on ");
     Serial.print(WiFi.localIP());
     Serial.print(":");
@@ -49,15 +47,16 @@ void setup() {
 }
 
 void loop() {
-  if(isConnected) {
+  if(/*isConnected*/CmdProc::Cmd.connected()) {
     uint32_t m1=millis();
-    int packetSize = udp_rcv.parsePacket(); 
-    if (packetSize) {
-      int len = udp_rcv.read(packetBuffer, BUF_SZ);
-      if(len>BUF_SZ-1) len=BUF_SZ-1;
-      packetBuffer[len] = 0;    
+    //int packetSize = udp_rcv.parsePacket(); 
+    if (/*packetSize*/CmdProc::Cmd.read()) {
+      //int len = udp_rcv.read(packetBuffer, BUF_SZ);
+      //if(len>BUF_SZ-1) len=BUF_SZ-1;
+      //packetBuffer[len] = 0;    
  
       doCycle(); yield();
+      /*
       // dbg out
       uint32_t m2=millis();
       Serial.print("From: "); Serial.print(udp_rcv.remoteIP());
@@ -67,15 +66,26 @@ void loop() {
       Serial.print(" Val: "); Serial.println(packetBuffer);
       //
       doCycle(); yield();
+      */
       
-      cmd.doCmd(packetBuffer);
+      //cmd.doCmd(packetBuffer);
+
+      CmdProc::Cmd.doCmd();
 
      // resp
+     /*
       udp_snd.beginPacket(udp_rcv.remoteIP(), udp_rcv.remotePort());
       udp_snd.write(packetBuffer, strlen(packetBuffer));
       udp_snd.endPacket();
+*/
 
+      doCycle(); yield();
+
+      CmdProc::Cmd.respond();
+      
       print_sys_info();
+
+      if(CmdProc::Cmd.isSysLog()) CmdProc::Cmd.sendSysLog("syslog");
     }
   }
   doCycle();
@@ -91,6 +101,7 @@ void doCycle() {
   else if(dt<=CYCLE_TO<<2) Stat::StatStore.cnt[2]++;
   else Stat::StatStore.cnt[3]++;
 }
+
 void print_sys_info() {
   Serial.print("Heap sz: "); Serial.println(ESP.getFreeHeap());
   Serial.print("TO<="); Serial.print(CYCLE_TO); Serial.print(": "); Serial.print(Stat::StatStore.cnt[0]);

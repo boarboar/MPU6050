@@ -38,7 +38,8 @@ while(1) :
         addr = d[1]
          
         print 'Server reply : ' + reply
-     
-    except socket.error, msg:
-        print 'Error Code : ' + str(msg[0]) + ' Message ' + msg[1]
+    except socket.timeout as msg:
+        print 'Timeout'
+    except socket.error as msg:
+        print 'Error Code : %s' % msg
         sys.exit()
