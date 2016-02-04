@@ -1,4 +1,3 @@
-//#include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
 #include <ArduinoJson.h>
@@ -18,7 +17,6 @@ int16_t c_setsyslog(JsonObject&,JsonObject&);
 
 VFP cmd_imp[3]={c_info, c_reset, c_setsyslog};
 
-//const int BUF_SZ = 255; 
 const char *CMDS="INFO\0RST\0SYSL\0";
 enum CMDS_ID {CMD_INFO=0, CMD_RESET=1, CMD_SETSYSLOG=2, CMD_NOCMD=3};
 // {"I":1,"C":"INFO"}
@@ -56,6 +54,17 @@ boolean CmdProc::read() {
     int len = udp_rcv.read(packetBuffer, BUF_SZ);
     if(len>BUF_SZ-1) len=BUF_SZ-1;
     packetBuffer[len] = 0;    
+          /*
+      // dbg out
+      uint32_t m2=millis();
+      Serial.print("From: "); Serial.print(udp_rcv.remoteIP());
+      Serial.print(":"); Serial.print(udp_rcv.remotePort());
+      Serial.print(" len: "); Serial.print(len);
+      Serial.print(" T: "); Serial.print(m2-m1);
+      Serial.print(" Val: "); Serial.println(packetBuffer);
+      //
+      doCycle(); yield();
+      */      
   }
  return packetSize>0; 
 }
@@ -143,25 +152,10 @@ int16_t c_reset(JsonObject& root, JsonObject& rootOut) {
 }
 
 int16_t c_setsyslog(JsonObject& root, JsonObject& rootOut) {
-  
-    bool on = root["ON"]!=0;
-    /*
-    if(!log_on) {
-      Serial.println("Remote logging off..."); 
-      return 0;
-    }
-    */
-    long port = root["PORT"];
-    const char* addr = root["ADDR"];
-    /*
-    if(port==0 || addr==NULL || !*addr) {
-       log_on = false;
-       return -3;      
-    }
-
-    return CmdProc::Cmd.setLogger(addr, port) ? 0 : -3;
-    */
-    return CmdProc::Cmd.setLogger(on, addr, port) ? 0 : -3;
+  bool on = root["ON"]!=0;
+  long port = root["PORT"];
+  const char* addr = root["ADDR"];
+  return CmdProc::Cmd.setLogger(on, addr, port) ? 0 : -3;
 }
 
 

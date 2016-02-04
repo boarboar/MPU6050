@@ -9,15 +9,12 @@ void doCycle();
 const char* ssid = "NETGEAR";
 const char* password = "boarboar";
 const int udp_port = 4444;
-//const int BUF_SZ = 255;
 const int CYCLE_TO = 2;
-//bool isConnected=false;
-//char packetBuffer[BUF_SZ];
-//WiFiUDP udp_rcv;
-//WiFiUDP udp_snd;
+const int CYCLE_SLOW_TO = 1000;
 uint32_t last_cycle;
+uint32_t last_slow_cycle;
 
-//CmdProc cmd;
+CmdProc& cmd = CmdProc::Cmd; 
 
 void setup() {
   delay(2000);
@@ -32,8 +29,7 @@ void setup() {
     ESP.reset();
   }
 
-  if(/*udp_rcv.begin(udp_port)*/CmdProc::Cmd.init(udp_port)) {
-    //isConnected=true;
+  if(cmd.init(udp_port)) {
     Serial.print("Ready! Listening on ");
     Serial.print(WiFi.localIP());
     Serial.print(":");
@@ -43,49 +39,18 @@ void setup() {
   }  
   print_sys_info();
 
-  last_cycle=millis();
+  last_cycle=last_slow_cycle=millis();
 }
 
 void loop() {
-  if(/*isConnected*/CmdProc::Cmd.connected()) {
+  if(cmd.connected()) {
     uint32_t m1=millis();
-    //int packetSize = udp_rcv.parsePacket(); 
-    if (/*packetSize*/CmdProc::Cmd.read()) {
-      //int len = udp_rcv.read(packetBuffer, BUF_SZ);
-      //if(len>BUF_SZ-1) len=BUF_SZ-1;
-      //packetBuffer[len] = 0;    
- 
+    if (cmd.read()) {
       doCycle(); yield();
-      /*
-      // dbg out
-      uint32_t m2=millis();
-      Serial.print("From: "); Serial.print(udp_rcv.remoteIP());
-      Serial.print(":"); Serial.print(udp_rcv.remotePort());
-      Serial.print(" len: "); Serial.print(len);
-      Serial.print(" T: "); Serial.print(m2-m1);
-      Serial.print(" Val: "); Serial.println(packetBuffer);
-      //
+      cmd.doCmd();
       doCycle(); yield();
-      */
-      
-      //cmd.doCmd(packetBuffer);
-
-      CmdProc::Cmd.doCmd();
-
-     // resp
-     /*
-      udp_snd.beginPacket(udp_rcv.remoteIP(), udp_rcv.remotePort());
-      udp_snd.write(packetBuffer, strlen(packetBuffer));
-      udp_snd.endPacket();
-*/
-
-      doCycle(); yield();
-
-      CmdProc::Cmd.respond();
-      
+      cmd.respond();      
       print_sys_info();
-
-      if(CmdProc::Cmd.isSysLog()) CmdProc::Cmd.sendSysLog("syslog");
     }
   }
   doCycle();
@@ -100,6 +65,14 @@ void doCycle() {
   else if(dt<=CYCLE_TO<<1) Stat::StatStore.cnt[1]++;
   else if(dt<=CYCLE_TO<<2) Stat::StatStore.cnt[2]++;
   else Stat::StatStore.cnt[3]++;
+  dt=t-last_slow_cycle;
+  if(dt < CYCLE_SLOW_TO) return;
+  last_slow_cycle = t;
+  if(cmd.isSysLog()) {
+    char buf[32];
+    snprintf(buf, 32, "Cycle %d ms", dt);
+    cmd.sendSysLog(buf);
+  }
 }
 
 void print_sys_info() {
