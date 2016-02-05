@@ -1,64 +1,16 @@
 import sys
-import time
-import random
 import wx
 import wx.lib.newevent
-import threading
-import Queue
-import json
 
-#to_network = Queue.Queue()
+import json
+import draw
+import comm
+
 LogEvent, EVT_LOG_EVENT = wx.lib.newevent.NewEvent()
 UpdEvent, EVT_UPD_EVENT = wx.lib.newevent.NewEvent()
 
-class MyThread (threading.Thread):
-    def __init__(self,form):
-        self.__form = form
-        self.__q = Queue.Queue()
-        threading.Thread.__init__(self)
-    def put(self, msg):
-        self.__q.put_nowait(msg)
-    def run (self):
-      self.__form.LogString("Thread started")
-      while 1:
-          while not self.__q.empty():
-                message = self.__q.get()
-                self.__form.LogString(message)
-                js = json.dumps({"x": random.random(), "y": random.random()})
-                #self.__form.Update("resp", result='succ', x=random.random(), y=random.random())
-                self.__form.Update("resp", result='succ', data=js)
-        #time.sleep(1)
-
-class DrawPanel(wx.Window):
-    def __init__(self, parent):
-        wx.Window.__init__(self, parent, wx.ID_ANY, style=wx.SIMPLE_BORDER)
-        self.Bind(wx.EVT_PAINT, self.OnPaint)
-        self.points=[(0,0), (50, 50)]
-
-    def OnPaint(self, event=None):
-        dc = wx.PaintDC(self)
-        dc.Clear()
-        dc.SetPen(wx.Pen(wx.BLACK, 4))
-        #dc.DrawLine(0, 0, 50, 50)
-        #if len(self.points)>1 :
-        #dc.DrawLine(self.points[0][0], self.points[0][1], self.points[1][0], self.points[1][0])
-        for point in self.points:
-            dc.DrawCheckMark(point[0], point[1], 10, 10)
-
-    def AddPoint(self, xf, yf):
-        x=int(xf*100)
-        y=int(yf*100)
-        self.points.append((x, y))
-
-        #print self.points
-
-        dc = wx.ClientDC(self)
-        dc.DrawCheckMark(x, y, 10, 10)
-        dc.SetPen(wx.Pen(wx.BLACK, 4))
-
-
 class MyForm(wx.Frame):
-    LOG_LINES = 5
+    LOG_LINES = 20
     def __init__(self):
         wx.Frame.__init__(self, None,
                           title="Console")
@@ -66,7 +18,7 @@ class MyForm(wx.Frame):
         # Add a panel so it looks the correct on all platforms
         panel = wx.Panel(self, wx.ID_ANY)
         style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL
-        log = wx.TextCtrl(panel, wx.ID_ANY, size=(300,100),
+        log = wx.TextCtrl(panel, wx.ID_ANY, size=(400,200),
                           style=style)
         btn = wx.Button(panel, wx.ID_ANY, 'Send')
         self.Bind(wx.EVT_BUTTON, self.onButton, btn)
@@ -74,7 +26,7 @@ class MyForm(wx.Frame):
         btn1 = wx.Button(panel, wx.ID_ANY, 'Log test')
         self.Bind(wx.EVT_BUTTON, self.onButton1, btn1)
 
-        self.canvas = DrawPanel(panel)
+        self.canvas = draw.DrawPanel(panel)
 
         # Add widgets to a sizer
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -99,11 +51,8 @@ class MyForm(wx.Frame):
         self.Bind(EVT_LOG_EVENT, self.onLogEvent)
         self.Bind(EVT_UPD_EVENT, self.onUpdEvent)
 
-        #t = threading.Thread(target=loop)
-        t=MyThread(self)
-        t.setDaemon(1)
-        self.worker=t
-        t.start()
+        self.worker=comm.CommandThread(self)
+        self.worker.start()
 
     def AddLine(self, msg) :
         while self.log.GetNumberOfLines()>self.LOG_LINES:
