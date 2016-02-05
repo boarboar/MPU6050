@@ -2,6 +2,7 @@
 #include <WiFiUdp.h>
 #include "cmd.h"
 #include "stat.h"
+#include "mpu.h"
 
 void print_sys_info();
 void doCycle();
@@ -20,23 +21,34 @@ void setup() {
   delay(2000);
   Serial.begin(115200);
   WiFi.begin(ssid, password);
-  Serial.print("\nConnecting to "); Serial.println(ssid);
+  Serial.print(F("\nConnecting to ")); Serial.println(ssid);
   uint8_t i = 0;
   while (WiFi.status() != WL_CONNECTED && i++ < 20) delay(500);
   if(i == 21){
-    Serial.print("Could not connect to "); Serial.println(ssid);
+    Serial.print(F("Could not connect to ")); Serial.println(ssid);
     delay(10000);
     ESP.reset();
   }
 
   if(cmd.init(udp_port)) {
-    Serial.print("Ready! Listening on ");
+    Serial.print(F("Ready! Listening on "));
     Serial.print(WiFi.localIP());
     Serial.print(":");
     Serial.println(udp_port);
   } else {
-    Serial.println("Failed to init UDP socket!");
+    Serial.println(F("Failed to init UDP socket!"));
+    delay(1000);
+    ESP.reset();
   }  
+
+  if(MpuDrv::Mpu.init()) {
+    Serial.println(F("MPU Ready!"));
+  } else {
+    Serial.println(F("Failed to init MPU!"));
+    //delay(1000);
+    //ESP.reset();
+  }  
+
   print_sys_info();
 
   last_cycle=last_slow_cycle=millis();

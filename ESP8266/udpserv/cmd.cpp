@@ -21,13 +21,13 @@ const char *CMDS="INFO\0RST\0SYSL\0";
 enum CMDS_ID {CMD_INFO=0, CMD_RESET=1, CMD_SETSYSLOG=2, CMD_NOCMD=3};
 // {"I":1,"C":"INFO"}
 // {"I":1,"C":"RST"}
-// {"I":1,"C":"SYSL", "ON":1, "ADDR":"192.168.1.1", "PORT":4444}
+// {"I":1,"C":"SYSL", "ON":1, "ADDR":"192.168.1.141", "PORT":4444}
 
 
 boolean CmdProc::setLogger(bool on, const char *addr, uint16_t port) {
    log_on = on;
    if(!log_on) { 
-      Serial.println("Remote logging off..."); 
+      Serial.println(F("Remote logging off...")); 
       return true;
    }
    if(!port || !addr || !*addr) {
@@ -36,7 +36,7 @@ boolean CmdProc::setLogger(bool on, const char *addr, uint16_t port) {
    }   
    if(!WiFi.hostByName(addr, log_addr)) { log_on = false; return false; }
    log_port=port;
-   Serial.print("SET_SYSL:"); Serial.print(log_addr); Serial.print(":"); Serial.println(log_port);     
+   Serial.print(F("SET_SYSL:")); Serial.print(log_addr); Serial.print(":"); Serial.println(log_port);     
    return true;
 }
 
@@ -54,16 +54,9 @@ boolean CmdProc::read() {
     int len = udp_rcv.read(packetBuffer, BUF_SZ);
     if(len>BUF_SZ-1) len=BUF_SZ-1;
     packetBuffer[len] = 0;    
-          /*
-      // dbg out
-      uint32_t m2=millis();
-      Serial.print("From: "); Serial.print(udp_rcv.remoteIP());
-      Serial.print(":"); Serial.print(udp_rcv.remotePort());
-      Serial.print(" len: "); Serial.print(len);
-      Serial.print(" T: "); Serial.print(m2-m1);
-      Serial.print(" Val: "); Serial.println(packetBuffer);
-      //
-      doCycle(); yield();
+      /*
+      Serial.print("From: "); Serial.print(udp_rcv.remoteIP()); Serial.print(":"); Serial.print(udp_rcv.remotePort());
+      Serial.print(" len: "); Serial.print(len);Serial.print(" Val: "); Serial.println(packetBuffer);
       */      
   }
  return packetSize>0; 
@@ -76,30 +69,32 @@ void CmdProc::respond() {
 }
 
 
-int16_t CmdProc::doCmd(/*char *buf*/) {  
-  //if(!buf) return 0;
+int16_t CmdProc::doCmd() {    
   char bufout[BUF_SZ];
- {
   //StaticJsonBuffer<JSON_OBJECT_SIZE(4)> jsonBufferIn;
   //StaticJsonBuffer<JSON_OBJECT_SIZE(4)+ JSON_ARRAY_SIZE(4)> jsonBufferOut;
   StaticJsonBuffer<200> jsonBufferIn;
   StaticJsonBuffer<200> jsonBufferOut;
-  //JsonObject& root = jsonBufferIn.parseObject(buf);
   JsonObject& root = jsonBufferIn.parseObject(packetBuffer);
   JsonObject& rootOut = jsonBufferOut.createObject();
   _doCmd(root, rootOut);
-  rootOut.printTo(Serial);
+  //rootOut.printTo(Serial);
   rootOut.printTo(bufout, BUF_SZ-1);
- }
-  //strcpy(buf, bufout);     
   strcpy(packetBuffer, bufout);     
   return 0;
 }
 
 boolean CmdProc::sendSysLog(const char *buf) {
-  Serial.println("sending syslog...");
+  StaticJsonBuffer<200> jsonBufferOut;
+  JsonObject& rootOut = jsonBufferOut.createObject();
+  char bufout[BUF_SZ];
+  rootOut["S"] = "I";
+  rootOut["T"] = millis();
+  rootOut["M"] = buf;
+  rootOut.printTo(bufout, BUF_SZ-1);
+  //Serial.println("sending syslog...");
   udp_snd.beginPacket(log_addr, log_port);
-  udp_snd.write(buf, strlen(buf));
+  udp_snd.write(bufout, strlen(bufout));
   udp_snd.endPacket();  
 }
   
@@ -134,9 +129,9 @@ int16_t _doCmd(JsonObject& root, JsonObject& rootOut) {
 
 int16_t c_info(JsonObject& root, JsonObject& rootOut) {
   //Serial.println("INFO"); 
-  rootOut["fhs"]=ESP.getFreeHeap();
-  rootOut["fss"]=ESP.getFreeSketchSpace();
-  JsonArray& data = rootOut.createNestedArray("to");
+  rootOut["FHS"]=ESP.getFreeHeap();
+  rootOut["FSS"]=ESP.getFreeSketchSpace();
+  JsonArray& data = rootOut.createNestedArray("TO");
   data.add(Stat::StatStore.cnt[0]);
   data.add(Stat::StatStore.cnt[1]);
   data.add(Stat::StatStore.cnt[2]);
@@ -145,7 +140,7 @@ int16_t c_info(JsonObject& root, JsonObject& rootOut) {
 }
 
 int16_t c_reset(JsonObject& root, JsonObject& rootOut) {
-  Serial.println("Resetting..."); 
+  Serial.println(F("Resetting...")); 
   delay(1000);
   ESP.restart();
   return 0;
