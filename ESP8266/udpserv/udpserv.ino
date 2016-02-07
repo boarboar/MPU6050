@@ -2,6 +2,7 @@
 #include <WiFiUdp.h>
 #include "cmd.h"
 #include "stat.h"
+#include "cfg.h"
 #include "mpu.h"
 
 void print_sys_info();
@@ -9,9 +10,14 @@ void doCycle();
 
 const char* ssid = "NETGEAR";
 const char* password = "boarboar";
+const char* cfg_file = "/config.json";
 const int udp_port = 4444;
 const int CYCLE_TO = 2;
 const int CYCLE_SLOW_TO = 1000;
+const int MPU_SDA=0;
+const int MPU_SDL=2;
+const int MPU_INT=15;
+
 uint32_t last_cycle;
 uint32_t last_slow_cycle;
 
@@ -30,6 +36,11 @@ void setup() {
     ESP.reset();
   }
 
+  if(CfgDrv::Cfg.init() && CfgDrv::Cfg.load(cfg_file)) {
+    Serial.println("Cfg loaded");
+  } else {
+    Serial.println(F("Failed to load cfg, using default!"));
+  }
   if(cmd.init(udp_port)) {
     Serial.print(F("Ready! Listening on "));
     Serial.print(WiFi.localIP());
@@ -41,7 +52,7 @@ void setup() {
     ESP.reset();
   }  
 
-  if(MpuDrv::Mpu.init()) {
+  if(MpuDrv::Mpu.init(MPU_SDA, MPU_SDL, MPU_INT)) { //sda, sdl, intr
     Serial.println(F("MPU Ready!"));
   } else {
     Serial.println(F("Failed to init MPU!"));
@@ -73,6 +84,7 @@ void doCycle() {
   uint16_t dt=t-last_cycle;
   if(dt < CYCLE_TO) return;
   last_cycle = t;
+  MpuDrv::Mpu.cycle(dt);
   if(dt<=CYCLE_TO) Stat::StatStore.cnt[0]++;
   else if(dt<=CYCLE_TO<<1) Stat::StatStore.cnt[1]++;
   else if(dt<=CYCLE_TO<<2) Stat::StatStore.cnt[2]++;
