@@ -83,6 +83,7 @@ int16_t CfgDrv::store(const char* fname) {
 }
 
 bool CfgDrv::setSysLog(JsonObject& root) {
+  dirty=true; // should be only if chg!!!
   bool on = root["ON"]!=0;
   long port = root["PORT"];
   const char* addr = root["ADDR"];
@@ -97,6 +98,7 @@ bool CfgDrv::setSysLog(JsonObject& root) {
   }     
   if(!WiFi.hostByName(addr, log_addr)) { log_on = false; return false; }
   log_port=port;
+  log_on=true;
   Serial.print(F("SET_SYSL:")); Serial.print(log_addr); Serial.print(":"); Serial.println(Cfg.log_port);     
   return true;
 }

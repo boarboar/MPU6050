@@ -74,7 +74,7 @@ void loop() {
       cmd.doCmd();
       doCycle(); yield();
       cmd.respond();      
-      print_sys_info();
+      //print_sys_info();
     }
   }
   doCycle();
