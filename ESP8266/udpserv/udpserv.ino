@@ -1,5 +1,6 @@
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
+#include <ArduinoJson.h>
 #include "cmd.h"
 #include "stat.h"
 #include "cfg.h"
@@ -92,6 +93,7 @@ void doCycle() {
   dt=t-last_slow_cycle;
   if(dt < CYCLE_SLOW_TO) return;
   last_slow_cycle = t;
+  if(CfgDrv::Cfg.isDirty()) CfgDrv::Cfg.store(cfg_file);
   if(cmd.isSysLog()) {
     char buf[32];
     snprintf(buf, 32, "Cycle %d ms", dt);

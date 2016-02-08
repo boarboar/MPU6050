@@ -4,7 +4,7 @@
 
 #include "cmd.h"
 #include "stat.h"
-
+#include "cfg.h"
 
 CmdProc CmdProc::Cmd; // singleton
 
@@ -23,22 +23,6 @@ enum CMDS_ID {CMD_INFO=0, CMD_RESET=1, CMD_SETSYSLOG=2, CMD_NOCMD=3};
 // {"I":1,"C":"RST"}
 // {"I":1,"C":"SYSL", "ON":1, "ADDR":"192.168.1.141", "PORT":4444}
 
-
-boolean CmdProc::setLogger(bool on, const char *addr, uint16_t port) {
-   log_on = on;
-   if(!log_on) { 
-      Serial.println(F("Remote logging off...")); 
-      return true;
-   }
-   if(!port || !addr || !*addr) {
-      log_on = false;
-      return false;
-   }   
-   if(!WiFi.hostByName(addr, log_addr)) { log_on = false; return false; }
-   log_port=port;
-   Serial.print(F("SET_SYSL:")); Serial.print(log_addr); Serial.print(":"); Serial.println(log_port);     
-   return true;
-}
 
 int16_t CmdProc::init(uint16_t port) {
   if(udp_rcv.begin(port)) {
@@ -84,7 +68,31 @@ int16_t CmdProc::doCmd() {
   return 0;
 }
 
+/*
+boolean CmdProc::setLogger(bool on, const char *addr, uint16_t port) {
+   //log_on = on;
+   if(!on) { 
+      Serial.println(F("Remote logging off...")); 
+      CfgDrv::Cfg.log_on=false;
+      return true;
+   }
+   
+   if(!port || !addr || !*addr) {
+      CfgDrv::Cfg.log_on = false;
+      return false;
+   } 
+     
+   if(!WiFi.hostByName(addr, CfgDrv::Cfg.log_addr)) { CfgDrv::Cfg.log_on = false; return false; }
+   CfgDrv::Cfg.log_port=port;
+   Serial.print(F("SET_SYSL:")); Serial.print(CfgDrv::Cfg.log_addr); Serial.print(":"); Serial.println(CfgDrv::Cfg.log_port);     
+   return true;
+}
+*/
+
+boolean CmdProc::isSysLog() { return CfgDrv::Cfg.log_on;}
+
 boolean CmdProc::sendSysLog(const char *buf) {
+  if(!CfgDrv::Cfg.log_on) return false;
   StaticJsonBuffer<200> jsonBufferOut;
   JsonObject& rootOut = jsonBufferOut.createObject();
   char bufout[BUF_SZ];
@@ -93,7 +101,7 @@ boolean CmdProc::sendSysLog(const char *buf) {
   rootOut["M"] = buf;
   rootOut.printTo(bufout, BUF_SZ-1);
   //Serial.println("sending syslog...");
-  udp_snd.beginPacket(log_addr, log_port);
+  udp_snd.beginPacket(CfgDrv::Cfg.log_addr, CfgDrv::Cfg.log_port);
   udp_snd.write(bufout, strlen(bufout));
   udp_snd.endPacket();  
 }
@@ -147,10 +155,13 @@ int16_t c_reset(JsonObject& root, JsonObject& rootOut) {
 }
 
 int16_t c_setsyslog(JsonObject& root, JsonObject& rootOut) {
+  /*
   bool on = root["ON"]!=0;
   long port = root["PORT"];
   const char* addr = root["ADDR"];
   return CmdProc::Cmd.setLogger(on, addr, port) ? 0 : -3;
+  */
+  return CfgDrv::Cfg.setSysLog(root) ? 0 : -3;
 }
 
 
