@@ -4,7 +4,8 @@ import wx.lib.newevent
 
 import json
 import draw
-import comm
+import controller
+import model
 
 LogEvent, EVT_LOG_EVENT = wx.lib.newevent.NewEvent()
 UpdEvent, EVT_UPD_EVENT = wx.lib.newevent.NewEvent()
@@ -20,11 +21,14 @@ class MyForm(wx.Frame):
         style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL
         log = wx.TextCtrl(panel, wx.ID_ANY, size=(400,200),
                           style=style)
-        btn = wx.Button(panel, wx.ID_ANY, 'Send')
-        self.Bind(wx.EVT_BUTTON, self.onButton, btn)
+        btn_st = wx.Button(panel, wx.ID_ANY, 'Status')
+        self.Bind(wx.EVT_BUTTON, self.onStatusReq, btn_st)
 
-        btn1 = wx.Button(panel, wx.ID_ANY, 'Log test')
-        self.Bind(wx.EVT_BUTTON, self.onButton1, btn1)
+        btn_pos = wx.Button(panel, wx.ID_ANY, 'Pos')
+        self.Bind(wx.EVT_BUTTON, self.onPositionReq, btn_pos)
+
+        btn_dump = wx.Button(panel, wx.ID_ANY, 'Dump')
+        self.Bind(wx.EVT_BUTTON, self.onDumpModel, btn_dump)
 
         self.canvas = draw.DrawPanel(panel)
 
@@ -38,8 +42,9 @@ class MyForm(wx.Frame):
 
         sizer_pan.Add(self.canvas, 1, wx.ALL|wx.EXPAND, 5)
         sizer_pan.Add(sizer_ctrls, 0, wx.ALL|wx.RIGHT, 5)
-        sizer_ctrls.Add(btn, 0, wx.ALL|wx.CENTER, 5)
-        sizer_ctrls.Add(btn1, 0, wx.ALL|wx.CENTER, 5)
+        sizer_ctrls.Add(btn_st, 0, wx.ALL|wx.CENTER, 5)
+        sizer_ctrls.Add(btn_pos, 0, wx.ALL|wx.CENTER, 5)
+        sizer_ctrls.Add(btn_dump, 0, wx.ALL|wx.CENTER, 5)
         panel.SetSizer(sizer)
         panel.SetAutoLayout(True)
         sizer.Fit(panel)
@@ -50,9 +55,8 @@ class MyForm(wx.Frame):
         self.logcnt=0
         self.Bind(EVT_LOG_EVENT, self.onLogEvent)
         self.Bind(EVT_UPD_EVENT, self.onUpdEvent)
-
-        self.worker=comm.CommandThread(self)
-        self.worker.start()
+        self.model=model.Model("ROBO")
+        self.controller=controller.Controller(self, self.model)
 
     def AddLine(self, msg) :
         while self.log.GetNumberOfLines()>self.LOG_LINES:
@@ -66,23 +70,26 @@ class MyForm(wx.Frame):
         event = LogEvent(msg=message, **kwargs)
         wx.PostEvent(self, event)
 
-    def Update(self, message, **kwargs) :
-        event = UpdEvent(msg=message, **kwargs)
+    def UpdatePos(self, **kwargs) :
+        event = UpdEvent(**kwargs)
         wx.PostEvent(self, event)
 
-    def onButton(self, event):
-        self.worker.put("Message to send")
+    def onStatusReq(self, event):
+        self.controller.reqStatus()
 
-    def onButton1(self, event):
-        self.LogString("LogTest")
+    def onPositionReq(self, event):
+        self.controller.reqPosition()
+
+    def onDumpModel(self, event):
+        self.LogString(str(self.model))
 
     def onLogEvent(self, evt):
         self.AddLine(evt.msg)
 
     def onUpdEvent(self, evt):
-        self.AddLine("%s as %s with %s" % (evt.msg, evt.result, evt.data))
-        parsed_json = json.loads(evt.data)
-        self.canvas.AddPoint(parsed_json["x"], parsed_json["y"])
+
+        self.AddLine("POS %s as %s" % (self.model["X"], self.model["Y"]))
+        self.canvas.AddPoint(self.model["X"], self.model["Y"])
 
 # Run the program
 if __name__ == "__main__":

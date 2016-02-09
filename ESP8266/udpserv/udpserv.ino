@@ -61,7 +61,7 @@ void setup() {
     //ESP.reset();
   }  
 
-  print_sys_info();
+  //print_sys_info();
 
   last_cycle=last_slow_cycle=millis();
 }
@@ -101,6 +101,7 @@ void doCycle() {
   }
 }
 
+/*
 void print_sys_info() {
   Serial.print("Heap sz: "); Serial.println(ESP.getFreeHeap());
   Serial.print("TO<="); Serial.print(CYCLE_TO); Serial.print(": "); Serial.print(Stat::StatStore.cnt[0]);
@@ -108,3 +109,4 @@ void print_sys_info() {
   Serial.print(" TO<="); Serial.print(CYCLE_TO<<2); Serial.print(": "); Serial.print(Stat::StatStore.cnt[2]);
   Serial.print(" TO>"); Serial.print(CYCLE_TO<<2); Serial.print(": "); Serial.println(Stat::StatStore.cnt[3]);
 }
+*/

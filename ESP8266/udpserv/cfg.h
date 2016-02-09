@@ -7,7 +7,7 @@ public:
   bool isDirty() { return dirty; }
   bool setSysLog(JsonObject& root);
 public:
-  boolean log_on;  
+  uint8_t log_on, debug_on;  
   IPAddress log_addr;
   uint16_t log_port;  
 protected:  

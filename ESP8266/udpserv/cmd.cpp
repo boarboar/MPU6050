@@ -68,27 +68,6 @@ int16_t CmdProc::doCmd() {
   return 0;
 }
 
-/*
-boolean CmdProc::setLogger(bool on, const char *addr, uint16_t port) {
-   //log_on = on;
-   if(!on) { 
-      Serial.println(F("Remote logging off...")); 
-      CfgDrv::Cfg.log_on=false;
-      return true;
-   }
-   
-   if(!port || !addr || !*addr) {
-      CfgDrv::Cfg.log_on = false;
-      return false;
-   } 
-     
-   if(!WiFi.hostByName(addr, CfgDrv::Cfg.log_addr)) { CfgDrv::Cfg.log_on = false; return false; }
-   CfgDrv::Cfg.log_port=port;
-   Serial.print(F("SET_SYSL:")); Serial.print(CfgDrv::Cfg.log_addr); Serial.print(":"); Serial.println(CfgDrv::Cfg.log_port);     
-   return true;
-}
-*/
-
 boolean CmdProc::isSysLog() { return CfgDrv::Cfg.log_on;}
 
 boolean CmdProc::sendSysLog(const char *buf) {
@@ -155,12 +134,6 @@ int16_t c_reset(JsonObject& root, JsonObject& rootOut) {
 }
 
 int16_t c_setsyslog(JsonObject& root, JsonObject& rootOut) {
-  /*
-  bool on = root["ON"]!=0;
-  long port = root["PORT"];
-  const char* addr = root["ADDR"];
-  return CmdProc::Cmd.setLogger(on, addr, port) ? 0 : -3;
-  */
   return CfgDrv::Cfg.setSysLog(root) ? 0 : -3;
 }
 
