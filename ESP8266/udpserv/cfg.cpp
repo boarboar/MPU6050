@@ -37,12 +37,15 @@ int16_t CfgDrv::load(const char* fname) {
   }
   size_t size = f.size();
   int c=0;
-  char *p = buf;
+  //char *p = buf;
   while(c!=-1) { // while !EOF
+    char *p = buf;
     while(1) { // new line
       c=f.read();
+      //Serial.println((char)c);
       if(c==-1 || c=='\n'  || c=='\r') break;
-      if(p-buf<MAX_CFG_LINE_SZ-1) *p++=c; 
+      if(p-buf<MAX_CFG_LINE_SZ-1) *p++=c;
+       
     }
     if(p>buf) { //non-empty
       *p=0; 
@@ -59,6 +62,7 @@ int16_t CfgDrv::load(const char* fname) {
     } // new line
   } // while !EOF
   f.close();
+  dirty=false;
   uint16_t t=millis()-ms1;
   Serial.print(F("Cfg sz ")); Serial.print(size); Serial.print(F(", read in ")); Serial.println(t);
   return 1;
@@ -80,6 +84,7 @@ int16_t CfgDrv::store(const char* fname) {
   json["C"]="DBG";
   json["ON"]=debug_on;
   json.printTo(f);
+  f.write('\n');
   }
   {
   //{"C":"SYSL", "ON":1, "ADDR":"192.168.1.141", "PORT":4444}
@@ -91,6 +96,7 @@ int16_t CfgDrv::store(const char* fname) {
   json["PORT"]=log_port;
   json["ADDR"]=addr;
   json.printTo(f);
+  f.write('\n');
   }
   {
   //{"C":"TODO", "ON":1}
@@ -123,7 +129,7 @@ bool CfgDrv::setSysLog(JsonObject& root) {
     return false;
   }     
   if(!WiFi.hostByName(addr, newaddr)) { /*log_on = false;*/ return false; }
-  if(log_addr==newaddr && log_port==port && on) return true;
+  if(log_addr==newaddr && log_port==port && log_on) return true;
   log_addr=newaddr;
   log_port=port;
   log_on=1;
