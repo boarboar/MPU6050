@@ -17,9 +17,7 @@ class DrawPanel(wx.Window):
         for point in self.points:
             dc.DrawCheckMark(point[0], point[1], 10, 10)
 
-    def AddPoint(self, xf, yf):
-        x=int(xf*100)
-        y=int(yf*100)
+    def AddPoint(self, x, y):
         self.points.append((x, y))
 
         #print self.points

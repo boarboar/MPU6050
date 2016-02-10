@@ -1,10 +1,20 @@
 import json
 import threading
 import copy
+import socket
 
 class Model(dict):
     def __init__(self, name=None):
         self["NAME"] = name
+        self["MOCKUP"] = True
+        #self["DEVADDR"] = "192.168.1.129"
+        self["DEVADDR"] = str(socket.gethostbyname(socket.gethostname()))
+        self["DEVPORT"] = "4444"
+        self["LISTENPORT"] = "4444"
+        self["FHS"]=0
+        self["FSS"]=0
+        self["X"]=0
+        self["Y"]=0
         self.__lock=threading.Lock()
     def __getitem__(self, key):
         self.__lock.acquire()
@@ -13,7 +23,6 @@ class Model(dict):
         except KeyError: value=None
         finally: self.__lock.release()
         return value
-
     def update(self, js):
         resp_json = json.loads(js)
         self.__lock.acquire()
