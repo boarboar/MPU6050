@@ -93,9 +93,9 @@ boolean CmdProc::sendSysLogStatus() {
   char bufout[BUF_SZ];
   rootOut["S"] = "I";
   rootOut["T"] = millis();
-  rootOut["O"] = 1; // on/off
-  rootOut["X"] = rand()*100;
-  rootOut["Y"] = rand()*100;
+  rootOut["R"] = 0; // OK
+  rootOut["X"] = rand()%100;
+  rootOut["Y"] = rand()%100;
   rootOut.printTo(bufout, BUF_SZ-1);
   //Serial.println("sending syslog...");
   udp_snd.beginPacket(CfgDrv::Cfg.log_addr, CfgDrv::Cfg.log_port);
@@ -156,10 +156,9 @@ int16_t c_setsyslog(JsonObject& root, JsonObject& rootOut) {
 }
 
 int16_t c_getpos(JsonObject& root, JsonObject& rootOut) {
-  rootOut["O"] = 1; // tracking on/off
-  rootOut["X"] = rand()*100;
-  rootOut["Y"] = rand()*100;
-  return 0;
+  rootOut["X"] = rand()%100;
+  rootOut["Y"] = rand()%100;
+  return 0; // -5 if racking off
 }
 
 
