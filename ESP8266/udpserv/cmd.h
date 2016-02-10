@@ -11,6 +11,7 @@ public:
   void  respond();
   boolean isSysLog(); // { return log_on;}
   boolean sendSysLog(const char *buf);
+  boolean sendSysLogStatus();
 protected:
   CmdProc() : isConnected(false) {;}
   char packetBuffer[BUF_SZ];

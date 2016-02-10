@@ -5,6 +5,11 @@
 #include "cfg.h"
 
 #define MAX_CFG_LINE_SZ 80
+
+const int NCFGS=3; 
+const char *CFG_NAMES[]={"DBG", "SYSL", "TODO"};
+enum CFG_ID {CFG_DBG=0, CFG_SYSL=1, CFG_TODO=2};
+
 /*
  * 
  * SPIFFS.open and dir.openFile functions return a File object. 
@@ -37,15 +42,14 @@ int16_t CfgDrv::load(const char* fname) {
   }
   size_t size = f.size();
   int c=0;
-  //char *p = buf;
+
   while(c!=-1) { // while !EOF
     char *p = buf;
     while(1) { // new line
       c=f.read();
       //Serial.println((char)c);
       if(c==-1 || c=='\n'  || c=='\r') break;
-      if(p-buf<MAX_CFG_LINE_SZ-1) *p++=c;
-       
+      if(p-buf<MAX_CFG_LINE_SZ-1) *p++=c;       
     }
     if(p>buf) { //non-empty
       *p=0; 
@@ -77,7 +81,29 @@ int16_t CfgDrv::store(const char* fname) {
     Serial.println(F("Failed to open config file (w)"));
     return 0;
   }
-  {
+
+  for(int i=0; i<NCFGS; i++) {
+    StaticJsonBuffer<200> jsonBuffer;
+    JsonObject& json = jsonBuffer.createObject();
+    Serial.print(F("Writing ")); Serial.println(CFG_NAMES[i]);
+    json["C"]=CFG_NAMES[i];
+    switch(i) {
+      case CFG_DBG: json["ON"]=debug_on; break;
+      case CFG_SYSL: {
+        String addr = log_addr.toString();
+        json["ON"]=log_on;
+        json["PORT"]=log_port;
+        json["ADDR"]=addr;
+        break;
+      }
+      case CFG_TODO: json["ON"]=3; break;  
+      default:;    
+    }
+    json.printTo(f);
+    f.write('\n');
+  }
+  
+  /*
   //{"C":"DBG", "ON":1}
   StaticJsonBuffer<200> jsonBuffer;
   JsonObject& json = jsonBuffer.createObject();
@@ -88,9 +114,9 @@ int16_t CfgDrv::store(const char* fname) {
   }
   {
   //{"C":"SYSL", "ON":1, "ADDR":"192.168.1.141", "PORT":4444}
-  String addr = log_addr.toString();
   StaticJsonBuffer<200> jsonBuffer;
   JsonObject& json = jsonBuffer.createObject();
+  String addr = log_addr.toString();
   json["C"]="SYSL";
   json["ON"]=log_on;
   json["PORT"]=log_port;
@@ -106,6 +132,7 @@ int16_t CfgDrv::store(const char* fname) {
   json["ON"]=3;
   json.printTo(f);
   }
+  */
   f.close();
   uint16_t t=millis()-ms1;
   Serial.print(F("Cfg written in ")); Serial.println(t);
@@ -124,12 +151,8 @@ bool CfgDrv::setSysLog(JsonObject& root) {
     dirty=true; 
     return true;
   }  
-  if(!port || !addr || !*addr) {
-    //log_on = false;
-    return false;
-  }     
-  if(!WiFi.hostByName(addr, newaddr)) { /*log_on = false;*/ return false; }
-  if(log_addr==newaddr && log_port==port && log_on) return true;
+  if(!port || !addr || !*addr || !WiFi.hostByName(addr, newaddr)) return false;    
+  if(log_addr==newaddr && log_port==port && log_on) return true; // nothing to change
   log_addr=newaddr;
   log_port=port;
   log_on=1;

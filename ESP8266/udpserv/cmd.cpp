@@ -14,15 +14,16 @@ int16_t _doCmd(JsonObject&,JsonObject&);
 int16_t c_info(JsonObject&,JsonObject&);
 int16_t c_reset(JsonObject&,JsonObject&);
 int16_t c_setsyslog(JsonObject&,JsonObject&);
+int16_t c_getpos(JsonObject&,JsonObject&);
 
-VFP cmd_imp[3]={c_info, c_reset, c_setsyslog};
+VFP cmd_imp[4]={c_info, c_reset, c_setsyslog, c_getpos};
 
-const char *CMDS="INFO\0RST\0SYSL\0";
-enum CMDS_ID {CMD_INFO=0, CMD_RESET=1, CMD_SETSYSLOG=2, CMD_NOCMD=3};
+const char *CMDS="INFO\0RST\0SYSL\0POS\0";
+enum CMDS_ID {CMD_INFO=0, CMD_RESET=1, CMD_SETSYSLOG=2, CMD_POS=3, CMD_NOCMD=4};
 // {"I":1,"C":"INFO"}
 // {"I":1,"C":"RST"}
 // {"I":1,"C":"SYSL", "ON":1, "ADDR":"192.168.1.141", "PORT":4444}
-
+// {"I":1,"C":"POS"}
 
 int16_t CmdProc::init(uint16_t port) {
   if(udp_rcv.begin(port)) {
@@ -84,7 +85,24 @@ boolean CmdProc::sendSysLog(const char *buf) {
   udp_snd.write(bufout, strlen(bufout));
   udp_snd.endPacket();  
 }
-  
+
+boolean CmdProc::sendSysLogStatus() {
+  if(!CfgDrv::Cfg.log_on) return false;
+  StaticJsonBuffer<200> jsonBufferOut;
+  JsonObject& rootOut = jsonBufferOut.createObject();
+  char bufout[BUF_SZ];
+  rootOut["S"] = "I";
+  rootOut["T"] = millis();
+  rootOut["O"] = 1; // on/off
+  rootOut["X"] = rand()*100;
+  rootOut["Y"] = rand()*100;
+  rootOut.printTo(bufout, BUF_SZ-1);
+  //Serial.println("sending syslog...");
+  udp_snd.beginPacket(CfgDrv::Cfg.log_addr, CfgDrv::Cfg.log_port);
+  udp_snd.write(bufout, strlen(bufout));
+  udp_snd.endPacket();  
+}
+
 int16_t _doCmd(JsonObject& root, JsonObject& rootOut) {  
   if (!root.success()) {
     //Serial.println("parseObject() failed");
@@ -135,6 +153,13 @@ int16_t c_reset(JsonObject& root, JsonObject& rootOut) {
 
 int16_t c_setsyslog(JsonObject& root, JsonObject& rootOut) {
   return CfgDrv::Cfg.setSysLog(root) ? 0 : -3;
+}
+
+int16_t c_getpos(JsonObject& root, JsonObject& rootOut) {
+  rootOut["O"] = 1; // tracking on/off
+  rootOut["X"] = rand()*100;
+  rootOut["Y"] = rand()*100;
+  return 0;
 }
 
 

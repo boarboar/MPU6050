@@ -60,9 +60,6 @@ void setup() {
     //delay(1000);
     //ESP.reset();
   }  
-
-  //print_sys_info();
-
   last_cycle=last_slow_cycle=millis();
 }
 
@@ -74,7 +71,6 @@ void loop() {
       cmd.doCmd();
       doCycle(); yield();
       cmd.respond();      
-      //print_sys_info();
     }
   }
   doCycle();
@@ -95,9 +91,12 @@ void doCycle() {
   last_slow_cycle = t;
   if(CfgDrv::Cfg.isDirty()) CfgDrv::Cfg.store(cfg_file);
   if(cmd.isSysLog()) {
+    /*
     char buf[32];
     snprintf(buf, 32, "Cycle %d ms", dt);
     cmd.sendSysLog(buf);
+    */
+    cmd.sendSysLogStatus();
   }
 }
 
