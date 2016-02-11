@@ -26,12 +26,13 @@ class MyForm(wx.Frame):
         self.statusbar.SetStatusText("---,----", 1)
         # Add a panel so it looks the correct on all platforms
         panel = wx.Panel(self, wx.ID_ANY)
-        self.log = wx.TextCtrl(panel, wx.ID_ANY, size=(400,400), style=wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL)
+        self.log = wx.TextCtrl(panel, wx.ID_ANY, size=(400,200), style=wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL)
         self.btn_st = wx.Button(panel, wx.ID_ANY, 'Status')
         self.btn_pos = wx.Button(panel, wx.ID_ANY, 'Pos')
+        self.btn_upl = wx.Button(panel, wx.ID_ANY, 'Upload')
         self.btn_dump = wx.Button(panel, wx.ID_ANY, 'Dump')
-        #self.txtFreeMem=wx.StaticText(panel, -1, "---")
-        #self.txtPos=wx.StaticText(panel, -1, "---,---")
+        self.txt_cmd = wx.TextCtrl(panel)
+        self.btn_cmd = wx.Button(panel, wx.ID_ANY, 'Send')
         self.canvas = draw.DrawPanel(panel)
         self.layout(panel)
         # redirect text here
@@ -42,7 +43,9 @@ class MyForm(wx.Frame):
         self.Bind(EVT_UPD_EVENT, self.onUpdEvent)
         self.Bind(wx.EVT_BUTTON, self.onStatusReq, self.btn_st)
         self.Bind(wx.EVT_BUTTON, self.onPositionReq, self.btn_pos)
+        self.Bind(wx.EVT_BUTTON, self.onUploadReq, self.btn_upl)
         self.Bind(wx.EVT_BUTTON, self.onDumpModel, self.btn_dump)
+        self.Bind(wx.EVT_BUTTON, self.onSendCmd, self.btn_cmd)
         self.model=model.Model("ROBO")
         self.controller=controller.Controller(self, self.model)
 
@@ -51,17 +54,22 @@ class MyForm(wx.Frame):
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer_pan = wx.BoxSizer(wx.HORIZONTAL)
         sizer_ctrls = wx.BoxSizer(wx.VERTICAL)
+        sizer_cmd = wx.BoxSizer(wx.HORIZONTAL)
 
-        sizer.Add(sizer_pan, 3, wx.ALL|wx.EXPAND, 5)
+        sizer.Add(sizer_pan, 2, wx.ALL|wx.EXPAND, 5)
         sizer.Add(self.log, 1, wx.ALL|wx.EXPAND, 5)
+        sizer.Add(sizer_cmd, 0, wx.ALL|wx.EXPAND, 5)
 
         sizer_pan.Add(self.canvas, 1, wx.ALL|wx.EXPAND, 5)
         sizer_pan.Add(sizer_ctrls, 0, wx.ALL|wx.RIGHT, 5)
         sizer_ctrls.Add(self.btn_st, 0, wx.ALL|wx.CENTER, 5)
         sizer_ctrls.Add(self.btn_pos, 0, wx.ALL|wx.CENTER, 5)
+        sizer_ctrls.Add(self.btn_upl, 0, wx.ALL|wx.CENTER, 5)
         sizer_ctrls.Add(self.btn_dump, 0, wx.ALL|wx.CENTER, 5)
-        #sizer_ctrls.Add(self.txtFreeMem, 0, wx.ALL|wx.LEFT, 5)
-        #sizer_ctrls.Add(self.txtPos, 0, wx.ALL|wx.LEFT, 5)
+
+        sizer_cmd.Add(self.txt_cmd, 10, wx.ALL|wx.CENTER, 5)
+        sizer_cmd.Add(self.btn_cmd, 0, wx.ALL|wx.CENTER, 5)
+
         panel.SetSizer(sizer)
         #panel.SetAutoLayout(True)
         panel.Layout()
@@ -97,8 +105,14 @@ class MyForm(wx.Frame):
     def onPositionReq(self, event):
         self.controller.reqPosition()
 
+    def onUploadReq(self, event):
+        self.controller.reqUpload()
+
     def onDumpModel(self, event):
         self.LogString(str(self.model))
+
+    def onSendCmd(self, event):
+        self.controller.reqCmdRaw(self.txt_cmd.GetValue())
 
     def onLogEvent(self, evt):
         self.AddLine(evt.msg)

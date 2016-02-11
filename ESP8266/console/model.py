@@ -4,9 +4,9 @@ import copy
 import socket
 
 class Model(dict):
-    def __init__(self, name=None):
+    def __init__(self, name=None, mock=False):
         self["NAME"] = name
-        self["MOCKUP"] = True
+        self["MOCKUP"] = mock
         #self["DEVADDR"] = "192.168.1.129"
         self["DEVADDR"] = str(socket.gethostbyname(socket.gethostname()))
         self["DEVPORT"] = "4444"
@@ -23,8 +23,8 @@ class Model(dict):
         except KeyError: value=None
         finally: self.__lock.release()
         return value
-    def update(self, js):
-        resp_json = json.loads(js)
+    def update(self, resp_json):
+        #resp_json = json.loads(js)
         self.__lock.acquire()
         try:
             if resp_json["C"]=="INFO" :

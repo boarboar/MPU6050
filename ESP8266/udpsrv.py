@@ -4,6 +4,7 @@
  
 import socket
 import sys
+import json
  
 host = ''   # Symbolic name meaning all available interfaces
 port = 4444 # Arbitrary non-privileged port
@@ -47,6 +48,10 @@ while 1:
         #reply = 'OK...' + data   
         #s.sendto(reply , addr)
         print 'Message[' + addr[0] + ':' + str(addr[1]) + '] - ' + data.strip()
+        js=json.loads(data.strip())
+        js.update({"R":0, "FHS":99999})
+        #js["I"]=99
+        s.sendto(json.dumps(js) , addr)
     except socket.timeout:
 #        print 'Timeout'
         continue
