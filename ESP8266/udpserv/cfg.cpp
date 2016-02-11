@@ -10,15 +10,9 @@ const int NCFGS=3;
 const char *CFG_NAMES[]={"DBG", "SYSL", "TODO"};
 enum CFG_ID {CFG_DBG=0, CFG_SYSL=1, CFG_TODO=2};
 
-/*
- * 
- * SPIFFS.open and dir.openFile functions return a File object. 
- * This object supports all the functions of Stream, so you can use readBytes, findUntil, parseInt, println, and all other Stream methods.
-There are also some functions which are specific to File object.
- */
 CfgDrv CfgDrv::Cfg; // singleton
 
-CfgDrv::CfgDrv() : fs_ok(false), dirty(false), debug_on(0), log_on(0), log_port(0) {;}
+CfgDrv::CfgDrv() : fs_ok(false), dirty(false), last_chg(0), debug_on(0), log_on(0), log_port(0) {;}
 
 int16_t CfgDrv::init() {
   fs_ok=SPIFFS.begin();
@@ -81,7 +75,6 @@ int16_t CfgDrv::store(const char* fname) {
     Serial.println(F("Failed to open config file (w)"));
     return 0;
   }
-
   for(int i=0; i<NCFGS; i++) {
     StaticJsonBuffer<200> jsonBuffer;
     JsonObject& json = jsonBuffer.createObject();
@@ -102,41 +95,14 @@ int16_t CfgDrv::store(const char* fname) {
     json.printTo(f);
     f.write('\n');
   }
-  
-  /*
-  //{"C":"DBG", "ON":1}
-  StaticJsonBuffer<200> jsonBuffer;
-  JsonObject& json = jsonBuffer.createObject();
-  json["C"]="DBG";
-  json["ON"]=debug_on;
-  json.printTo(f);
-  f.write('\n');
-  }
-  {
-  //{"C":"SYSL", "ON":1, "ADDR":"192.168.1.141", "PORT":4444}
-  StaticJsonBuffer<200> jsonBuffer;
-  JsonObject& json = jsonBuffer.createObject();
-  String addr = log_addr.toString();
-  json["C"]="SYSL";
-  json["ON"]=log_on;
-  json["PORT"]=log_port;
-  json["ADDR"]=addr;
-  json.printTo(f);
-  f.write('\n');
-  }
-  {
-  //{"C":"TODO", "ON":1}
-  StaticJsonBuffer<200> jsonBuffer;
-  JsonObject& json = jsonBuffer.createObject();
-  json["C"]="TODO";
-  json["ON"]=3;
-  json.printTo(f);
-  }
-  */
   f.close();
   uint16_t t=millis()-ms1;
   Serial.print(F("Cfg written in ")); Serial.println(t);
   return 1;
+}
+
+bool CfgDrv::needToStore() {
+  return dirty && (millis()-last_chg)/1000>CfgDrv::LAZY_WRITE_TIMEOUT;
 }
 
 bool CfgDrv::setSysLog(JsonObject& root) {
@@ -149,6 +115,7 @@ bool CfgDrv::setSysLog(JsonObject& root) {
     Serial.println(F("SET_SYSL OFF")); 
     log_on=0;
     dirty=true; 
+    last_chg=millis();
     return true;
   }  
   if(!port || !addr || !*addr || !WiFi.hostByName(addr, newaddr)) return false;    
@@ -157,6 +124,7 @@ bool CfgDrv::setSysLog(JsonObject& root) {
   log_port=port;
   log_on=1;
   dirty=true;
+  last_chg=millis();
   Serial.print(F("SET_SYSL ON:")); Serial.print(log_addr); Serial.print(":"); Serial.println(Cfg.log_port);     
   return true;
 }

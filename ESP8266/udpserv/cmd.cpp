@@ -80,7 +80,6 @@ boolean CmdProc::sendSysLog(const char *buf) {
   rootOut["T"] = millis();
   rootOut["M"] = buf;
   rootOut.printTo(bufout, BUF_SZ-1);
-  //Serial.println("sending syslog...");
   udp_snd.beginPacket(CfgDrv::Cfg.log_addr, CfgDrv::Cfg.log_port);
   udp_snd.write(bufout, strlen(bufout));
   udp_snd.endPacket();  
@@ -93,11 +92,10 @@ boolean CmdProc::sendSysLogStatus() {
   char bufout[BUF_SZ];
   rootOut["S"] = "I";
   rootOut["T"] = millis();
-  rootOut["R"] = 0; // OK
+  rootOut["R"] = 0; // OK, shoild be -5 if tracking is off (reserved)
   rootOut["X"] = rand()%100;
   rootOut["Y"] = rand()%100;
   rootOut.printTo(bufout, BUF_SZ-1);
-  //Serial.println("sending syslog...");
   udp_snd.beginPacket(CfgDrv::Cfg.log_addr, CfgDrv::Cfg.log_port);
   udp_snd.write(bufout, strlen(bufout));
   udp_snd.endPacket();  
@@ -137,10 +135,13 @@ int16_t c_info(JsonObject& root, JsonObject& rootOut) {
   rootOut["FHS"]=ESP.getFreeHeap();
   rootOut["FSS"]=ESP.getFreeSketchSpace();
   JsonArray& data = rootOut.createNestedArray("TO");
+  for(int i=0; i<4; i++) data.add(Stat::StatStore.cnt[i]);
+  /*
   data.add(Stat::StatStore.cnt[0]);
   data.add(Stat::StatStore.cnt[1]);
   data.add(Stat::StatStore.cnt[2]);
   data.add(Stat::StatStore.cnt[3]);
+  */
   return 0;
 }
 
@@ -158,7 +159,7 @@ int16_t c_setsyslog(JsonObject& root, JsonObject& rootOut) {
 int16_t c_getpos(JsonObject& root, JsonObject& rootOut) {
   rootOut["X"] = rand()%100;
   rootOut["Y"] = rand()%100;
-  return 0; // -5 if racking off
+  return 0; // -5 if tracking off (reserved)
 }
 
 
