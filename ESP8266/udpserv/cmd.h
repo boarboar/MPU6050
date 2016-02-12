@@ -1,3 +1,5 @@
+#ifndef _UMP_CMD_H_
+#define _UMP_CMD_H_
 
 const int BUF_SZ = 255;
 
@@ -19,4 +21,6 @@ protected:
   WiFiUDP udp_rcv;
   WiFiUDP udp_snd;
 };
+
+#endif //_UMP_CMD_H_
 

@@ -26,7 +26,7 @@ class MyForm(wx.Frame):
         self.statusbar.SetStatusText("---,----", 1)
         # Add a panel so it looks the correct on all platforms
         panel = wx.Panel(self, wx.ID_ANY)
-        self.log = wx.TextCtrl(panel, wx.ID_ANY, size=(400,200), style=wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL)
+        self.log = wx.TextCtrl(panel, wx.ID_ANY, size=(400,200), style=wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.TE_RICH)
         self.btn_st = wx.Button(panel, wx.ID_ANY, 'Status')
         self.btn_pos = wx.Button(panel, wx.ID_ANY, 'Pos')
         self.btn_upl = wx.Button(panel, wx.ID_ANY, 'Upload')
@@ -34,6 +34,7 @@ class MyForm(wx.Frame):
         self.txt_cmd = wx.TextCtrl(panel)
         self.btn_cmd = wx.Button(panel, wx.ID_ANY, 'Send')
         self.canvas = draw.DrawPanel(panel)
+        self.log_bg=self.log.GetBackgroundColour()
         self.layout(panel)
         # redirect text here
         sys.stdout=self.log
@@ -48,6 +49,7 @@ class MyForm(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onSendCmd, self.btn_cmd)
         self.model=model.Model("ROBO")
         self.controller=controller.Controller(self, self.model)
+        self.LogString("Local address is %s" % socket.gethostbyname(socket.gethostname()))
 
     def layout(self, panel):
         # Add widgets to a sizer
@@ -74,19 +76,27 @@ class MyForm(wx.Frame):
         #panel.SetAutoLayout(True)
         panel.Layout()
         sizer.Fit(panel)
-        self.LogString("Local address is %s" % socket.gethostbyname(socket.gethostname()))
 
-    def AddLine(self, msg) :
+
+    def AddLine(self, msg, color) :
         while self.log.GetNumberOfLines()>self.LOG_LINES:
             self.log.Remove(0, self.log.GetLineLength(0)+1)
-        self.log.AppendText("%d : %s" % (self.logcnt, msg))
+        if color is None : color= wx.BLACK
+
+        self.log.SetDefaultStyle(wx.TextAttr(color,self.log_bg))
+
+       # self.log.AppendText("%d : %s" % (self.logcnt, msg))
+        self.log.AppendText(msg)
         if not msg.endswith('\n'):
             self.log.AppendText('\n')
         self.logcnt=self.logcnt+1
 
-    def LogString(self, message, **kwargs):
-        event = LogEvent(msg=message, **kwargs)
+    def LogString(self, message, color='BLACK') :
+        event = LogEvent(msg=message, color=color)
         wx.PostEvent(self, event)
+
+    def LogErrorString(self, message) :
+        self.LogString(message, color='RED')
 
     def UpdatePos(self, **kwargs) :
         event = UpdEvent(**kwargs)
@@ -115,7 +125,7 @@ class MyForm(wx.Frame):
         self.controller.reqCmdRaw(self.txt_cmd.GetValue())
 
     def onLogEvent(self, evt):
-        self.AddLine(evt.msg)
+        self.AddLine(evt.msg, evt.color)
 
     def onUpdEvent(self, evt):
         #self.txtFreeMem.SetLabel(str(self.model["FHS"]))
@@ -140,9 +150,13 @@ class SettingsDialog(wx.Dialog):
         self.addr = wx.TextCtrl(pnl)
         self.port = wx.TextCtrl(pnl)
         self.listenport = wx.TextCtrl(pnl)
-        self.addr.SetValue(str(self.model["DEVADDR"]))
-        self.port.SetValue(str(self.model["DEVPORT"]))
-        self.listenport.SetValue(str(self.model["LISTENPORT"]))
+        self.syslogenable = wx.CheckBox(pnl)
+        try:
+            self.addr.SetValue(str(self.model["DEVADDR"]))
+            self.port.SetValue(str(self.model["DEVPORT"]))
+            self.listenport.SetValue(str(self.model["LISTENPORT"]))
+            self.syslogenable.SetValue(int(self.model["SYSLOGENABLE"]))
+        except KeyError : pass
 
         vbox = wx.BoxSizer(wx.VERTICAL)
 
@@ -156,6 +170,10 @@ class SettingsDialog(wx.Dialog):
         hbox = wx.BoxSizer(wx.HORIZONTAL)
         hbox.Add(wx.StaticText(pnl, label='IP Port:'), flag=wx.LEFT, border=15)
         hbox.Add(self.port, flag=wx.RIGHT, border=15)
+        sbs.Add(hbox)
+        hbox = wx.BoxSizer(wx.HORIZONTAL)
+        hbox.Add(wx.StaticText(pnl, label='Enable syslog:'), flag=wx.LEFT, border=15)
+        hbox.Add(self.syslogenable, flag=wx.RIGHT, border=15)
         sbs.Add(hbox)
         hbox = wx.BoxSizer(wx.HORIZONTAL)
         hbox.Add(wx.StaticText(pnl, label='Local IP Port:'), flag=wx.LEFT, border=15)
@@ -210,6 +228,8 @@ class SettingsDialog(wx.Dialog):
         self.model["DEVADDR"] = addr
         self.model["DEVPORT"] = port
         self.model["LISTENPORT"] = listenport
+        if self.syslogenable.GetValue() : self.model["SYSLOGENABLE"] = 1
+        else : self.model["SYSLOGENABLE"] = 0
         self.SetReturnCode(True)
         self.Destroy()
 

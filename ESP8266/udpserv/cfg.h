@@ -1,3 +1,6 @@
+#ifndef _UMP_CFG_H_
+#define _UMP_CFG_H_
+
 class CfgDrv {
 public:
   const int LAZY_WRITE_TIMEOUT=10; //seconds
@@ -18,4 +21,6 @@ protected:
   bool dirty;
   uint32_t  last_chg;
 };
+
+#endif //_UMP_CFG_H_
 

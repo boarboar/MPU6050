@@ -3,6 +3,6 @@
 
 Stat Stat::StatStore ; // singleton
 
-Stat::Stat() : cnt{0} {
+Stat::Stat() : cycle_delay_cnt{0}, cycle_mpu_dry_cnt(0) {
   }
 

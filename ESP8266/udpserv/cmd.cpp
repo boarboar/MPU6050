@@ -5,6 +5,7 @@
 #include "cmd.h"
 #include "stat.h"
 #include "cfg.h"
+#include "mpu.h"
 
 CmdProc CmdProc::Cmd; // singleton
 
@@ -134,14 +135,9 @@ int16_t c_info(JsonObject& root, JsonObject& rootOut) {
   //Serial.println("INFO"); 
   rootOut["FHS"]=ESP.getFreeHeap();
   rootOut["FSS"]=ESP.getFreeSketchSpace();
-  JsonArray& data = rootOut.createNestedArray("TO");
-  for(int i=0; i<4; i++) data.add(Stat::StatStore.cnt[i]);
-  /*
-  data.add(Stat::StatStore.cnt[0]);
-  data.add(Stat::StatStore.cnt[1]);
-  data.add(Stat::StatStore.cnt[2]);
-  data.add(Stat::StatStore.cnt[3]);
-  */
+  rootOut["MDR"]=Stat::StatStore.cycle_mpu_dry_cnt;
+  JsonArray& data = rootOut.createNestedArray("CYT");
+  for(int i=0; i<4; i++) data.add(Stat::StatStore.cycle_delay_cnt[i]);
   return 0;
 }
 
@@ -157,9 +153,15 @@ int16_t c_setsyslog(JsonObject& root, JsonObject& rootOut) {
 }
 
 int16_t c_getpos(JsonObject& root, JsonObject& rootOut) {
+  if(!MpuDrv::Mpu.isDataReady()) return -5;
+  
   rootOut["X"] = rand()%100;
   rootOut["Y"] = rand()%100;
-  return 0; // -5 if tracking off (reserved)
+  JsonArray& qa = rootOut.createNestedArray("Q");
+  Quaternion& q = MpuDrv::Mpu.getQuaternion(); 
+  qa.add(q.w); qa.add(q.x); qa.add(q.y); qa.add(q.z);
+  
+  return 0;
 }
 
 

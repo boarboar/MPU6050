@@ -26,7 +26,7 @@ class CommandThread(threading.Thread):
             self.__s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.__s.settimeout(1)
         except socket.error:
-            self.__controller.log().LogString("Failed to create socket!")
+            self.__controller.log().LogErrorString("Failed to create socket!")
             return
 
         self.__controller.log().LogString("Cmd thread starting: dev=%s:%s" % (self.__addr, str(self.__port)))
@@ -48,13 +48,13 @@ class CommandThread(threading.Thread):
                         retr=0
                         while retr<3 :
                             d = self.__s.recvfrom(1024)
-                            self.__controller.log().LogString("From %s rsp %s" % (d[1], d[0]))
+                            self.__controller.log().LogString("From %s rsp %s" % (d[1], d[0]), 'GREY')
                             resp_json=json.loads(d[0])
                             if self.__controller.resp(d[0], req_json) : break
                     except socket.timeout as msg:
-                        self.__controller.log().LogString("Timeout")
+                        self.__controller.log().LogErrorString("Timeout")
                     except socket.error as msg:
-                        self.__controller.log().LogString("Sock error : %s" % msg)
+                        self.__controller.log().LogErrorString("Sock error : %s" % msg)
 
         self.__s.close()
         self.__controller.log().LogString("Cmd thread stopped")
@@ -74,24 +74,24 @@ class ListenerThread(threading.Thread):
             self.__s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.__s.settimeout(1)
         except socket.error:
-            self.__controller.log().LogString("Failed to create syslog socket!")
+            self.__controller.log().LogErrorString("Failed to create syslog socket!")
             return
         # Bind socket to local host and port
         try:
             self.__s.bind(("", int(self.__bindport)))
         except socket.error as msg:
-            self.__controller.log().LogString("Failed to bind syslog socket!")
+            self.__controller.log().LogErrorString("Failed to bind syslog socket!")
             return
 
         self.__controller.log().LogString("Syslog thread starting on %s" % (str(self.__bindport)))
         while not self.__stop:
             try :
                 d = self.__s.recvfrom(1024)
-                self.__controller.log().LogString("From %s log %s" % (d[1], d[0]))
+                self.__controller.log().LogString("From %s log %s" % (d[1], d[0]), 'GREY')
                 self.__controller.resp(d[0])
             except socket.timeout as msg:
                 pass
             except socket.error as msg:
-                self.__controller.log().LogString("Sock error : %s" % msg)
+                self.__controller.log().LogErrorString("Sock error : %s" % msg)
 
         self.__controller.log().LogString("Syslog thread stopped")

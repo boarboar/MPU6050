@@ -15,17 +15,22 @@ class Controller():
         try:
             self.__comm_thread=comm.CommandThread(self, self.__model["DEVADDR"], self.__model["DEVPORT"], self.__model["MOCKUP"])
             self.__comm_thread.start()
-            self.__comm_listener_thread=comm.ListenerThread(self, self.__model["LISTENPORT"], self.__model["MOCKUP"])
-            self.__comm_listener_thread.start()
+            if self.__model["SYSLOGENABLE"] :
+                self.__comm_listener_thread=comm.ListenerThread(self, self.__model["LISTENPORT"], self.__model["MOCKUP"])
+                self.__comm_listener_thread.start()
+            else :
+                self.__comm_listener_thread=None
         except KeyError: pass
 
     def log(self): return self.__form
 
     def restart(self):
-        self.__comm_listener_thread.stop()
+        self.__form.LogString("Stopping...")
+        if self.__comm_listener_thread is not None :
+            self.__comm_listener_thread.stop()
+            self.__comm_listener_thread.join()
         self.__comm_thread.stop()
         self.__comm_thread.join()
-        self.__comm_listener_thread.join()
         self.__form.LogString("Restarting...")
         self.__tstart()
 
@@ -47,10 +52,12 @@ class Controller():
         # config upload
         # {"I":1,"C":"SYSL", "ON":1, "ADDR":"192.168.1.141", "PORT":4444}
         js={"C": "SYSL"}
-        js["ON"]=1
-        js["ADDR"]=str(socket.gethostbyname(socket.gethostname()))
-        js["PORT"]=int(self.__model["LISTENPORT"])
-        self.__req(js)
+        try:
+            js["ON"]=int(self.__model["SYSLOGENABLE"])
+            js["ADDR"]=str(socket.gethostbyname(socket.gethostname()))
+            js["PORT"]=int(self.__model["LISTENPORT"])
+            self.__req(js)
+        except KeyError : pass
 
     def __req(self, js):
         self.__cmdid=self.__cmdid+1
@@ -59,14 +66,17 @@ class Controller():
 
     def resp(self, js, req_json=None):
         " resp callback, called in thread context!!! "
-        self.__form.LogString("RSP:"+js)
+        if req_json is None : self.__form.LogString("SYS:"+js, 'BLUE') #syslog
         try:
             resp_json = json.loads(js)
-            if(req_json is not None and int(req_json["I"]) != int(resp_json["I"])) :
-                self.__form.LogString("Unmatched resp")
-                return False
+            if req_json is not None : #cmd-rsp
+                if int(req_json["I"]) != int(resp_json["I"]) :
+                    self.__form.LogErrorString("UNMATCHED: "+js)
+                    return False
+                self.__form.LogString("RSP:"+js, 'FOREST GREEN')
         except ValueError : return True
         except KeyError : return True
+
         self.__model.update(resp_json)
         #if resp_json["C"]=="POS" :
         self.__form.UpdatePos()

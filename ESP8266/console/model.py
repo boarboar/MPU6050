@@ -9,8 +9,9 @@ class Model(dict):
         self["MOCKUP"] = mock
         #self["DEVADDR"] = "192.168.1.129"
         self["DEVADDR"] = str(socket.gethostbyname(socket.gethostname()))
-        self["DEVPORT"] = "4444"
-        self["LISTENPORT"] = "4444"
+        self["DEVPORT"] = 4444
+        self["LISTENPORT"] = 4444
+        self["SYSLOGENABLE"] = 1
         self["FHS"]=0
         self["FSS"]=0
         self["X"]=0

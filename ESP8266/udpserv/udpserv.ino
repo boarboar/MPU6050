@@ -1,6 +1,7 @@
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
 #include <ArduinoJson.h>
+
 #include "cmd.h"
 #include "stat.h"
 #include "cfg.h"
@@ -63,6 +64,7 @@ void setup() {
     //delay(1000);
     //ESP.reset();
   }  
+  
   last_cycle=last_slow_cycle=millis();
 }
 
@@ -84,17 +86,15 @@ void doCycle() {
   uint16_t dt=t-last_cycle;
   if(dt < CYCLE_TO) return;
   last_cycle = t;
-  MpuDrv::Mpu.cycle(dt);
-  /*
-  if(dt<=CYCLE_TO) Stat::StatStore.cnt[0]++;
-  else if(dt<=CYCLE_TO<<1) Stat::StatStore.cnt[1]++;
-  else if(dt<=CYCLE_TO<<2) Stat::StatStore.cnt[2]++;
-  else Stat::StatStore.cnt[3]++;
-  */
+  
+  int16_t mpu_res = MpuDrv::Mpu.cycle(dt);
+  
   // collect delay statistics
   int i=0;
   while(i<3 && dt>(CYCLE_TO<<i)) i++;
-  Stat::StatStore.cnt[i]++;
+  Stat::StatStore.cycle_delay_cnt[i]++;
+
+  if(!mpu_res) Stat::StatStore.cycle_mpu_dry_cnt++;
    
   dt=t-last_slow_cycle;
   if(dt < CYCLE_SLOW_TO) return;
