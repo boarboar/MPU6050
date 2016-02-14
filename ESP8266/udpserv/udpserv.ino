@@ -13,7 +13,7 @@ const char* ssid = "NETGEAR";
 const char* password = "boarboar";
 const char* cfg_file = "/config.json";
 const int udp_port = 4444;
-const int CYCLE_TO = 2;
+const int CYCLE_TO = 5;
 const int CYCLE_SLOW_TO = 1000;
 const int MPU_SDA=0;
 const int MPU_SDL=2;
@@ -43,7 +43,9 @@ void setup() {
     delay(10000);
     ESP.reset();
   }
-
+  
+  delay(1000);
+  
   if(cmd.init(udp_port)) {
     Serial.print(F("Ready! Listening on "));
     Serial.print(WiFi.localIP());
@@ -101,5 +103,9 @@ void doCycle() {
   last_slow_cycle = t;
   if(CfgDrv::Cfg.needToStore()) CfgDrv::Cfg.store(cfg_file);
   if(cmd.isSysLog()) cmd.sendSysLogStatus();
+/*
+Serial.print("MPUST: "); Serial.print(MpuDrv::Mpu.isReady()); Serial.print(", "); Serial.println(MpuDrv::Mpu.isDataReady());
+MpuDrv::Mpu.validate();
+*/
 }
 

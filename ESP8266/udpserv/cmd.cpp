@@ -2,10 +2,11 @@
 #include <WiFiUdp.h>
 #include <ArduinoJson.h>
 
-#include "cmd.h"
 #include "stat.h"
 #include "cfg.h"
 #include "mpu.h"
+
+#include "cmd.h"
 
 CmdProc CmdProc::Cmd; // singleton
 
@@ -60,7 +61,7 @@ int16_t CmdProc::doCmd() {
   //StaticJsonBuffer<JSON_OBJECT_SIZE(4)> jsonBufferIn;
   //StaticJsonBuffer<JSON_OBJECT_SIZE(4)+ JSON_ARRAY_SIZE(4)> jsonBufferOut;
   StaticJsonBuffer<200> jsonBufferIn;
-  StaticJsonBuffer<200> jsonBufferOut;
+  StaticJsonBuffer<400> jsonBufferOut;
   JsonObject& root = jsonBufferIn.parseObject(packetBuffer);
   JsonObject& rootOut = jsonBufferOut.createObject();
   _doCmd(root, rootOut);
@@ -133,9 +134,11 @@ int16_t _doCmd(JsonObject& root, JsonObject& rootOut) {
 
 int16_t c_info(JsonObject& root, JsonObject& rootOut) {
   //Serial.println("INFO"); 
+  rootOut["MST"]=MpuDrv::Mpu.isReady() ? 1 : 0;
+  rootOut["MDR"]=MpuDrv::Mpu.isDataReady() ? 1 : 0;
   rootOut["FHS"]=ESP.getFreeHeap();
   rootOut["FSS"]=ESP.getFreeSketchSpace();
-  rootOut["MDR"]=Stat::StatStore.cycle_mpu_dry_cnt;
+  rootOut["MDC"]=Stat::StatStore.cycle_mpu_dry_cnt;
   JsonArray& data = rootOut.createNestedArray("CYT");
   for(int i=0; i<4; i++) data.add(Stat::StatStore.cycle_delay_cnt[i]);
   return 0;
@@ -160,7 +163,59 @@ int16_t c_getpos(JsonObject& root, JsonObject& rootOut) {
   JsonArray& qa = rootOut.createNestedArray("Q");
   Quaternion& q = MpuDrv::Mpu.getQuaternion(); 
   qa.add(q.w); qa.add(q.x); qa.add(q.y); qa.add(q.z);
-  
+  JsonArray& ga = rootOut.createNestedArray("G");
+  VectorFloat& g = MpuDrv::Mpu.getGravity(); 
+  ga.add(g.x); ga.add(g.y); ga.add(g.z);
+  JsonArray& ya = rootOut.createNestedArray("YPR");
+  float *ypr  = MpuDrv::Mpu.getYPR(); 
+  ya.add(ypr[0] * 180/M_PI); ya.add(ypr[1] * 180/M_PI); ya.add(ypr[2] * 180/M_PI);
+  JsonArray& aa = rootOut.createNestedArray("A");
+  VectorInt16 a  = MpuDrv::Mpu.getWorldAccel(); 
+  aa.add(a.x); aa.add(a.y); aa.add(a.z);
+
+
+            Serial.print("quat\t");
+            Serial.print(q.w);
+            Serial.print("\t");
+            Serial.print(q.x);
+            Serial.print("\t");
+            Serial.print(q.y);
+            Serial.print("\t");
+            Serial.println(q.z);
+//yield();
+            Serial.print("Grav\t");
+            Serial.print(g.x);
+            Serial.print("\t");
+            Serial.print(g.y);
+            Serial.print("\t");
+            Serial.println(g.z);
+yield();
+            Serial.print("YPR\t");
+            Serial.print(ypr[0] * 180/M_PI);
+            Serial.print("\t");
+            Serial.print(ypr[1] * 180/M_PI);
+            Serial.print("\t");
+            Serial.println(ypr[2] * 180/M_PI);
+//yield();
+            Serial.print("Acc\t");
+            Serial.print(a.x);
+            Serial.print("\t");
+            Serial.print(a.y);
+            Serial.print("\t");
+            Serial.println(a.z);
+
+/*            
+                  float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
+            VectorFloat gravity;    // [x, y, z]            gravity vector
+            mpu.dmpGetGravity(&gravity, &q);
+            mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
+            Serial.print("ypr\t");
+            Serial.print(ypr[0] * 180/M_PI);
+            Serial.print("\t");
+            Serial.print(ypr[1] * 180/M_PI);
+            Serial.print("\t");
+            Serial.println(ypr[2] * 180/M_PI);
+  */          
   return 0;
 }
 

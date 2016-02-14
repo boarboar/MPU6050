@@ -7,7 +7,10 @@
 
 MpuDrv MpuDrv::Mpu; // singleton
 
-MpuDrv::MpuDrv() : dmpReady(false), data_ready(false), fifoCount(0) {;}
+MpuDrv::MpuDrv() : dmpReady(false), data_ready(false), fifoCount(0) {}
+
+uint8_t MpuDrv::isReady() { return dmpReady; }
+uint8_t MpuDrv::isDataReady() { return data_ready; }
 
 int16_t MpuDrv::init(uint16_t sda, uint16_t sdl, uint16_t intrp) {
   Wire.begin(sda, sdl);
@@ -16,10 +19,11 @@ int16_t MpuDrv::init(uint16_t sda, uint16_t sdl, uint16_t intrp) {
   mpu.initialize();
   // verify connection
   Serial.println(F("Test device conn..."));
-  Serial.println(mpu.testConnection() ? F("MPU6050 conn OK") : F("MPU6050 conn fail"));
-
-  // load and configure the DMP
-  
+  if(!mpu.testConnection()) {
+    Serial.println(F("MPU6050 conn fail"));
+    return 0;
+  }
+  // load and configure the DMP  
   Serial.println(F("Init DMP..."));
   yield();
   uint8_t devStatus = mpu.dmpInitialize();
@@ -90,7 +94,7 @@ int16_t MpuDrv::cycle(uint16_t dt) {
     Serial.println(F("FIFO overflow!!!"));
     return -2;
     // otherwise, check for DMP data ready interrupt (this should happen frequently)
-  } else if (mpuIntStatus & 0x02) {
+  } else if (mpuIntStatus & 0x02 || fifoCount >= packetSize) {
     fifoCount = mpu.getFIFOCount();
     //if(fifoCount < packetSize) return 0;
     // wait for correct available data length, should be a VERY short wait
@@ -103,15 +107,19 @@ int16_t MpuDrv::cycle(uint16_t dt) {
     }
     // read a packet from FIFO
     mpu.getFIFOBytes(fifoBuffer, packetSize);
-        
-    // track FIFO count here in case there is > 1 packet available
-    // (this lets us immediately read more without waiting for an interrupt)
     fifoCount -= packetSize;
-
-    if(fifoCount >0) Serial.println(F("FIFO excess!"));
-    
+    if(fifoCount >0) { Serial.print(F("FIFO excess : ")); Serial.println(fifoCount);}   
     mpu.dmpGetQuaternion(&q, fifoBuffer);
+    mpu.dmpGetGravity(&gravity, &q);
+    mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
 
+    VectorInt16 aa;         // [x, y, z]            accel sensor measurements
+    VectorInt16 aaReal;     // [x, y, z]            gravity-free accel sensor measurements
+    mpu.dmpGetAccel(&aa, fifoBuffer);
+    mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
+    mpu.dmpGetLinearAccelInWorld(&aaWorld, &aaReal, &q);
+
+/*
             yield();
             Serial.print("quat\t");
             Serial.print(q.w);
@@ -121,7 +129,7 @@ int16_t MpuDrv::cycle(uint16_t dt) {
             Serial.print(q.y);
             Serial.print("\t");
             Serial.println(q.z);
-
+*/
     data_ready=true;        
     return 1;
   }  
