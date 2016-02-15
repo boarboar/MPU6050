@@ -11,11 +11,10 @@ public:
   int16_t cycle(uint16_t dt);
   uint8_t isReady();
   uint8_t isDataReady();
-  //Quaternion& getQuaternion() { return q;}
   Quaternion& getQuaternion();
-  VectorFloat& getGravity() { return gravity;}
-  float* getYPR() { return ypr;}
-  VectorInt16& getWorldAccel() { return aaWorld;}
+  VectorFloat& getGravity();
+  float* getYPR();
+  VectorInt16& getWorldAccel();
 
 protected:  
   MpuDrv();

@@ -13,6 +13,9 @@ MpuDrv::MpuDrv() : dmpReady(false), data_ready(false), fifoCount(0), count(0) {}
 uint8_t MpuDrv::isReady() { return dmpReady; }
 uint8_t MpuDrv::isDataReady() { return data_ready; }
 Quaternion& MpuDrv::getQuaternion() { return q; }
+float* MpuDrv::getYPR() { return ypr; }
+VectorFloat& MpuDrv::getGravity() {return gravity;}
+VectorInt16& MpuDrv::getWorldAccel() {return aaWorld;}
 
 
 int16_t MpuDrv::init(uint16_t sda, uint16_t sdl, uint16_t intrp) {
@@ -56,6 +59,9 @@ int16_t MpuDrv::init(uint16_t sda, uint16_t sdl, uint16_t intrp) {
     packetSize = mpu.dmpGetFIFOPacketSize();
     // set our DMP Ready flag so the main loop() function knows it's okay to use it
     dmpReady = true;
+
+    // warmup 20 sec??? 
+    
     Serial.print(F("DMP ok! Wait for int...FIFO sz is ")); Serial.println(packetSize);
     
   } else {
@@ -115,15 +121,13 @@ int16_t MpuDrv::cycle(uint16_t dt) {
     fifoCount -= packetSize;
     if(fifoCount >0) { Serial.print(F("FIFO excess : ")); Serial.println(fifoCount);}   
     mpu.dmpGetQuaternion(&q, fifoBuffer);
-
+/*
     int32_t q32[4];
     int32_t q16[4];
 
     mpu.dmpGetQuaternion(q16, fifoBuffer);
     mpu.dmpGetQuaternion(q32, fifoBuffer);
-
-
-    /*
+  */
     mpu.dmpGetGravity(&gravity, &q);
     mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
 
@@ -132,11 +136,12 @@ int16_t MpuDrv::cycle(uint16_t dt) {
     mpu.dmpGetAccel(&aa, fifoBuffer);
     mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
     mpu.dmpGetLinearAccelInWorld(&aaWorld, &aaReal, &q);
-*/
+
 
     if(count%100==0) {
+      /*
             yield();
-            Serial.print("quat\t");
+            Serial.print("int quat\t");
             Serial.print(q.w);
             Serial.print("\t");
             Serial.print(q.x);
@@ -144,7 +149,8 @@ int16_t MpuDrv::cycle(uint16_t dt) {
             Serial.print(q.y);
             Serial.print("\t");
             Serial.println(q.z);
-            
+            */
+            /*
             yield();
             Serial.print("quat16\t");
             Serial.print(q16[0]);
@@ -164,6 +170,32 @@ int16_t MpuDrv::cycle(uint16_t dt) {
             Serial.print(q32[2]);
             Serial.print("\t");
             Serial.println(q32[3]);
+            */
+/*
+            yield();
+            Serial.print("YPR\t");
+            Serial.print(ypr[0] * 180.0f/M_PI);
+            Serial.print("\t");
+            Serial.print(ypr[1] * 180.0f/M_PI);
+            Serial.print("\t");
+            Serial.println(ypr[2] * 180.0f/M_PI);
+  */
+/*
+            Serial.print("Cmd Grav\t");
+            Serial.print(gravity.x);
+            Serial.print("\t");
+            Serial.print(gravity.y);
+            Serial.print("\t");
+            Serial.println(gravity.z);
+  */
+
+  Serial.print("Int Acc\t");
+            Serial.print(aaWorld.x);
+            Serial.print("\t");
+            Serial.print(aaWorld.y);
+            Serial.print("\t");
+            Serial.println(aaWorld.z);
+
     }
 
     count++;

@@ -173,8 +173,8 @@ int16_t c_getpos(JsonObject& root, JsonObject& rootOut) {
   VectorInt16 a  = MpuDrv::Mpu.getWorldAccel(); 
   aa.add(a.x); aa.add(a.y); aa.add(a.z);
 
-
-            Serial.print("quat\t");
+/*
+            Serial.print("cmd quat\t");
             Serial.print(q.w);
             Serial.print("\t");
             Serial.print(q.x);
@@ -182,40 +182,35 @@ int16_t c_getpos(JsonObject& root, JsonObject& rootOut) {
             Serial.print(q.y);
             Serial.print("\t");
             Serial.println(q.z);
+  */
+            /*
 //yield();
-            Serial.print("Grav\t");
+            Serial.print("Cmd Grav\t");
             Serial.print(g.x);
             Serial.print("\t");
             Serial.print(g.y);
             Serial.print("\t");
             Serial.println(g.z);
 yield();
+*/
+/*
             Serial.print("YPR\t");
             Serial.print(ypr[0] * 180/M_PI);
             Serial.print("\t");
             Serial.print(ypr[1] * 180/M_PI);
             Serial.print("\t");
             Serial.println(ypr[2] * 180/M_PI);
+*/
+
 //yield();
-            Serial.print("Acc\t");
+
+            Serial.print("Cmd Acc\t");
             Serial.print(a.x);
             Serial.print("\t");
             Serial.print(a.y);
             Serial.print("\t");
             Serial.println(a.z);
 
-/*            
-                  float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
-            VectorFloat gravity;    // [x, y, z]            gravity vector
-            mpu.dmpGetGravity(&gravity, &q);
-            mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-            Serial.print("ypr\t");
-            Serial.print(ypr[0] * 180/M_PI);
-            Serial.print("\t");
-            Serial.print(ypr[1] * 180/M_PI);
-            Serial.print("\t");
-            Serial.println(ypr[2] * 180/M_PI);
-  */          
   return 0;
 }
 
