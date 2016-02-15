@@ -6,6 +6,7 @@ import socket
 import draw
 import model
 import controller
+import config
 
 LogEvent, EVT_LOG_EVENT = wx.lib.newevent.NewEvent()
 UpdEvent, EVT_UPD_EVENT = wx.lib.newevent.NewEvent()
@@ -30,6 +31,7 @@ class MyForm(wx.Frame):
         self.btn_st = wx.Button(panel, wx.ID_ANY, 'Status')
         self.btn_pos = wx.Button(panel, wx.ID_ANY, 'Pos')
         self.btn_upl = wx.Button(panel, wx.ID_ANY, 'Upload')
+        self.btn_scan = wx.Button(panel, wx.ID_ANY, 'Scan')
         self.btn_dump = wx.Button(panel, wx.ID_ANY, 'Dump')
         self.txt_cmd = wx.TextCtrl(panel)
         self.btn_cmd = wx.Button(panel, wx.ID_ANY, 'Send')
@@ -45,10 +47,12 @@ class MyForm(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onStatusReq, self.btn_st)
         self.Bind(wx.EVT_BUTTON, self.onPositionReq, self.btn_pos)
         self.Bind(wx.EVT_BUTTON, self.onUploadReq, self.btn_upl)
+        self.Bind(wx.EVT_BUTTON, self.onScanReq, self.btn_scan)
         self.Bind(wx.EVT_BUTTON, self.onDumpModel, self.btn_dump)
         self.Bind(wx.EVT_BUTTON, self.onSendCmd, self.btn_cmd)
         self.model=model.Model("ROBO")
         self.controller=controller.Controller(self, self.model)
+        self.config=config.Config(self, self.model)
         self.LogString("Local address is %s" % socket.gethostbyname(socket.gethostname()))
 
     def layout(self, panel):
@@ -67,6 +71,7 @@ class MyForm(wx.Frame):
         sizer_ctrls.Add(self.btn_st, 0, wx.ALL|wx.CENTER, 5)
         sizer_ctrls.Add(self.btn_pos, 0, wx.ALL|wx.CENTER, 5)
         sizer_ctrls.Add(self.btn_upl, 0, wx.ALL|wx.CENTER, 5)
+        sizer_ctrls.Add(self.btn_scan, 0, wx.ALL|wx.CENTER, 5)
         sizer_ctrls.Add(self.btn_dump, 0, wx.ALL|wx.CENTER, 5)
 
         sizer_cmd.Add(self.txt_cmd, 10, wx.ALL|wx.CENTER, 5)
@@ -107,7 +112,9 @@ class MyForm(wx.Frame):
         sd.ShowModal()
         rc = sd.GetReturnCode()
         sd.Destroy()
-        if rc : self.controller.restart()
+        if rc :
+            self.config.update()
+            self.controller.restart()
 
     def onStatusReq(self, event):
         self.controller.reqStatus()
@@ -117,6 +124,14 @@ class MyForm(wx.Frame):
 
     def onUploadReq(self, event):
         self.controller.reqUpload()
+
+    def onScanReq(self, event):
+        if self.controller.isScanning() :
+            self.controller.stopScan()
+            self.btn_scan.SetLabel("Scan");
+        else :
+            self.controller.startScan()
+            self.btn_scan.SetLabel("Stop Scan");
 
     def onDumpModel(self, event):
         self.LogString(str(self.model))
@@ -151,6 +166,7 @@ class SettingsDialog(wx.Dialog):
         self.port = wx.TextCtrl(pnl)
         self.listenport = wx.TextCtrl(pnl)
         self.syslogenable = wx.CheckBox(pnl)
+
         try:
             self.addr.SetValue(str(self.model["DEVADDR"]))
             self.port.SetValue(str(self.model["DEVPORT"]))
@@ -230,6 +246,7 @@ class SettingsDialog(wx.Dialog):
         self.model["LISTENPORT"] = listenport
         if self.syslogenable.GetValue() : self.model["SYSLOGENABLE"] = 1
         else : self.model["SYSLOGENABLE"] = 0
+
         self.SetReturnCode(True)
         self.Destroy()
 

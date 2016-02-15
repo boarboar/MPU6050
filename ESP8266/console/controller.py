@@ -9,6 +9,7 @@ class Controller():
         self.__form = form
         self.__model = model
         self.__cmdid=0
+        self.__comm_scan_thread = None
         self.__tstart()
 
     def __tstart(self):
@@ -33,6 +34,20 @@ class Controller():
         self.__comm_thread.join()
         self.__form.LogString("Restarting...")
         self.__tstart()
+
+    def startScan(self):
+        self.__comm_scan_thread=comm.ScanThread(self, self.__model["MOCKUP"])
+        self.__comm_scan_thread.start()
+
+    def stopScan(self):
+        self.__comm_scan_thread.stop()
+        self.__comm_scan_thread.join()
+        self.__comm_scan_thread = None
+
+    def isScanning(self):
+        return self.__comm_scan_thread!=None
+        #if self.__comm_scan_thread==None : return False
+        #return True
 
     def reqCmdRaw(self, cmd):
         try:
@@ -82,3 +97,7 @@ class Controller():
         self.__form.UpdatePos()
         return True
 
+    def scanComplete(self, result=None):
+        if result is None :
+            self.__form.LogErrorString("Device not found")
+        else : self.__form.LogString("FOUND %s" % result, 'FOREST GREEN')

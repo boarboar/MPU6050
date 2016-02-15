@@ -95,3 +95,48 @@ class ListenerThread(threading.Thread):
                 self.__controller.log().LogErrorString("Sock error : %s" % msg)
 
         self.__controller.log().LogString("Syslog thread stopped")
+
+class ScanThread(threading.Thread):
+    # device command-resp communication
+    def __init__(self, controller, mockup=False):
+        threading.Thread.__init__(self)
+        self.__controller = controller
+        self.__mockup=mockup
+        self.__stop = False
+        self.setDaemon(1)
+    def stop(self) : self.__stop=True
+    def run (self):
+        try:
+            self.__s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.__s.settimeout(1)
+        except socket.error:
+            self.__controller.log().LogErrorString("Failed to create syslog socket!")
+            return
+
+        self.__controller.log().LogString("Scanner thread started")
+
+        cmd='{"I": 1, "C": "INFO"}'
+        port = 4444
+        id=1
+        result = None
+        while not self.__stop and id<255:
+            try :
+                addr='192.168.1.'+str(id)
+                id=id+1
+                self.__controller.log().LogString("Scanning %s..." % (addr), 'GREY')
+                self.__s.sendto(cmd, (addr, port))
+                d = self.__s.recvfrom(1024)
+                self.__controller.log().LogString("From %s rsp %s" % (d[1], d[0]), 'GREY')
+                resp_json=json.loads(d[0])
+                if resp_json["C"]=="INFO" and "I" in resp_json and "FHS"  in resp_json:
+                    result=addr
+                    break
+            except socket.timeout as msg:
+                pass
+            except socket.error as msg:
+                self.__controller.log().LogErrorString("Sock error : %s" % msg)
+            except KeyError : return True
+
+        self.__controller.scanComplete(result)
+
+        self.__controller.log().LogString("Scanner thread stopped")
