@@ -103,9 +103,5 @@ void doCycle() {
   last_slow_cycle = t;
   if(CfgDrv::Cfg.needToStore()) CfgDrv::Cfg.store(cfg_file);
   if(cmd.isSysLog()) cmd.sendSysLogStatus();
-/*
-Serial.print("MPUST: "); Serial.print(MpuDrv::Mpu.isReady()); Serial.print(", "); Serial.println(MpuDrv::Mpu.isDataReady());
-MpuDrv::Mpu.validate();
-*/
 }
 

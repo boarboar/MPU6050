@@ -14,8 +14,9 @@ class Model(dict):
         self["SYSLOGENABLE"] = 1
         self["FHS"]=0
         self["FSS"]=0
-        self["X"]=0
-        self["Y"]=0
+        #self["X"]=0
+        #self["Y"]=0
+        self["YPR"]=[0,0,0]
         self.__lock=threading.Lock()
     def __getitem__(self, key):
         self.__lock.acquire()
@@ -32,8 +33,9 @@ class Model(dict):
                 self["FHS"]=resp_json["FHS"]
                 self["FSS"]=resp_json["FSS"]
             elif resp_json["C"]=="POS" :
-                self["X"]=resp_json["X"]
-                self["Y"]=resp_json["Y"]
+                #self["X"]=resp_json["X"]
+                #self["Y"]=resp_json["Y"]
+                self["YPR"]=resp_json["YPR"]
         except KeyError: pass
         finally: self.__lock.release()
 

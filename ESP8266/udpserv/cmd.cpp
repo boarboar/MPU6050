@@ -17,15 +17,17 @@ int16_t c_info(JsonObject&,JsonObject&);
 int16_t c_reset(JsonObject&,JsonObject&);
 int16_t c_setsyslog(JsonObject&,JsonObject&);
 int16_t c_getpos(JsonObject&,JsonObject&);
+int16_t c_resetMPU(JsonObject&,JsonObject&);
 
-VFP cmd_imp[4]={c_info, c_reset, c_setsyslog, c_getpos};
+VFP cmd_imp[5]={c_info, c_reset, c_setsyslog, c_getpos, c_resetMPU};
 
-const char *CMDS="INFO\0RST\0SYSL\0POS\0";
-enum CMDS_ID {CMD_INFO=0, CMD_RESET=1, CMD_SETSYSLOG=2, CMD_POS=3, CMD_NOCMD=4};
+const char *CMDS="INFO\0RST\0SYSL\0POS\0RSTMPU\0";
+enum CMDS_ID {CMD_INFO=0, CMD_RESET=1, CMD_SETSYSLOG=2, CMD_POS=3, CMD_RESET_MPU=4, CMD_NOCMD=5};
 // {"I":1,"C":"INFO"}
 // {"I":1,"C":"RST"}
 // {"I":1,"C":"SYSL", "ON":1, "ADDR":"192.168.1.141", "PORT":4444}
 // {"I":1,"C":"POS"}
+// {"I":1,"C":"RSTMPU"}
 
 int16_t CmdProc::init(uint16_t port) {
   if(udp_rcv.begin(port)) {
@@ -34,6 +36,8 @@ int16_t CmdProc::init(uint16_t port) {
   }
   return 0;
 }   
+
+boolean CmdProc::connected() { return isConnected; }
 
 boolean CmdProc::read() {
   int packetSize = udp_rcv.parsePacket(); 
@@ -134,7 +138,7 @@ int16_t _doCmd(JsonObject& root, JsonObject& rootOut) {
 
 int16_t c_info(JsonObject& root, JsonObject& rootOut) {
   //Serial.println("INFO"); 
-  rootOut["MST"]=MpuDrv::Mpu.isReady() ? 1 : 0;
+  rootOut["MST"]=MpuDrv::Mpu.getStatus() ? 1 : 0;
   rootOut["MDR"]=MpuDrv::Mpu.isDataReady() ? 1 : 0;
   rootOut["FHS"]=ESP.getFreeHeap();
   rootOut["FSS"]=ESP.getFreeSketchSpace();
@@ -151,21 +155,31 @@ int16_t c_reset(JsonObject& root, JsonObject& rootOut) {
   return 0;
 }
 
+int16_t c_resetMPU(JsonObject& root, JsonObject& rootOut) {
+  Serial.println(F("Resetting MPU...")); 
+  MpuDrv::Mpu.init();
+  return 0;
+}
+
 int16_t c_setsyslog(JsonObject& root, JsonObject& rootOut) {
   return CfgDrv::Cfg.setSysLog(root) ? 0 : -3;
 }
 
 int16_t c_getpos(JsonObject& root, JsonObject& rootOut) {
+  // {"I":0,"C":"POS","Q":[0,1,2,3],"YPR":[0,1,2]}
   if(!MpuDrv::Mpu.isDataReady()) return -5;
-  
+  /*
   rootOut["X"] = rand()%100;
   rootOut["Y"] = rand()%100;
+  */
   JsonArray& qa = rootOut.createNestedArray("Q");
   Quaternion& q = MpuDrv::Mpu.getQuaternion(); 
   qa.add(q.w); qa.add(q.x); qa.add(q.y); qa.add(q.z);
+  /*
   JsonArray& ga = rootOut.createNestedArray("G");
   VectorFloat& g = MpuDrv::Mpu.getGravity(); 
   ga.add(g.x); ga.add(g.y); ga.add(g.z);
+  */
   JsonArray& ya = rootOut.createNestedArray("YPR");
   float *ypr  = MpuDrv::Mpu.getYPR(); 
   ya.add(ypr[0] * 180/M_PI); ya.add(ypr[1] * 180/M_PI); ya.add(ypr[2] * 180/M_PI);
@@ -174,43 +188,14 @@ int16_t c_getpos(JsonObject& root, JsonObject& rootOut) {
   aa.add(a.x); aa.add(a.y); aa.add(a.z);
 
 /*
-            Serial.print("cmd quat\t");
-            Serial.print(q.w);
-            Serial.print("\t");
-            Serial.print(q.x);
-            Serial.print("\t");
-            Serial.print(q.y);
-            Serial.print("\t");
-            Serial.println(q.z);
-  */
-            /*
 //yield();
-            Serial.print("Cmd Grav\t");
-            Serial.print(g.x);
-            Serial.print("\t");
-            Serial.print(g.y);
-            Serial.print("\t");
-            Serial.println(g.z);
-yield();
-*/
-/*
-            Serial.print("YPR\t");
-            Serial.print(ypr[0] * 180/M_PI);
-            Serial.print("\t");
-            Serial.print(ypr[1] * 180/M_PI);
-            Serial.print("\t");
-            Serial.println(ypr[2] * 180/M_PI);
-*/
-
-//yield();
-
             Serial.print("Cmd Acc\t");
             Serial.print(a.x);
             Serial.print("\t");
             Serial.print(a.y);
             Serial.print("\t");
             Serial.println(a.z);
-
+*/
   return 0;
 }
 

@@ -8,19 +8,23 @@
 
 MpuDrv MpuDrv::Mpu; // singleton
 
-MpuDrv::MpuDrv() : dmpReady(false), data_ready(false), fifoCount(0), count(0) {}
+MpuDrv::MpuDrv() : dmpStatus(ST_0), data_ready(0), fifoCount(0), count(0) {}
 
-uint8_t MpuDrv::isReady() { return dmpReady; }
+uint8_t MpuDrv::getStatus() { return dmpStatus; }
 uint8_t MpuDrv::isDataReady() { return data_ready; }
 Quaternion& MpuDrv::getQuaternion() { return q; }
 float* MpuDrv::getYPR() { return ypr; }
 VectorFloat& MpuDrv::getGravity() {return gravity;}
 VectorInt16& MpuDrv::getWorldAccel() {return aaWorld;}
 
-
 int16_t MpuDrv::init(uint16_t sda, uint16_t sdl, uint16_t intrp) {
   Wire.begin(sda, sdl);
+  return init();
+}
+
+int16_t MpuDrv::init() {
   // initialize device
+  dmpStatus=ST_0;
   Serial.println(F("Init I2C dev..."));
   mpu.initialize();
   // verify connection
@@ -58,10 +62,9 @@ int16_t MpuDrv::init(uint16_t sda, uint16_t sdl, uint16_t intrp) {
     // get expected DMP packet size for later comparison
     packetSize = mpu.dmpGetFIFOPacketSize();
     // set our DMP Ready flag so the main loop() function knows it's okay to use it
-    dmpReady = true;
-
     // warmup 20 sec??? 
-    
+    dmpStatus=ST_INIT;
+    start=millis();
     Serial.print(F("DMP ok! Wait for int...FIFO sz is ")); Serial.println(packetSize);
     
   } else {
@@ -70,12 +73,13 @@ int16_t MpuDrv::init(uint16_t sda, uint16_t sdl, uint16_t intrp) {
     // 2 = DMP configuration updates failed
     // (if it's going to break, usually the code will be 1)
     Serial.print(F("DMP Init fail, code ")); Serial.println(devStatus);
+    dmpStatus = ST_FAIL;
   }
-  return dmpReady;
+  return dmpStatus;
 }
 
 int16_t MpuDrv::cycle(uint16_t dt) {
-  if (!dmpReady) return -1;
+  if (dmpStatus==ST_0 || dmpStatus==ST_FAIL) return -1;
 /*
     // wait for MPU interrupt or extra packet(s) available
     while (!mpuInterrupt && fifoCount < packetSize) {
@@ -120,11 +124,20 @@ int16_t MpuDrv::cycle(uint16_t dt) {
     mpu.getFIFOBytes(fifoBuffer, packetSize);
     fifoCount -= packetSize;
     if(fifoCount >0) { Serial.print(F("FIFO excess : ")); Serial.println(fifoCount);}   
-    mpu.dmpGetQuaternion(&q, fifoBuffer);
-/*
-    int32_t q32[4];
-    int32_t q16[4];
 
+    if(dmpStatus==ST_INIT) dmpStatus=ST_WUP;
+
+    //VectorInt16
+    //memcpy(v, vReal, sizeof(VectorInt16));
+    
+    mpu.dmpGetQuaternion(&q, fifoBuffer);
+
+//    int32_t q32[4];
+//    int32_t q16[4];
+
+    mpu.dmpGetGyro(g16, fifoBuffer);
+    
+/*
     mpu.dmpGetQuaternion(q16, fifoBuffer);
     mpu.dmpGetQuaternion(q32, fifoBuffer);
   */
@@ -138,29 +151,31 @@ int16_t MpuDrv::cycle(uint16_t dt) {
     mpu.dmpGetLinearAccelInWorld(&aaWorld, &aaReal, &q);
 
 
-    if(count%100==0) {
-      /*
-            yield();
-            Serial.print("int quat\t");
+    if(count%200==0) {
+            Serial.print((millis()-start)/1000);
+ 
+            /*
+            Serial.print("\tQuat\t");
             Serial.print(q.w);
             Serial.print("\t");
             Serial.print(q.x);
             Serial.print("\t");
             Serial.print(q.y);
             Serial.print("\t");
-            Serial.println(q.z);
+            Serial.print(q.z);
             */
-            /*
+            
+            
             yield();
-            Serial.print("quat16\t");
-            Serial.print(q16[0]);
+            Serial.print("\tG16\t");
+            Serial.print(g16[0]);
             Serial.print("\t");
-            Serial.print(q16[1]);
+            Serial.print(g16[1]);
             Serial.print("\t");
-            Serial.print(q16[2]);
-            Serial.print("\t");
-            Serial.println(q16[3]);
-
+            Serial.println(g16[2]);
+            
+            
+/*
             yield();
             Serial.print("quat32\t");
             Serial.print(q32[0]);
@@ -189,12 +204,12 @@ int16_t MpuDrv::cycle(uint16_t dt) {
             Serial.println(gravity.z);
   */
 
-  Serial.print("Int Acc\t");
-            Serial.print(aaWorld.x);
+  Serial.print("\tAcc\t");
+            Serial.print(aaReal.x);
             Serial.print("\t");
-            Serial.print(aaWorld.y);
+            Serial.print(aaReal.y);
             Serial.print("\t");
-            Serial.println(aaWorld.z);
+            Serial.println(aaReal.z);
 
     }
 

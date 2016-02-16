@@ -17,9 +17,11 @@ class MyForm(wx.Frame):
         wx.Frame.__init__(self, None, title="Console", size=(640,480))
         menuBar = wx.MenuBar()
         menu = wx.Menu()
-        m_setup = menu.Append(wx.ID_SETUP, "&Setup")
         menuBar.Append(menu, "&File")
+        m_setup = menu.Append(wx.ID_SETUP, "&Setup")
+        m_scan = menu.Append(wx.ID_FILE1, "&Scan Start/Stop")
         self.Bind(wx.EVT_MENU, self.OnSetup, m_setup)
+        self.Bind(wx.EVT_MENU, self.onScanReq, m_scan)
         self.SetMenuBar(menuBar)
         self.statusbar = self.CreateStatusBar()
         self.statusbar.SetFieldsCount(3)
@@ -31,28 +33,31 @@ class MyForm(wx.Frame):
         self.btn_st = wx.Button(panel, wx.ID_ANY, 'Status')
         self.btn_pos = wx.Button(panel, wx.ID_ANY, 'Pos')
         self.btn_upl = wx.Button(panel, wx.ID_ANY, 'Upload')
-        self.btn_scan = wx.Button(panel, wx.ID_ANY, 'Scan')
+        self.btn_rst_mpu = wx.Button(panel, wx.ID_ANY, 'ResetMPU')
         self.btn_dump = wx.Button(panel, wx.ID_ANY, 'Dump')
         self.txt_cmd = wx.TextCtrl(panel)
         self.btn_cmd = wx.Button(panel, wx.ID_ANY, 'Send')
+
+        self.unitPan = draw.UnitPanel(panel)
         self.canvas = draw.DrawPanel(panel)
+
         self.log_bg=self.log.GetBackgroundColour()
         self.layout(panel)
         # redirect text here
-        sys.stdout=self.log
-        sys.stderr=self.log
+        #sys.stdout=self.log
+        #sys.stderr=self.log
         self.logcnt=0
         self.Bind(EVT_LOG_EVENT, self.onLogEvent)
         self.Bind(EVT_UPD_EVENT, self.onUpdEvent)
         self.Bind(wx.EVT_BUTTON, self.onStatusReq, self.btn_st)
         self.Bind(wx.EVT_BUTTON, self.onPositionReq, self.btn_pos)
         self.Bind(wx.EVT_BUTTON, self.onUploadReq, self.btn_upl)
-        self.Bind(wx.EVT_BUTTON, self.onScanReq, self.btn_scan)
+        self.Bind(wx.EVT_BUTTON, self.onResetMPUReq, self.btn_rst_mpu)
         self.Bind(wx.EVT_BUTTON, self.onDumpModel, self.btn_dump)
         self.Bind(wx.EVT_BUTTON, self.onSendCmd, self.btn_cmd)
         self.model=model.Model("ROBO")
-        self.controller=controller.Controller(self, self.model)
         self.config=config.Config(self, self.model)
+        self.controller=controller.Controller(self, self.model)
         self.LogString("Local address is %s" % socket.gethostbyname(socket.gethostname()))
 
     def layout(self, panel):
@@ -66,12 +71,13 @@ class MyForm(wx.Frame):
         sizer.Add(self.log, 1, wx.ALL|wx.EXPAND, 5)
         sizer.Add(sizer_cmd, 0, wx.ALL|wx.EXPAND, 5)
 
+        sizer_pan.Add(self.unitPan, 1, wx.ALL|wx.EXPAND, 5)
         sizer_pan.Add(self.canvas, 1, wx.ALL|wx.EXPAND, 5)
         sizer_pan.Add(sizer_ctrls, 0, wx.ALL|wx.RIGHT, 5)
         sizer_ctrls.Add(self.btn_st, 0, wx.ALL|wx.CENTER, 5)
         sizer_ctrls.Add(self.btn_pos, 0, wx.ALL|wx.CENTER, 5)
         sizer_ctrls.Add(self.btn_upl, 0, wx.ALL|wx.CENTER, 5)
-        sizer_ctrls.Add(self.btn_scan, 0, wx.ALL|wx.CENTER, 5)
+        sizer_ctrls.Add(self.btn_rst_mpu, 0, wx.ALL|wx.CENTER, 5)
         sizer_ctrls.Add(self.btn_dump, 0, wx.ALL|wx.CENTER, 5)
 
         sizer_cmd.Add(self.txt_cmd, 10, wx.ALL|wx.CENTER, 5)
@@ -125,13 +131,14 @@ class MyForm(wx.Frame):
     def onUploadReq(self, event):
         self.controller.reqUpload()
 
+    def onResetMPUReq(self, event):
+        self.controller.reqResetMPU()
+
     def onScanReq(self, event):
         if self.controller.isScanning() :
             self.controller.stopScan()
-            self.btn_scan.SetLabel("Scan");
         else :
             self.controller.startScan()
-            self.btn_scan.SetLabel("Stop Scan");
 
     def onDumpModel(self, event):
         self.LogString(str(self.model))
@@ -143,11 +150,10 @@ class MyForm(wx.Frame):
         self.AddLine(evt.msg, evt.color)
 
     def onUpdEvent(self, evt):
-        #self.txtFreeMem.SetLabel(str(self.model["FHS"]))
-        #self.txtPos.SetLabel("%(X)s, %(Y)s" % self.model)
         self.statusbar.SetStatusText(str(self.model["FHS"]), 0)
-        self.statusbar.SetStatusText("%(X)s, %(Y)s" % self.model, 1)
-        self.canvas.AddPoint(self.model["X"], self.model["Y"])
+        self.statusbar.SetStatusText("%(YPR)s" % self.model, 1)
+        self.unitPan.UpdateData(self.model["YPR"])
+        #self.canvas.AddPoint(self.model["X"], self.model["Y"])
 
 
 class SettingsDialog(wx.Dialog):

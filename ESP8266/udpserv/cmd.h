@@ -8,10 +8,10 @@ public:
   static CmdProc Cmd; // singleton  
   int16_t init(uint16_t port);
   int16_t doCmd();
-  boolean connected() { return isConnected; }
+  boolean connected();
   boolean read();
   void  respond();
-  boolean isSysLog(); // { return log_on;}
+  boolean isSysLog();
   boolean sendSysLog(const char *buf);
   boolean sendSysLogStatus();
 protected:
