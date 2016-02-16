@@ -38,7 +38,7 @@ protected:
   VectorFloat gravity; // for test
   float ypr[3];           // [yaw, pitch, roll]
   VectorInt16 aaWorld;    // [x, y, z]            world-frame accel sensor measurements
-  int32_t g16[3]; 
+  //int32_t g16[3]; 
   /*
   volatile uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
   */

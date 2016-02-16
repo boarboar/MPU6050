@@ -133,14 +133,14 @@ int16_t MpuDrv::cycle(uint16_t dt) {
     mpu.dmpGetQuaternion(&q, fifoBuffer);
 
 //    int32_t q32[4];
-//    int32_t q16[4];
+    int16_t q16[4];
 
-    mpu.dmpGetGyro(g16, fifoBuffer);
+//    mpu.dmpGetGyro(g16, fifoBuffer);
     
-/*
+
     mpu.dmpGetQuaternion(q16, fifoBuffer);
-    mpu.dmpGetQuaternion(q32, fifoBuffer);
-  */
+//    mpu.dmpGetQuaternion(q32, fifoBuffer);
+  
     mpu.dmpGetGravity(&gravity, &q);
     mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
 
@@ -167,12 +167,14 @@ int16_t MpuDrv::cycle(uint16_t dt) {
             
             
             yield();
-            Serial.print("\tG16\t");
-            Serial.print(g16[0]);
+            Serial.print("\tQ16\t");
+            Serial.print(q16[0]);
             Serial.print("\t");
-            Serial.print(g16[1]);
+            Serial.print(q16[1]);
             Serial.print("\t");
-            Serial.println(g16[2]);
+            Serial.print(q16[2]);
+            Serial.print("\t");
+            Serial.println(q16[3]);
             
             
 /*
@@ -205,11 +207,11 @@ int16_t MpuDrv::cycle(uint16_t dt) {
   */
 
   Serial.print("\tAcc\t");
-            Serial.print(aaReal.x);
+            Serial.print(aa.x);
             Serial.print("\t");
-            Serial.print(aaReal.y);
+            Serial.print(aa.y);
             Serial.print("\t");
-            Serial.println(aaReal.z);
+            Serial.println(aa.z);
 
     }
 
