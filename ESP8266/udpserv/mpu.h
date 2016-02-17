@@ -20,7 +20,7 @@ public:
   int16_t init(uint16_t sda, uint16_t sdl, uint16_t intr);
   int16_t init();
   int16_t cycle(uint16_t dt);
-  uint8_t getStatus();
+  int8_t getStatus();
   uint8_t isDataReady();
   Quaternion& getQuaternion();
   VectorFloat& getGravity();
@@ -32,7 +32,7 @@ protected:
   // MPU control/status vars
   MPU6050 mpu;
   uint32_t start;
-  uint8_t dmpStatus; 
+  int8_t dmpStatus; 
   uint8_t data_ready;
   uint16_t packetSize;    // expected DMP packet size (default is 42 bytes)
   uint16_t fifoCount;     // count of all bytes currently in FIFO

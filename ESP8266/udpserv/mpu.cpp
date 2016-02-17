@@ -10,7 +10,7 @@ MpuDrv MpuDrv::Mpu; // singleton
 
 MpuDrv::MpuDrv() : dmpStatus(ST_0)/*, data_ready(0), fifoCount(0), count(0)*/ {}
 
-uint8_t MpuDrv::getStatus() { return dmpStatus; }
+int8_t MpuDrv::getStatus() { return dmpStatus; }
 uint8_t MpuDrv::isDataReady() { return data_ready; }
 Quaternion& MpuDrv::getQuaternion() { return q; }
 float* MpuDrv::getYPR() { return ypr; }
@@ -122,14 +122,24 @@ int16_t MpuDrv::cycle(uint16_t dt) {
     
     mpu.dmpGetQuaternion(q16, fifoBuffer);
     mpu.dmpGetAccel(&aa, fifoBuffer);
-
+/*
+    if(count%200==0)   {
+      Serial.print(dmpStatus);
+      Serial.print("\t");
+      Serial.println(count);
+    }
+*/
     if(dmpStatus==ST_WUP) { // warmup covergence state
       if(count%200==0) {
         Serial.println((millis()-start)/1000);
         yield();
         Serial.print("\tQ16");
+        for(i=0; i<4; i++) {Serial.print("\t"); Serial.print(q16_0[i]);}
+        Serial.println();
+        Serial.print("\tQ16");
         for(i=0; i<4; i++) {Serial.print("\t"); Serial.print(q16[i]);}
         Serial.println();
+        Serial.print("\tAcc\t"); Serial.print(aa16_0[0]); Serial.print("\t"); Serial.print(aa16_0[1]); Serial.print("\t"); Serial.println(aa16_0[2]);
         Serial.print("\tAcc\t"); Serial.print(aa.x); Serial.print("\t"); Serial.print(aa.y); Serial.print("\t"); Serial.println(aa.z);
       }
 
@@ -141,14 +151,13 @@ int16_t MpuDrv::cycle(uint16_t dt) {
         for(i=0; i<3; i++) {e=aa16[i]-aa16_0[i]; if(e<0) e=-e; if(e>ae) ae=e;}        
         
         if(count%200==0) {Serial.print("Q16 Err:\t"); Serial.print(qe); Serial.print("\tA16 Err:\t"); Serial.println(ae);} 
-
         if(qe<QUAT_INIT_TOL && ae<ACC_INIT_TOL) {
-          if((millis()-start) > INIT_PERIOD_MIN) {
+          if((millis()-start)/1000 > INIT_PERIOD_MIN) {
             // TODO add conv count seq !!! (at least 3) 
             Serial.println(F("===MPU Converged"));
             dmpStatus=ST_READY;
           }
-        } else if((millis()-start) > INIT_PERIOD_MAX) {
+        } else if((millis()-start)/1000 > INIT_PERIOD_MAX) {
           Serial.println(F("===MPU Failed to converge"));
            dmpStatus=ST_READY; // temporarily
         }
@@ -172,12 +181,15 @@ int16_t MpuDrv::cycle(uint16_t dt) {
       mpu.dmpGetYawPitchRoll(ypr, &q, &gravity); // not necessary at this step, should be moved to on-demand
 
       // use microseconds for V/R integration !!!
-    
+    /*
       if(count%200==0) { 
+               Serial.println((millis()-start)/1000);
+ 
         //Serial.print("\tQuat\t"); Serial.print(q.w); Serial.print("\t"); Serial.print(q.x); Serial.print("\t"); Serial.print(q.y); Serial.print("\t"); Serial.print(q.z);
-        //Serial.print("YPR\t"); Serial.print(ypr[0] * 180.0f/M_PI); Serial.print("\t"); Serial.print(ypr[1] * 180.0f/M_PI); Serial.print("\t"); Serial.println(ypr[2] * 180.0f/M_PI);
+        Serial.print("YPR\t"); Serial.print(ypr[0] * 180.0f/M_PI); Serial.print("\t"); Serial.print(ypr[1] * 180.0f/M_PI); Serial.print("\t"); Serial.println(ypr[2] * 180.0f/M_PI);
         //Serial.print("Cmd Grav\t");Serial.print(gravity.x);Serial.print("\t");Serial.print(gravity.y);Serial.print("\t");Serial.println(gravity.z);
       }
+      */
       data_ready=1; 
     }
     count++;       

@@ -79,13 +79,12 @@ boolean CmdProc::isSysLog() { return CfgDrv::Cfg.log_on;}
 
 boolean CmdProc::sendSysLog(const char *buf) {
   if(!CfgDrv::Cfg.log_on) return false;
-  StaticJsonBuffer<400> jsonBufferOut;
+  StaticJsonBuffer<200> jsonBufferOut;
   JsonObject& rootOut = jsonBufferOut.createObject();
   char bufout[BUF_SZ];
   rootOut["S"] = "I";
   rootOut["T"] = millis();
   rootOut["M"] = buf;
-  c_getpos(rootOut, rootOut);
   rootOut.printTo(bufout, BUF_SZ-1);
   udp_snd.beginPacket(CfgDrv::Cfg.log_addr, CfgDrv::Cfg.log_port);
   udp_snd.write(bufout, strlen(bufout));
@@ -94,7 +93,7 @@ boolean CmdProc::sendSysLog(const char *buf) {
 
 boolean CmdProc::sendSysLogStatus() {
   if(!CfgDrv::Cfg.log_on) return false;
-  StaticJsonBuffer<200> jsonBufferOut;
+  StaticJsonBuffer<400> jsonBufferOut;
   JsonObject& rootOut = jsonBufferOut.createObject();
   char bufout[BUF_SZ];
   rootOut["S"] = "I";
@@ -102,6 +101,7 @@ boolean CmdProc::sendSysLogStatus() {
   rootOut["R"] = 0; // OK, shoild be -5 if tracking is off (reserved)
   //rootOut["X"] = rand()%100;
   //rootOut["Y"] = rand()%100;
+  c_getpos(rootOut, rootOut);
   rootOut.printTo(bufout, BUF_SZ-1);
   udp_snd.beginPacket(CfgDrv::Cfg.log_addr, CfgDrv::Cfg.log_port);
   udp_snd.write(bufout, strlen(bufout));
