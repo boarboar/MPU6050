@@ -79,12 +79,13 @@ boolean CmdProc::isSysLog() { return CfgDrv::Cfg.log_on;}
 
 boolean CmdProc::sendSysLog(const char *buf) {
   if(!CfgDrv::Cfg.log_on) return false;
-  StaticJsonBuffer<200> jsonBufferOut;
+  StaticJsonBuffer<400> jsonBufferOut;
   JsonObject& rootOut = jsonBufferOut.createObject();
   char bufout[BUF_SZ];
   rootOut["S"] = "I";
   rootOut["T"] = millis();
   rootOut["M"] = buf;
+  c_getpos(rootOut, rootOut);
   rootOut.printTo(bufout, BUF_SZ-1);
   udp_snd.beginPacket(CfgDrv::Cfg.log_addr, CfgDrv::Cfg.log_port);
   udp_snd.write(bufout, strlen(bufout));
@@ -99,8 +100,8 @@ boolean CmdProc::sendSysLogStatus() {
   rootOut["S"] = "I";
   rootOut["T"] = millis();
   rootOut["R"] = 0; // OK, shoild be -5 if tracking is off (reserved)
-  rootOut["X"] = rand()%100;
-  rootOut["Y"] = rand()%100;
+  //rootOut["X"] = rand()%100;
+  //rootOut["Y"] = rand()%100;
   rootOut.printTo(bufout, BUF_SZ-1);
   udp_snd.beginPacket(CfgDrv::Cfg.log_addr, CfgDrv::Cfg.log_port);
   udp_snd.write(bufout, strlen(bufout));
@@ -138,8 +139,8 @@ int16_t _doCmd(JsonObject& root, JsonObject& rootOut) {
 
 int16_t c_info(JsonObject& root, JsonObject& rootOut) {
   //Serial.println("INFO"); 
-  rootOut["MST"]=MpuDrv::Mpu.getStatus() ? 1 : 0;
-  rootOut["MDR"]=MpuDrv::Mpu.isDataReady() ? 1 : 0;
+  rootOut["MST"]=MpuDrv::Mpu.getStatus();
+  rootOut["MDR"]=MpuDrv::Mpu.isDataReady();
   rootOut["FHS"]=ESP.getFreeHeap();
   rootOut["FSS"]=ESP.getFreeSketchSpace();
   rootOut["MDC"]=Stat::StatStore.cycle_mpu_dry_cnt;

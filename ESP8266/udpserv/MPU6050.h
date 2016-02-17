@@ -860,7 +860,8 @@ class MPU6050 {
             uint8_t dmpGetAccel(VectorInt16 *v, const uint8_t* packet=0);
             uint8_t dmpGetQuaternion(int32_t *data, const uint8_t* packet=0);
             uint8_t dmpGetQuaternion(int16_t *data, const uint8_t* packet=0);
-            uint8_t dmpGetQuaternion(Quaternion *q, const uint8_t* packet=0);
+            uint8_t dmpGetQuaternion(Quaternion *q, const uint8_t* packet=0);            
+            uint8_t dmpGetQuaternion(Quaternion *q, const int16_t qI[4]);// ADDED
             uint8_t dmpGet6AxisQuaternion(int32_t *data, const uint8_t* packet=0);
             uint8_t dmpGet6AxisQuaternion(int16_t *data, const uint8_t* packet=0);
             uint8_t dmpGet6AxisQuaternion(Quaternion *q, const uint8_t* packet=0);

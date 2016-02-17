@@ -1,12 +1,11 @@
-import sys
 import wx
 import wx.lib.newevent
-#import json
 import socket
 import draw
 import model
 import controller
 import config
+import history
 
 LogEvent, EVT_LOG_EVENT = wx.lib.newevent.NewEvent()
 UpdEvent, EVT_UPD_EVENT = wx.lib.newevent.NewEvent()
@@ -34,6 +33,7 @@ class MyForm(wx.Frame):
         self.btn_pos = wx.Button(panel, wx.ID_ANY, 'Pos')
         self.btn_upl = wx.Button(panel, wx.ID_ANY, 'Upload')
         self.btn_rst_mpu = wx.Button(panel, wx.ID_ANY, 'ResetMPU')
+        self.btn_hist = wx.Button(panel, wx.ID_ANY, 'Measurements')
         self.btn_dump = wx.Button(panel, wx.ID_ANY, 'Dump')
         self.txt_cmd = wx.TextCtrl(panel)
         self.btn_cmd = wx.Button(panel, wx.ID_ANY, 'Send')
@@ -41,7 +41,11 @@ class MyForm(wx.Frame):
         self.unitPan = draw.UnitPanel(panel)
         self.canvas = draw.DrawPanel(panel)
 
+        self.unitPan.SetMaxSize((240, 240))
+        #self.canvas.SetMaxSize((240, 240))
+
         self.log_bg=self.log.GetBackgroundColour()
+
         self.layout(panel)
         # redirect text here
         #sys.stdout=self.log
@@ -54,6 +58,7 @@ class MyForm(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onUploadReq, self.btn_upl)
         self.Bind(wx.EVT_BUTTON, self.onResetMPUReq, self.btn_rst_mpu)
         self.Bind(wx.EVT_BUTTON, self.onDumpModel, self.btn_dump)
+        self.Bind(wx.EVT_BUTTON, self.onHistory, self.btn_hist)
         self.Bind(wx.EVT_BUTTON, self.onSendCmd, self.btn_cmd)
         self.model=model.Model("ROBO")
         self.config=config.Config(self, self.model)
@@ -68,6 +73,7 @@ class MyForm(wx.Frame):
         sizer_cmd = wx.BoxSizer(wx.HORIZONTAL)
 
         sizer.Add(sizer_pan, 2, wx.ALL|wx.EXPAND, 5)
+        #sizer.Add(self.grid, 0, wx.ALL|wx.EXPAND, 5)
         sizer.Add(self.log, 1, wx.ALL|wx.EXPAND, 5)
         sizer.Add(sizer_cmd, 0, wx.ALL|wx.EXPAND, 5)
 
@@ -78,6 +84,7 @@ class MyForm(wx.Frame):
         sizer_ctrls.Add(self.btn_pos, 0, wx.ALL|wx.CENTER, 5)
         sizer_ctrls.Add(self.btn_upl, 0, wx.ALL|wx.CENTER, 5)
         sizer_ctrls.Add(self.btn_rst_mpu, 0, wx.ALL|wx.CENTER, 5)
+        sizer_ctrls.Add(self.btn_hist, 0, wx.ALL|wx.CENTER, 5)
         sizer_ctrls.Add(self.btn_dump, 0, wx.ALL|wx.CENTER, 5)
 
         sizer_cmd.Add(self.txt_cmd, 10, wx.ALL|wx.CENTER, 5)
@@ -122,6 +129,11 @@ class MyForm(wx.Frame):
             self.config.update()
             self.controller.restart()
 
+    def onHistory(self, event):
+        sd = history.HistoryDialog(self, self.model, None)
+        sd.ShowModal()
+        sd.Destroy()
+
     def onStatusReq(self, event):
         self.controller.reqStatus()
 
@@ -141,7 +153,7 @@ class MyForm(wx.Frame):
             self.controller.startScan()
 
     def onDumpModel(self, event):
-        self.LogString(str(self.model))
+        self.LogString(str(self.model.dump()))
 
     def onSendCmd(self, event):
         self.controller.reqCmdRaw(self.txt_cmd.GetValue())
@@ -157,7 +169,6 @@ class MyForm(wx.Frame):
 
 
 class SettingsDialog(wx.Dialog):
-
     def __init__(self, model, *args, **kw):
         super(SettingsDialog, self).__init__(*args, **kw)
         self.model = model

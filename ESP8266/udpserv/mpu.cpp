@@ -8,7 +8,7 @@
 
 MpuDrv MpuDrv::Mpu; // singleton
 
-MpuDrv::MpuDrv() : dmpStatus(ST_0), data_ready(0), fifoCount(0), count(0) {}
+MpuDrv::MpuDrv() : dmpStatus(ST_0)/*, data_ready(0), fifoCount(0), count(0)*/ {}
 
 uint8_t MpuDrv::getStatus() { return dmpStatus; }
 uint8_t MpuDrv::isDataReady() { return data_ready; }
@@ -25,6 +25,9 @@ int16_t MpuDrv::init(uint16_t sda, uint16_t sdl, uint16_t intrp) {
 int16_t MpuDrv::init() {
   // initialize device
   dmpStatus=ST_0;
+  data_ready=0;
+  fifoCount=0;
+  count=0;
   Serial.println(F("Init I2C dev..."));
   mpu.initialize();
   // verify connection
@@ -63,7 +66,7 @@ int16_t MpuDrv::init() {
     packetSize = mpu.dmpGetFIFOPacketSize();
     // set our DMP Ready flag so the main loop() function knows it's okay to use it
     // warmup 20 sec??? 
-    dmpStatus=ST_INIT;
+    dmpStatus=ST_WUP;
     start=millis();
     Serial.print(F("DMP ok! Wait for int...FIFO sz is ")); Serial.println(packetSize);
     
@@ -82,25 +85,11 @@ int16_t MpuDrv::cycle(uint16_t dt) {
   if (dmpStatus==ST_0 || dmpStatus==ST_FAIL) return -1;
 /*
     // wait for MPU interrupt or extra packet(s) available
-    while (!mpuInterrupt && fifoCount < packetSize) {
-        // other program behavior stuff here
-        // .
-        // .
-        // .
-        // if you are really paranoid you can frequently test in between other
-        // stuff to see if mpuInterrupt is true, and if so, "break;" from the
-        // while() loop to immediately process the MPU data
-        // .
-        // .
-        // .
-    }
-
+    if (!mpuInterrupt && fifoCount < packetSize) return ;
     // reset interrupt flag and get INT_STATUS byte
     mpuInterrupt = false;
     */
   uint8_t mpuIntStatus = mpu.getIntStatus();
-  // get current FIFO count
-  
   // check for overflow (this should never happen unless our code is too inefficient)
   if ((mpuIntStatus & 0x10) || fifoCount == 1024) {
     // reset so we can continue cleanly
@@ -108,8 +97,9 @@ int16_t MpuDrv::cycle(uint16_t dt) {
     fifoCount=0;
     Serial.println(F("FIFO overflow!!!"));
     return -2;
-    // otherwise, check for DMP data ready interrupt (this should happen frequently)
-  } else if (mpuIntStatus & 0x02 || fifoCount >= packetSize) {
+  } 
+  // otherwise, check for DMP data ready interrupt (this should happen frequently)
+  if (mpuIntStatus & 0x02 || fifoCount >= packetSize) {
     fifoCount = mpu.getFIFOCount();
     //if(fifoCount < packetSize) return 0;
     // wait for correct available data length, should be a VERY short wait
@@ -124,101 +114,75 @@ int16_t MpuDrv::cycle(uint16_t dt) {
     mpu.getFIFOBytes(fifoBuffer, packetSize);
     fifoCount -= packetSize;
     if(fifoCount >0) { Serial.print(F("FIFO excess : ")); Serial.println(fifoCount);}   
-
-    if(dmpStatus==ST_INIT) dmpStatus=ST_WUP;
-
-    //VectorInt16
-    //memcpy(v, vReal, sizeof(VectorInt16));
     
-    mpu.dmpGetQuaternion(&q, fifoBuffer);
-
-//    int32_t q32[4];
-    int16_t q16[4];
-
-//    mpu.dmpGetGyro(g16, fifoBuffer);
+    int16_t q16_0[4];
+    int16_t aa16_0[3];
+    for(i=0; i<4; i++) q16_0[i]=q16[i];
+    aa16_0[0]=aa.x; aa16_0[1]=aa.y; aa16_0[2]=aa.z;
     
-
     mpu.dmpGetQuaternion(q16, fifoBuffer);
-//    mpu.dmpGetQuaternion(q32, fifoBuffer);
-  
-    mpu.dmpGetGravity(&gravity, &q);
-    mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-
-    VectorInt16 aa;         // [x, y, z]            accel sensor measurements
-    VectorInt16 aaReal;     // [x, y, z]            gravity-free accel sensor measurements
     mpu.dmpGetAccel(&aa, fifoBuffer);
-    mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
-    mpu.dmpGetLinearAccelInWorld(&aaWorld, &aaReal, &q);
 
+    if(dmpStatus==ST_WUP) { // warmup covergence state
+      if(count%200==0) {
+        Serial.println((millis()-start)/1000);
+        yield();
+        Serial.print("\tQ16");
+        for(i=0; i<4; i++) {Serial.print("\t"); Serial.print(q16[i]);}
+        Serial.println();
+        Serial.print("\tAcc\t"); Serial.print(aa.x); Serial.print("\t"); Serial.print(aa.y); Serial.print("\t"); Serial.println(aa.z);
+      }
 
-    if(count%200==0) {
-            Serial.print((millis()-start)/1000);
- 
-            /*
-            Serial.print("\tQuat\t");
-            Serial.print(q.w);
-            Serial.print("\t");
-            Serial.print(q.x);
-            Serial.print("\t");
-            Serial.print(q.y);
-            Serial.print("\t");
-            Serial.print(q.z);
-            */
-            
-            
-            yield();
-            Serial.print("\tQ16\t");
-            Serial.print(q16[0]);
-            Serial.print("\t");
-            Serial.print(q16[1]);
-            Serial.print("\t");
-            Serial.print(q16[2]);
-            Serial.print("\t");
-            Serial.println(q16[3]);
-            
-            
-/*
-            yield();
-            Serial.print("quat32\t");
-            Serial.print(q32[0]);
-            Serial.print("\t");
-            Serial.print(q32[1]);
-            Serial.print("\t");
-            Serial.print(q32[2]);
-            Serial.print("\t");
-            Serial.println(q32[3]);
-            */
-/*
-            yield();
-            Serial.print("YPR\t");
-            Serial.print(ypr[0] * 180.0f/M_PI);
-            Serial.print("\t");
-            Serial.print(ypr[1] * 180.0f/M_PI);
-            Serial.print("\t");
-            Serial.println(ypr[2] * 180.0f/M_PI);
-  */
-/*
-            Serial.print("Cmd Grav\t");
-            Serial.print(gravity.x);
-            Serial.print("\t");
-            Serial.print(gravity.y);
-            Serial.print("\t");
-            Serial.println(gravity.z);
-  */
+      if(count) {
+        int16_t aa16[3];
+        int32_t qe=0, ae=0, e;
+        aa16[0]=aa.x; aa16[1]=aa.y; aa16[2]=aa.z;                   
+        for(i=0; i<4; i++) {e=q16[i]-q16_0[i]; if(e<0) e=-e; if(e>qe) qe=e;}
+        for(i=0; i<3; i++) {e=aa16[i]-aa16_0[i]; if(e<0) e=-e; if(e>ae) ae=e;}        
+        
+        if(count%200==0) {Serial.print("Q16 Err:\t"); Serial.print(qe); Serial.print("\tA16 Err:\t"); Serial.println(ae);} 
 
-  Serial.print("\tAcc\t");
-            Serial.print(aa.x);
-            Serial.print("\t");
-            Serial.print(aa.y);
-            Serial.print("\t");
-            Serial.println(aa.z);
+        if(qe<QUAT_INIT_TOL && ae<ACC_INIT_TOL) {
+          if((millis()-start) > INIT_PERIOD_MIN) {
+            // TODO add conv count seq !!! (at least 3) 
+            Serial.println(F("===MPU Converged"));
+            dmpStatus=ST_READY;
+          }
+        } else if((millis()-start) > INIT_PERIOD_MAX) {
+          Serial.println(F("===MPU Failed to converge"));
+           dmpStatus=ST_READY; // temporarily
+        }
+      } // if count
 
+      if(dmpStatus==ST_READY) {
+        // TODO - store base data here
+      }
+    } // warmup
+
+    if(dmpStatus==ST_READY) {
+      //mpu.dmpGetQuaternion(&q, fifoBuffer);
+
+      mpu.dmpGetQuaternion(&q, q16);
+      mpu.dmpGetGravity(&gravity, &q);
+    
+      VectorInt16 aaReal;     // [x, y, z]            gravity-free accel sensor measurements
+      mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
+      mpu.dmpGetLinearAccelInWorld(&aaWorld, &aaReal, &q);
+
+      mpu.dmpGetYawPitchRoll(ypr, &q, &gravity); // not necessary at this step, should be moved to on-demand
+
+      // use microseconds for V/R integration !!!
+    
+      if(count%200==0) { 
+        //Serial.print("\tQuat\t"); Serial.print(q.w); Serial.print("\t"); Serial.print(q.x); Serial.print("\t"); Serial.print(q.y); Serial.print("\t"); Serial.print(q.z);
+        //Serial.print("YPR\t"); Serial.print(ypr[0] * 180.0f/M_PI); Serial.print("\t"); Serial.print(ypr[1] * 180.0f/M_PI); Serial.print("\t"); Serial.println(ypr[2] * 180.0f/M_PI);
+        //Serial.print("Cmd Grav\t");Serial.print(gravity.x);Serial.print("\t");Serial.print(gravity.y);Serial.print("\t");Serial.println(gravity.z);
+      }
+      data_ready=1; 
     }
-
-    count++;
-    data_ready=true;        
+    count++;       
     return 1;
-  }  
+  } // if data
   return 0;
 }
 

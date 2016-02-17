@@ -4,6 +4,7 @@
  
 import socket
 import sys
+import random
 import json
  
 host = ''   # Symbolic name meaning all available interfaces
@@ -49,12 +50,16 @@ while 1:
         #s.sendto(reply , addr)
         print 'Message[' + addr[0] + ':' + str(addr[1]) + '] - ' + data.strip()
         js=json.loads(data.strip())
-        js.update({"R":0, "FHS":99999})
+        # pos: {"I":0,"C":"POS","Q":[0,1,2,3],"YPR":[0,1,2]}
+        if js["C"]=="INFO" : js["FHS"]=99999
+        elif js["C"]=="POS" : js.update({"Q":[0,1,2,3], "YPR":[int((random.random()-0.5)*360),12,13]})
+        js["R"]=0
         #js["I"]=99
         s.sendto(json.dumps(js) , addr)
+    except KeyError: continue   
     except socket.timeout:
 #        print 'Timeout'
-        continue
+        continue    
     except socket.error as msg:
         print 'Rcv/Snd failed. Error %s ' % msg
         sys.exit()

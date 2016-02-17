@@ -7,10 +7,14 @@
 class MpuDrv {
   public:
   static const int8_t ST_0=0;
-  static const int8_t ST_FAIL=255;
-  static const int8_t ST_INIT=1;
-  static const int8_t ST_WUP=2;
-  static const int8_t ST_READY=3;
+  static const int8_t ST_FAIL=-10;
+  static const int8_t ST_WUP=-12;
+  static const int8_t ST_NOTCONV=-13;
+  static const int8_t ST_READY=1;
+  static const int16_t QUAT_INIT_TOL=10; 
+  static const int16_t ACC_INIT_TOL=10;
+  static const int16_t INIT_PERIOD_MIN=20;
+  static const int16_t INIT_PERIOD_MAX=60;
 public:
   static MpuDrv Mpu; // singleton  
   int16_t init(uint16_t sda, uint16_t sdl, uint16_t intr);
@@ -38,7 +42,9 @@ protected:
   VectorFloat gravity; // for test
   float ypr[3];           // [yaw, pitch, roll]
   VectorInt16 aaWorld;    // [x, y, z]            world-frame accel sensor measurements
-  //int32_t g16[3]; 
+  //
+  int16_t q16[4];         // [w, x, y, z]         quaternion container (int 16)
+  VectorInt16 aa;          // [x, y, z]            accel sensor measurements
   /*
   volatile uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
   */

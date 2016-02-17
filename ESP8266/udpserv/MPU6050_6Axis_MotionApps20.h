@@ -625,6 +625,16 @@ uint8_t MPU6050::dmpGetQuaternion(Quaternion *q, const uint8_t* packet) {
     }
     return status; // int16 return value, indicates error if this line is reached
 }
+
+// ADDED
+uint8_t MPU6050::dmpGetQuaternion(Quaternion *q, const int16_t qI[4]) {
+        q -> w = (float)qI[0] / 16384.0f;
+        q -> x = (float)qI[1] / 16384.0f;
+        q -> y = (float)qI[2] / 16384.0f;
+        q -> z = (float)qI[3] / 16384.0f;
+        return 0;
+}
+
 // uint8_t MPU6050::dmpGet6AxisQuaternion(long *data, const uint8_t* packet);
 // uint8_t MPU6050::dmpGetRelativeQuaternion(long *data, const uint8_t* packet);
 uint8_t MPU6050::dmpGetGyro(int32_t *data, const uint8_t* packet) {

@@ -2,6 +2,7 @@ import json
 import threading
 import copy
 import socket
+import pprint
 
 class Model(dict):
     def __init__(self, name=None, mock=False):
@@ -17,6 +18,11 @@ class Model(dict):
         #self["X"]=0
         #self["Y"]=0
         self["YPR"]=[0,0,0]
+        self["MHIST"]=(2,[
+                        {"T":1000, "Q":[1.0, 0.0, 0.0, 1.0], "YPR":[90.0, 0.0, 0.0]},
+                        {"T":2000, "Q":[0.9, 0.0, 0.1, -0.9], "YPR":[92.0, -10.0, -5.0]}
+                        ]
+                       )
         self.__lock=threading.Lock()
     def __getitem__(self, key):
         self.__lock.acquire()
@@ -26,7 +32,7 @@ class Model(dict):
         finally: self.__lock.release()
         return value
     def update(self, resp_json):
-        #resp_json = json.loads(js)
+        "from sresp"
         self.__lock.acquire()
         try:
             if resp_json["C"]=="INFO" :
@@ -39,5 +45,21 @@ class Model(dict):
         except KeyError: pass
         finally: self.__lock.release()
 
+    def update_log(self, resp_json):
+        "from syslog"
+        self.__lock.acquire()
+        try:
+            item={"T":resp_json["T"], "Q":resp_json["Q"], "YPR":resp_json["YPR"]}
+            self["MHIST"][1].append()
+            self["MHIST"][0]=len(self["MHIST"][1])
+        except KeyError: pass
+        finally: self.__lock.release()
+
+    def dump(self):
+        s=""
+        self.__lock.acquire()
+        s=pprint.pformat(self, depth=2)
+        self.__lock.release()
+        return s
 
 
