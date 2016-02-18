@@ -20,7 +20,8 @@
  
  */
 
-#define SCALE_A (2.0f*8192.0f) // 1g = (9.80665 m/s^2)
+//#define SCALE_A (2.0f*8192.0f) // 1g = (9.80665 m/s^2)
+#define SCALE_A (8192.0f) // 1g = (9.80665 m/s^2)
 //#define SCALE_G 131.0f      // 
 #define G_FORCE 9.80665f
 #define G_SCALE (G_FORCE/SCALE_A)
@@ -253,28 +254,36 @@ VectorInt16 MpuDrv::getWorldAccel() {
   mpu.dmpGetLinearAccel(&aaReal, &aa16, &gravity);
   mpu.dmpGetLinearAccelInWorld(&aaWorld, &aaReal, &q);
 
-  Serial.print(F("Observ RGrav\t"));Serial.print(aa16.x);Serial.print("\t");Serial.print(aa16.y);Serial.print("\t");Serial.println(aa16.z);
-  Serial.print(F("Observ WGrav\t"));Serial.print(aaWorld.x);Serial.print("\t");Serial.print(aaWorld.y);Serial.print("\t");Serial.println(aaWorld.z);
+  Serial.print(F("Observ AAcc\t"));Serial.print(aa16.x);Serial.print("\t");Serial.print(aa16.y);Serial.print("\t");Serial.println(aa16.z);
+  Serial.print(F("Observ RAcc\t"));Serial.print(aaReal.x);Serial.print("\t");Serial.print(aaReal.y);Serial.print("\t");Serial.println(aaReal.z);
+  Serial.print(F("Observ WAcc\t"));Serial.print(aaWorld.x);Serial.print("\t");Serial.print(aaWorld.y);Serial.print("\t");Serial.println(aaWorld.z);
+VectorFloat af;
+  af.x=aaWorld.x*G_SCALE; af.y=aaWorld.y*G_SCALE; af.z=aaWorld.z*G_SCALE;
 
+  Serial.print(F("Real WGrav (m/s^2)\t"));Serial.print(af.x);Serial.print("\t");Serial.print(af.y);Serial.print("\t");Serial.println(af.z);
+
+  // but still in the tilted basis!!!
+  
+  /*
   yield();
   
   VectorInt16 aa;
   aa.x=aa16.x-aa16_0.x; aa.y=aa16.y-aa16_0.y; aa.z=aa16.z-aa16_0.z;
-  mpu.dmpGetLinearAccel(&aaReal, &aa16, &gravity);
+  mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
   mpu.dmpGetLinearAccelInWorld(&aaWorld, &aaReal, &q);
 
-  Serial.print(F("Adj RGrav\t"));Serial.print(aa16.x);Serial.print("\t");Serial.print(aa16.y);Serial.print("\t");Serial.println(aa16.z);
-  Serial.print(F("Adj WGrav\t"));Serial.print(aaWorld.x);Serial.print("\t");Serial.print(aaWorld.y);Serial.print("\t");Serial.println(aaWorld.z);
+  Serial.print(F("Adj AAcc\t"));Serial.print(aa.x);Serial.print("\t");Serial.print(aa.y);Serial.print("\t");Serial.println(aa.z);
+  Serial.print(F("Observ RAcc\t"));Serial.print(aaReal.x);Serial.print("\t");Serial.print(aaReal.y);Serial.print("\t");Serial.println(aaReal.z);
+  Serial.print(F("Adj WAcc\t"));Serial.print(aaWorld.x);Serial.print("\t");Serial.print(aaWorld.y);Serial.print("\t");Serial.println(aaWorld.z);
   // but still in the tilted basis!!!
 
   // real A=ax/SCALE_A*G_FORCE
   yield();
-  VectorFloat af;
   af.x=aaWorld.x*G_SCALE; af.y=aaWorld.y*G_SCALE; af.z=aaWorld.z*G_SCALE;
 
   Serial.print(F("Real WGrav (m/s^2)\t"));Serial.print(af.x);Serial.print("\t");Serial.print(af.y);Serial.print("\t");Serial.println(af.z);
   // but still in the tilted basis!!!
-  
+  */
   return aaWorld;
 }
 
