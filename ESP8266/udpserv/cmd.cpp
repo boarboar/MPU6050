@@ -82,7 +82,7 @@ boolean CmdProc::sendSysLog(const char *buf) {
   StaticJsonBuffer<200> jsonBufferOut;
   JsonObject& rootOut = jsonBufferOut.createObject();
   char bufout[BUF_SZ];
-  rootOut["S"] = "I";
+  rootOut["C"] = "I";
   rootOut["T"] = millis();
   rootOut["M"] = buf;
   rootOut.printTo(bufout, BUF_SZ-1);
@@ -92,11 +92,12 @@ boolean CmdProc::sendSysLog(const char *buf) {
 }
 
 boolean CmdProc::sendSysLogStatus() {
+  //{"C": "I", "T":12345, "R":0, "A": [10, 20, -30], "C": "POS", "R": 0, "YPR": [59, 12, 13]}
   if(!CfgDrv::Cfg.log_on) return false;
   StaticJsonBuffer<400> jsonBufferOut;
   JsonObject& rootOut = jsonBufferOut.createObject();
   char bufout[BUF_SZ];
-  rootOut["S"] = "I";
+  rootOut["C"] = "L";
   rootOut["T"] = millis();
   rootOut["R"] = 0; // OK, shoild be -5 if tracking is off (reserved)
   //rootOut["X"] = rand()%100;
@@ -109,6 +110,7 @@ boolean CmdProc::sendSysLogStatus() {
 }
 
 int16_t _doCmd(JsonObject& root, JsonObject& rootOut) {  
+  rootOut["T"] = millis();
   if (!root.success()) {
     //Serial.println("parseObject() failed");
     rootOut["I"] = -1;
@@ -173,16 +175,19 @@ int16_t c_getpos(JsonObject& root, JsonObject& rootOut) {
   rootOut["X"] = rand()%100;
   rootOut["Y"] = rand()%100;
   */
+  /*
   JsonArray& qa = rootOut.createNestedArray("Q");
   Quaternion& q = MpuDrv::Mpu.getQuaternion(); 
   qa.add(q.w); qa.add(q.x); qa.add(q.y); qa.add(q.z);
+  */
   /*
   JsonArray& ga = rootOut.createNestedArray("G");
   VectorFloat& g = MpuDrv::Mpu.getGravity(); 
   ga.add(g.x); ga.add(g.y); ga.add(g.z);
   */
   JsonArray& ya = rootOut.createNestedArray("YPR");
-  float *ypr  = MpuDrv::Mpu.getYPR(); 
+  float ypr[3];
+  MpuDrv::Mpu.getYPR(ypr); 
   ya.add(ypr[0] * 180/M_PI); ya.add(ypr[1] * 180/M_PI); ya.add(ypr[2] * 180/M_PI);
   JsonArray& aa = rootOut.createNestedArray("A");
   VectorInt16 a  = MpuDrv::Mpu.getWorldAccel(); 

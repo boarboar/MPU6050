@@ -35,9 +35,10 @@ void setup() {
   }
   
   WiFi.begin(ssid, password);
-  Serial.print(F("\nConnecting to ")); Serial.println(ssid);
+  Serial.print(F("\nConnecting to ")); Serial.print(ssid);
   uint8_t i = 0;
-  while (WiFi.status() != WL_CONNECTED && i++ < 20) delay(500);
+  while (WiFi.status() != WL_CONNECTED && i++ < 20) {delay(500); Serial.print(".");}
+  Serial.println();
   if(i == 21){
     Serial.print(F("Could not connect to ")); Serial.println(ssid);
     delay(10000);

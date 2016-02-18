@@ -96,11 +96,11 @@ class Controller():
         except ValueError : return True
         except KeyError : return True
 
-        if req_json is None : self.__model.update_log(resp_json)
-        else : self.__model.update(resp_json)
+        #if req_json is None : self.__model.update_log(resp_json)
+        #else : self.__model.update(resp_json)
 
-        #if resp_json["C"]=="POS" :
-        self.__form.UpdatePos()
+        if self.__model.update(resp_json) :
+            self.__form.UpdatePos()
         return True
 
     def scanComplete(self, result=None):

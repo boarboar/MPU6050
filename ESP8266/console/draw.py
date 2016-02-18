@@ -7,9 +7,10 @@ class UnitPanel(wx.Window):
     UNIT_HEIGHT=100
     UNIT_ARROW_SIZE=10
     def __init__(self, parent):
-        wx.Window.__init__(self, parent, wx.ID_ANY, style=wx.SIMPLE_BORDER, size=(240,240))
+        wx.Window.__init__(self, parent, wx.ID_ANY, style=wx.SIMPLE_BORDER, size=(160,160))
         self.Bind(wx.EVT_PAINT, self.OnPaint)
-        wx.EVT_SIZE(self, self.OnSize)
+        #wx.EVT_SIZE(self, self.OnSize)
+        self.Bind(wx.EVT_SIZE, self.OnSize)
         self.att=[0,0,0]
         self.yaw_sin=0.0
         self.yaw_cos=1.0
@@ -68,6 +69,58 @@ class UnitPanel(wx.Window):
         y1=-x*self.yaw_sin+y*self.yaw_cos
         return wx.Point(x1+self.x0,-y1+self.y0)
 
+#
+#
+#
+
+class ChartPanel(wx.Window):
+    " draw panel"
+    def __init__(self, parent):
+        wx.Window.__init__(self, parent, wx.ID_ANY, style=wx.SIMPLE_BORDER, size=(240,240))
+        self.Bind(wx.EVT_PAINT, self.OnPaint)
+        self.Bind(wx.EVT_SIZE, self.OnSize)
+        self.points=[(0,[0,0,0]), (1000, [90,0,0])]
+
+    def OnSize(self,event):
+        w, h = self.GetSize()
+        self.w=w
+        self.h=h
+        self.UpdateDrawing()
+
+    def OnPaint(self, event=None):
+        dc = wx.PaintDC(self)
+        dc.Clear()
+        dc.SetPen(wx.Pen(wx.BLACK, 1))
+        dc.DrawLine(0, self.h/2, self.w, self.h/2)
+        if len(self.points)>1 :
+            dc.SetPen(wx.Pen(wx.GREEN, 2))
+            point0=None
+            for point in self.points:
+                if point[0]/1000*2 > self.w : break
+                if point0 != None:
+                    dc.DrawLine(point0[0]/1000*2, self.h/2-point0[1][0]/2, point[0]/1000*2, self.h/2-point[1][0]/2)
+                point0=point
+
+
+    def UpdateDrawing(self) :
+        self.Refresh()
+        self.Update()
+
+    def UpdateData(self, t, att):
+        point=(t, att)
+        self.points.append(point)
+        if len(self.points)>1 and point[0]/1000*2 < self.w:
+            dc = wx.ClientDC(self)
+            dc.SetPen(wx.Pen(wx.GREEN, 2))
+            point0=self.points[-2]
+            dc.DrawLine(point0[0]/1000*2, self.h/2-point0[1][0]/2, point[0]/1000*2, self.h/2-point[1][0]/2)
+
+
+#
+#
+#
+
+
 class DrawPanel(wx.Window):
     " draw panel"
     def __init__(self, parent):
@@ -78,7 +131,7 @@ class DrawPanel(wx.Window):
     def OnPaint(self, event=None):
         dc = wx.PaintDC(self)
         dc.Clear()
-        dc.SetPen(wx.Pen(wx.BLACK, 4))
+        dc.SetPen(wx.Pen(wx.BLACK, 1))
         #dc.DrawLine(0, 0, 50, 50)
         #if len(self.points)>1 :
         #dc.DrawLine(self.points[0][0], self.points[0][1], self.points[1][0], self.points[1][0])

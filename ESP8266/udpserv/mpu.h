@@ -22,11 +22,13 @@ public:
   int16_t cycle(uint16_t dt);
   int8_t getStatus();
   uint8_t isDataReady();
-  Quaternion& getQuaternion();
-  VectorFloat& getGravity();
-  float* getYPR();
-  VectorInt16& getWorldAccel();
-
+  //Quaternion& getQuaternion();
+  //VectorFloat& getGravity();
+  //float* getYPR();
+  void getYPR(float* ypr);
+  //VectorInt16& getWorldAccel();
+  VectorInt16 getWorldAccel();
+  
 protected:  
   MpuDrv();
   // MPU control/status vars
@@ -38,13 +40,17 @@ protected:
   uint16_t fifoCount;     // count of all bytes currently in FIFO
   uint8_t fifoBuffer[64]; // FIFO storage buffer
   uint32_t count;
-  Quaternion q;           // [w, x, y, z]         quaternion container
-  VectorFloat gravity; // for test
-  float ypr[3];           // [yaw, pitch, roll]
-  VectorInt16 aaWorld;    // [x, y, z]            world-frame accel sensor measurements
+  uint16_t conv_count;
+  // measurements
+  //Quaternion q;           // [w, x, y, z]         quaternion container
+  //VectorFloat gravity; // for test
+  //float ypr[3];           // [yaw, pitch, roll]
+  //VectorInt16 aaWorld;    // [x, y, z]            world-frame accel sensor measurements
   //
   int16_t q16[4];         // [w, x, y, z]         quaternion container (int 16)
-  VectorInt16 aa;          // [x, y, z]            accel sensor measurements
+  VectorInt16 aa16;          // [x, y, z]            accel sensor measurements
+  int16_t q16_0[4];         // [w, x, y, z]         quaternion container (int 16) - prev/base
+  VectorInt16 aa16_0;          // [x, y, z]            accel sensor measurements - prev/base
   /*
   volatile uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
   */

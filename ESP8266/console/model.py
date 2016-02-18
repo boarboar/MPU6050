@@ -18,42 +18,64 @@ class Model(dict):
         #self["X"]=0
         #self["Y"]=0
         self["YPR"]=[0,0,0]
-        self["MHIST"]=(2,[
-                        {"T":1000, "Q":[1.0, 0.0, 0.0, 1.0], "YPR":[90.0, 0.0, 0.0]},
-                        {"T":2000, "Q":[0.9, 0.0, 0.1, -0.9], "YPR":[92.0, -10.0, -5.0]}
+        self["T"]=0
+        self["T_ATT"]=0
+        self["MHIST"]=(None,[
+                        #{"T":1000, "A":[1, 0, 0], "YPR":[90.0, 0.0, 0.0]},
+                        #{"T":2000, "A":[9, 1000, 1], "YPR":[92.0, -10.0, -5.0]}
                         ]
                        )
         self.__lock=threading.Lock()
     def __getitem__(self, key):
         self.__lock.acquire()
         try:
-            value = copy.deepcopy(dict.__getitem__(self, key))
+            #value = copy.deepcopy(dict.__getitem__(self, key))
+            #value = copy.copy(dict.__getitem__(self, key))
+            value = dict.__getitem__(self, key)
         except KeyError: value=None
         finally: self.__lock.release()
         return value
+
     def update(self, resp_json):
         "from sresp"
+        update_pos=False
         self.__lock.acquire()
         try:
+            self["T_ATT"]=0
+            self["T"]=resp_json["T"]
             if resp_json["C"]=="INFO" :
                 self["FHS"]=resp_json["FHS"]
                 self["FSS"]=resp_json["FSS"]
-            elif resp_json["C"]=="POS" :
+            elif resp_json["C"]=="POS" or resp_json["C"]=="L":
                 #self["X"]=resp_json["X"]
                 #self["Y"]=resp_json["Y"]
-                self["YPR"]=resp_json["YPR"]
+                data=dict.__getitem__(self, "MHIST")
+                if len(data[1])==0  or (int(resp_json["T"]) > int(data[1][-1]["T"])) :
+                    item={"T":resp_json["T"], "A":resp_json["A"], "YPR":resp_json["YPR"]}
+                    data[1].append(item)
+                    self["YPR"]=resp_json["YPR"]
+                    self["T_ATT"]=resp_json["T"]
+                    update_pos=True
         except KeyError: pass
         finally: self.__lock.release()
+        return update_pos
 
     def update_log(self, resp_json):
         "from syslog"
+        '''
         self.__lock.acquire()
         try:
-            item={"T":resp_json["T"], "Q":resp_json["Q"], "YPR":resp_json["YPR"]}
-            self["MHIST"][1].append()
-            self["MHIST"][0]=len(self["MHIST"][1])
+            self["T_ATT"]=0
+            self["T"]=resp_json["T"]
+            data=dict.__getitem__(self, "MHIST")
+            if len(data[1])==0  or (int(resp_json["T"]) > int(data[1][-1]["T"])) :
+                item={"T":resp_json["T"], "A":resp_json["A"], "YPR":resp_json["YPR"]}
+                data[1].append(item)
+                self["YPR"]=resp_json["YPR"]
+                self["T_ATT"]=resp_json["T"]
         except KeyError: pass
         finally: self.__lock.release()
+        '''
 
     def dump(self):
         s=""

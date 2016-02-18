@@ -33,12 +33,13 @@ class MyForm(wx.Frame):
         self.btn_pos = wx.Button(panel, wx.ID_ANY, 'Pos')
         self.btn_upl = wx.Button(panel, wx.ID_ANY, 'Upload')
         self.btn_rst_mpu = wx.Button(panel, wx.ID_ANY, 'ResetMPU')
-        self.btn_hist = wx.Button(panel, wx.ID_ANY, 'Measurements')
+        self.btn_hist = wx.Button(panel, wx.ID_ANY, 'Measmts')
         self.btn_dump = wx.Button(panel, wx.ID_ANY, 'Dump')
         self.txt_cmd = wx.TextCtrl(panel)
         self.btn_cmd = wx.Button(panel, wx.ID_ANY, 'Send')
 
         self.unitPan = draw.UnitPanel(panel)
+        self.chart = draw.ChartPanel(panel)
         self.canvas = draw.DrawPanel(panel)
 
         self.unitPan.SetMaxSize((240, 240))
@@ -69,6 +70,7 @@ class MyForm(wx.Frame):
         # Add widgets to a sizer
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer_pan = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_charts = wx.BoxSizer(wx.VERTICAL)
         sizer_ctrls = wx.BoxSizer(wx.VERTICAL)
         sizer_cmd = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -77,8 +79,12 @@ class MyForm(wx.Frame):
         sizer.Add(self.log, 1, wx.ALL|wx.EXPAND, 5)
         sizer.Add(sizer_cmd, 0, wx.ALL|wx.EXPAND, 5)
 
-        sizer_pan.Add(self.unitPan, 1, wx.ALL|wx.EXPAND, 5)
-        sizer_pan.Add(self.canvas, 1, wx.ALL|wx.EXPAND, 5)
+        ##sizer_pan.Add(self.unitPan, 1, wx.ALL|wx.EXPAND, 5)
+        sizer_charts.Add(self.unitPan, 1, wx.ALL|wx.EXPAND, border=0)
+        sizer_charts.Add(self.chart, 1, wx.ALL|wx.EXPAND, border=0)
+        sizer_pan.Add(sizer_charts, 1, wx.ALL|wx.EXPAND, border=0)
+
+        sizer_pan.Add(self.canvas, 1, wx.ALL|wx.EXPAND, border=0)
         sizer_pan.Add(sizer_ctrls, 0, wx.ALL|wx.RIGHT, 5)
         sizer_ctrls.Add(self.btn_st, 0, wx.ALL|wx.CENTER, 5)
         sizer_ctrls.Add(self.btn_pos, 0, wx.ALL|wx.CENTER, 5)
@@ -165,6 +171,7 @@ class MyForm(wx.Frame):
         self.statusbar.SetStatusText(str(self.model["FHS"]), 0)
         self.statusbar.SetStatusText("%(YPR)s" % self.model, 1)
         self.unitPan.UpdateData(self.model["YPR"])
+        self.chart.UpdateData(self.model["T_ATT"], self.model["YPR"])
         #self.canvas.AddPoint(self.model["X"], self.model["Y"])
 
 

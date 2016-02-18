@@ -38,6 +38,7 @@ except socket.error as msg:
 print 'Socket bind complete to '+str(s.getsockname())
  
 #now keep talking with the client
+t=1000
 while 1:
     try:
         # receive data from client (data, addr)
@@ -52,9 +53,11 @@ while 1:
         js=json.loads(data.strip())
         # pos: {"I":0,"C":"POS","Q":[0,1,2,3],"YPR":[0,1,2]}
         if js["C"]=="INFO" : js["FHS"]=99999
-        elif js["C"]=="POS" : js.update({"Q":[0,1,2,3], "YPR":[int((random.random()-0.5)*360),12,13]})
+        elif js["C"]=="POS" : js.update({"A":[10,20,-30], "YPR":[int((random.random()-0.5)*360),12,13]})
         js["R"]=0
+        js["T"]=t
         #js["I"]=99
+        t=t+1000
         s.sendto(json.dumps(js) , addr)
     except KeyError: continue   
     except socket.timeout:
