@@ -332,9 +332,11 @@ void MpuDrv::getAll(float* ypr, float* af, float* vf) {
   af[0]=ar.x; af[1]=ar.y; af[2]=ar.z;
   vf[0]=vr.x; vf[1]=vr.y; vf[2]=vr.z;
 
-  Serial.print(F("A Corr (m/s^2)")); { Serial.print("\t"); Serial.print(af[i]);}
+  Serial.print(F("A Corr (m/s^2)")); 
+    for(i=0; i<3; i++) { Serial.print("\t"); Serial.print(af[i]);}
   Serial.println();
-  Serial.print(F("V Corr (m/s)")); { Serial.print("\t"); Serial.print(vf[i]);}
+  Serial.print(F("V Corr (m/s)"));
+  for(i=0; i<3; i++) { Serial.print("\t"); Serial.print(vf[i]);}
   Serial.println();
   
 }  
