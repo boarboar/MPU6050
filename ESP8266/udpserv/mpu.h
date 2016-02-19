@@ -27,7 +27,9 @@ public:
   //float* getYPR();
   void getYPR(float* ypr);
   //VectorInt16& getWorldAccel();
-  VectorInt16 getWorldAccel();
+  //VectorInt16 getWorldAccel();
+  void getWorldAccel(float* af);
+  void getAll(float* ypr, float* af, float* v);
   
 protected:  
   MpuDrv();
@@ -51,6 +53,9 @@ protected:
   VectorInt16 aa16;          // [x, y, z]            accel sensor measurements
   int16_t q16_0[4];         // [w, x, y, z]         quaternion container (int 16) - prev/base
   VectorInt16 aa16_0;          // [x, y, z]            accel sensor measurements - prev/base
+  //float v[3];// world velocity
+  VectorFloat a;
+  VectorFloat v;
   /*
   volatile uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
   */

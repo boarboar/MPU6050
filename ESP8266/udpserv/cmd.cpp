@@ -92,7 +92,7 @@ boolean CmdProc::sendSysLog(const char *buf) {
 }
 
 boolean CmdProc::sendSysLogStatus() {
-  //{"C": "I", "T":12345, "R":0, "A": [10, 20, -30], "C": "POS", "R": 0, "YPR": [59, 12, 13]}
+  //{"C": "I", "T":12345, "R":0, "C": "L", "YPR": [59, 12, 13], "A": [0.01, 0.02, -0.03], "V": [0.1, 0.2, -0.3]}
   if(!CfgDrv::Cfg.log_on) return false;
   StaticJsonBuffer<400> jsonBufferOut;
   JsonObject& rootOut = jsonBufferOut.createObject();
@@ -169,7 +169,7 @@ int16_t c_setsyslog(JsonObject& root, JsonObject& rootOut) {
 }
 
 int16_t c_getpos(JsonObject& root, JsonObject& rootOut) {
-  // {"I":0,"C":"POS","Q":[0,1,2,3],"YPR":[0,1,2]}
+  //{"C": "I", "T":12345, "R":0, "C": "POS", "YPR": [59, 12, 13], "A": [0.01, 0.02, -0.03], "V": [0.1, 0.2, -0.3]}
   if(!MpuDrv::Mpu.isDataReady()) return -5;
   /*
   rootOut["X"] = rand()%100;
@@ -186,12 +186,21 @@ int16_t c_getpos(JsonObject& root, JsonObject& rootOut) {
   ga.add(g.x); ga.add(g.y); ga.add(g.z);
   */
   JsonArray& ya = rootOut.createNestedArray("YPR");
-  float ypr[3];
-  MpuDrv::Mpu.getYPR(ypr); 
-  ya.add(ypr[0] * 180/M_PI); ya.add(ypr[1] * 180/M_PI); ya.add(ypr[2] * 180/M_PI);
+  float ypr[3], af[3], vf[3];
+  uint8_t i;
+  //MpuDrv::Mpu.getYPR(ypr); 
+  MpuDrv::Mpu.getAll(ypr, af, vf); 
+  for(i=0; i<3; i++) ya.add(ypr[i] * 180/M_PI);
   JsonArray& aa = rootOut.createNestedArray("A");
-  VectorInt16 a  = MpuDrv::Mpu.getWorldAccel(); 
-  aa.add(a.x); aa.add(a.y); aa.add(a.z);
+  //MpuDrv::Mpu.getWorldAccel(af); 
+  for(i=0; i<3; i++) aa.add(af[i]);
+  
+  JsonArray& v = rootOut.createNestedArray("V");
+  for(i=0; i<3; i++) v.add(vf[i]);
+
+  
+  //VectorInt16 a  = MpuDrv::Mpu.getWorldAccel(); 
+  //aa.add(a.x); aa.add(a.y); aa.add(a.z);
 
 /*
 //yield();

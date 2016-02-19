@@ -51,6 +51,8 @@ int16_t MpuDrv::init() {
   fifoCount=0;
   count=0;
   conv_count=0;
+  //v[0]=v[1]=v[2]=0.0f;
+  v.x=v.y=v.z=0.0f;
   Serial.println(F("Init I2C dev..."));
   mpu.initialize();
   // verify connection
@@ -134,11 +136,6 @@ int16_t MpuDrv::cycle(uint16_t dt) {
     fifoCount -= packetSize;
     if(fifoCount >0) { Serial.print(F("FIFO excess : ")); Serial.println(fifoCount);}   
     
-    //int16_t q16_0[4];
-    //int16_t aa16_0[3];
-    //for(i=0; i<4; i++) q16_0[i]=q16[i];
-    //aa16_0[0]=aa.x; aa16_0[1]=aa.y; aa16_0[2]=aa.z;
-    
     mpu.dmpGetQuaternion(q16, fifoBuffer);
     mpu.dmpGetAccel(&aa16, fifoBuffer);
     
@@ -185,29 +182,27 @@ int16_t MpuDrv::cycle(uint16_t dt) {
     } // warmup
 
     if(dmpStatus==ST_READY) {
-      /*
+      // integrate motion
       Quaternion q;
-      VectorInt16 aaReal;     // [x, y, z]            gravity-free accel sensor measurements
-      VectorFloat gravity;
-      
+      VectorFloat gravity;    
+      VectorInt16 aaReal, aaWorld;
+      //float af[3];
+      //VectorFloat af;
+      uint8_t i;
+      // do in a tilted frame
       mpu.dmpGetQuaternion(&q, q16);
+      //mpu.dmpGetQuaternion(&q0, q16_0);
+      //q0=q0.getConjugate();
+      //q=q0.getProduct(q); // real quaternion (relative to base)
       mpu.dmpGetGravity(&gravity, &q);
-    
       mpu.dmpGetLinearAccel(&aaReal, &aa16, &gravity);
       mpu.dmpGetLinearAccelInWorld(&aaWorld, &aaReal, &q);
-
-      //mpu.dmpGetYawPitchRoll(ypr, &q, &gravity); // not necessary at this step, should be moved to on-demand
-*/
-      // use microseconds for V/R integration !!!
-    /*
-      if(count%200==0) { 
-               Serial.println((millis()-start)/1000);
- 
-        //Serial.print("\tQuat\t"); Serial.print(q.w); Serial.print("\t"); Serial.print(q.x); Serial.print("\t"); Serial.print(q.y); Serial.print("\t"); Serial.print(q.z);
-        Serial.print("YPR\t"); Serial.print(ypr[0] * 180.0f/M_PI); Serial.print("\t"); Serial.print(ypr[1] * 180.0f/M_PI); Serial.print("\t"); Serial.println(ypr[2] * 180.0f/M_PI);
-        //Serial.print("Cmd Grav\t");Serial.print(gravity.x);Serial.print("\t");Serial.print(gravity.y);Serial.print("\t");Serial.println(gravity.z);
-      }
-      */
+      //af[0]=aaWorld.x*G_SCALE; af[1]=aaWorld.y*G_SCALE; af[2]=aaWorld.z*G_SCALE;
+      //for(i=0; i<3; i++) v[i]+=af[i]*(float)dt/1000.0f;
+      a.x=aaWorld.x*G_SCALE; a.y=aaWorld.y*G_SCALE; a.z=aaWorld.z*G_SCALE;
+      v.x+=a.x*(float)dt/1000.0f; v.y+=a.y*(float)dt/1000.0f; v.z+=a.z*(float)dt/1000.0f;
+      
+      // use microseconds for V/R integration - TODO!!!
       data_ready=1; 
     }
     count++;       
@@ -218,18 +213,25 @@ int16_t MpuDrv::cycle(uint16_t dt) {
 
 
 void MpuDrv::getYPR(float* ypr) {        
-  Quaternion q;
+  Quaternion q, q0;
   VectorFloat gravity;    
   mpu.dmpGetQuaternion(&q, q16);
+  mpu.dmpGetQuaternion(&q0, q16_0);
+  q0=q0.getConjugate();
+  q=q0.getProduct(q); // real quaternion (relative to base)
+  mpu.dmpGetGravity(&gravity, &q);
+  mpu.dmpGetYawPitchRoll(ypr, &q, &gravity); 
+  Serial.print(F("YPR\t")); Serial.print(ypr[0] * 180.0f/M_PI); Serial.print("\t"); Serial.print(ypr[1] * 180.0f/M_PI); Serial.print("\t"); Serial.println(ypr[2] * 180.0f/M_PI);
+  
+  /*
   mpu.dmpGetGravity(&gravity, &q);
   mpu.dmpGetYawPitchRoll(ypr, &q, &gravity); 
 
   Serial.print(F("Observ Quat\t")); Serial.print(q.w); Serial.print("\t"); Serial.print(q.x); Serial.print("\t"); Serial.print(q.y); Serial.print("\t"); Serial.println(q.z);
   Serial.print(F("Observ YPR\t")); Serial.print(ypr[0] * 180.0f/M_PI); Serial.print("\t"); Serial.print(ypr[1] * 180.0f/M_PI); Serial.print("\t"); Serial.println(ypr[2] * 180.0f/M_PI);
   Serial.print(F("Observ Grav\t"));Serial.print(gravity.x);Serial.print("\t");Serial.print(gravity.y);Serial.print("\t");Serial.println(gravity.z);
-  yield();
-  Quaternion q0;
-  mpu.dmpGetQuaternion(&q0, q16_0);
+  yield();*/
+  /*
   Serial.print(F("Base Quat\t")); Serial.print(q0.w); Serial.print("\t"); Serial.print(q0.x); Serial.print("\t"); Serial.print(q0.y); Serial.print("\t"); Serial.println(q0.z);
   q0=q0.getConjugate();
   Serial.print(F("Conj Quat\t")); Serial.print(q0.w); Serial.print("\t"); Serial.print(q0.x); Serial.print("\t"); Serial.print(q0.y); Serial.print("\t"); Serial.println(q0.z);
@@ -237,32 +239,44 @@ void MpuDrv::getYPR(float* ypr) {
   Serial.print(F("Real Quat\t")); Serial.print(q.w); Serial.print("\t"); Serial.print(q.x); Serial.print("\t"); Serial.print(q.y); Serial.print("\t"); Serial.println(q.z);
   yield();
   float yprr[3];
+  */
+  /*
   mpu.dmpGetGravity(&gravity, &q);
   mpu.dmpGetYawPitchRoll(yprr, &q, &gravity); 
   Serial.print(F("Real Grav\t"));Serial.print(gravity.x);Serial.print("\t");Serial.print(gravity.y);Serial.print("\t");Serial.println(gravity.z);
   Serial.print(F("Real YPR\t")); Serial.print(yprr[0] * 180.0f/M_PI); Serial.print("\t"); Serial.print(yprr[1] * 180.0f/M_PI); Serial.print("\t"); Serial.println(yprr[2] * 180.0f/M_PI);
   yield();
+  */
 }
 
-VectorInt16 MpuDrv::getWorldAccel() {
-  Quaternion q;
+//VectorInt16 MpuDrv::getWorldAccel() {
+void MpuDrv::getWorldAccel(float* af) {
+  Quaternion q, q0;
   VectorFloat gravity;    
-  VectorInt16 aaReal; 
-  VectorInt16 aaWorld;
+  VectorInt16 aaReal, aaWorld;
   mpu.dmpGetQuaternion(&q, q16);
+  mpu.dmpGetQuaternion(&q0, q16_0);
+  q0=q0.getConjugate();
+  q=q0.getProduct(q); // real quaternion (relative to base)
   mpu.dmpGetGravity(&gravity, &q);
   mpu.dmpGetLinearAccel(&aaReal, &aa16, &gravity);
   mpu.dmpGetLinearAccelInWorld(&aaWorld, &aaReal, &q);
-
+  af[0]=aaWorld.x*G_SCALE; af[1]=aaWorld.y*G_SCALE; af[2]=aaWorld.z*G_SCALE;
+  Serial.print(F("Accel (m/s^2)\t"));Serial.print(af[0]);Serial.print("\t");Serial.print(af[1]);Serial.print("\t");Serial.println(af[2]);
+  //VectorFloat af;
+  //af.x=aaWorld.x*G_SCALE; af.y=aaWorld.y*G_SCALE; af.z=aaWorld.z*G_SCALE;
+  //Serial.print(F("Real WGrav (m/s^2)\t"));Serial.print(af.x);Serial.print("\t");Serial.print(af.y);Serial.print("\t");Serial.println(af.z);
+/*
   Serial.print(F("Observ AAcc\t"));Serial.print(aa16.x);Serial.print("\t");Serial.print(aa16.y);Serial.print("\t");Serial.println(aa16.z);
   Serial.print(F("Observ RAcc\t"));Serial.print(aaReal.x);Serial.print("\t");Serial.print(aaReal.y);Serial.print("\t");Serial.println(aaReal.z);
   Serial.print(F("Observ WAcc\t"));Serial.print(aaWorld.x);Serial.print("\t");Serial.print(aaWorld.y);Serial.print("\t");Serial.println(aaWorld.z);
-VectorFloat af;
+  VectorFloat af;
   af.x=aaWorld.x*G_SCALE; af.y=aaWorld.y*G_SCALE; af.z=aaWorld.z*G_SCALE;
 
   Serial.print(F("Real WGrav (m/s^2)\t"));Serial.print(af.x);Serial.print("\t");Serial.print(af.y);Serial.print("\t");Serial.println(af.z);
 
   // but still in the tilted basis!!!
+ */
   
   /*
   yield();
@@ -284,8 +298,46 @@ VectorFloat af;
   Serial.print(F("Real WGrav (m/s^2)\t"));Serial.print(af.x);Serial.print("\t");Serial.print(af.y);Serial.print("\t");Serial.println(af.z);
   // but still in the tilted basis!!!
   */
-  return aaWorld;
+  //return aaWorld;
+  return;
 }
+
+
+void MpuDrv::getAll(float* ypr, float* af, float* vf) {        
+  Quaternion q, q0;
+  VectorFloat gravity;    
+  uint8_t i;
+  mpu.dmpGetQuaternion(&q, q16);
+  mpu.dmpGetQuaternion(&q0, q16_0);
+  q0=q0.getConjugate();
+  q=q0.getProduct(q); // real quaternion (relative to base)
+  mpu.dmpGetGravity(&gravity, &q);
+  mpu.dmpGetYawPitchRoll(ypr, &q, &gravity); 
+  
+  Serial.print(F("YPR")); 
+  for(i=0; i<3; i++) { Serial.print("\t"); Serial.print(ypr[i]);}
+  Serial.println();
+ 
+  //mpu.dmpGetLinearAccel(&aaReal, &aa16, &gravity);
+  //mpu.dmpGetLinearAccelInWorld(&aaWorld, &aaReal, &q);
+  //af[0]=aaWorld.x*G_SCALE; af[1]=aaWorld.y*G_SCALE; af[2]=aaWorld.z*G_SCALE;
+  //Serial.print(F("Accel (m/s^2)\t"));Serial.print(af[0]);Serial.print("\t");Serial.print(af[1]);Serial.print("\t");Serial.println(af[2]);
+
+  Serial.print(F("A Tilt (m/s^2)\t"));Serial.print(a.x);Serial.print("\t");Serial.print(a.y);Serial.print("\t");Serial.println(a.z);
+  Serial.print(F("V Tilt (m/s)\t"));Serial.print(v.x);Serial.print("\t");Serial.print(v.y);Serial.print("\t");Serial.println(v.z);
+  yield();
+  
+  VectorFloat ar=a.getRotated(&q0);
+  VectorFloat vr=v.getRotated(&q0);
+  af[0]=ar.x; af[1]=ar.y; af[2]=ar.z;
+  vf[0]=vr.x; vf[1]=vr.y; vf[2]=vr.z;
+
+  Serial.print(F("A Corr (m/s^2)")); { Serial.print("\t"); Serial.print(af[i]);}
+  Serial.println();
+  Serial.print(F("V Corr (m/s)")); { Serial.print("\t"); Serial.print(vf[i]);}
+  Serial.println();
+  
+}  
 
 // ================================================================
 // ===               INTERRUPT DETECTION ROUTINE                ===

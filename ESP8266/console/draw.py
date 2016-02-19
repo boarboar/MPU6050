@@ -6,26 +6,25 @@ class UnitPanel(wx.Window):
     UNIT_WIDTH=80
     UNIT_HEIGHT=100
     UNIT_ARROW_SIZE=10
+    V_SCALE=100  # 1 cm/s = 0.01 m/s * 1000 = 1 pix
     def __init__(self, parent):
         wx.Window.__init__(self, parent, wx.ID_ANY, style=wx.SIMPLE_BORDER, size=(160,160))
+        self.SetBackgroundColour(wx.WHITE)
         self.Bind(wx.EVT_PAINT, self.OnPaint)
         #wx.EVT_SIZE(self, self.OnSize)
         self.Bind(wx.EVT_SIZE, self.OnSize)
         self.att=[0,0,0]
-        self.yaw_sin=0.0
-        self.yaw_cos=1.0
+        self.t=0
+        self.v=[0,0,0]
+        self.r_sin=0.0
+        self.r_cos=1.0
         # in real coords
         self.shape=[wx.Point(-self.UNIT_WIDTH/2, -self.UNIT_HEIGHT/2),
                     wx.Point(-self.UNIT_WIDTH/2, self.UNIT_HEIGHT/2),
                     wx.Point(self.UNIT_WIDTH/2, self.UNIT_HEIGHT/2),
                     wx.Point(self.UNIT_WIDTH/2, -self.UNIT_HEIGHT/2),
                     ]
-        yl=self.UNIT_HEIGHT*3/4
-        self.y_line=[wx.Point(0,0), wx.Point(0,yl),
-                     wx.Point(self.UNIT_ARROW_SIZE/2,yl-self.UNIT_ARROW_SIZE/2),
-                     wx.Point(0,yl),
-                     wx.Point(-self.UNIT_ARROW_SIZE/2,yl-self.UNIT_ARROW_SIZE/2)
-                     ]
+        self.y_line=self.MakeArrow(self.UNIT_HEIGHT*3/4)
         self.OnSize(None)
 
     def OnSize(self,event):
@@ -47,26 +46,47 @@ class UnitPanel(wx.Window):
         self.Refresh()
         self.Update()
 
-    def UpdateData(self, att):
+    def UpdateData(self, t, att, v=None):
+        self.t=t
         self.att=att
-        self.yaw_cos=math.cos(att[0]*math.pi/180.0)
-        self.yaw_sin=math.sin(att[0]*math.pi/180.0)
+        self.v=v
         self.UpdateDrawing()
 
     def Draw(self, dc):
+        dc.SetBackground(wx.Brush(wx.WHITE))
         dc.Clear()
+        dc.SetTextForeground(wx.BLACK)
+        dc.SetTextBackground(wx.WHITE)
         dc.SetPen(wx.Pen(wx.BLUE, 4))
+        self.SetRotation(self.att[0]*math.pi/180.0)
         dc.DrawPolygon(self.ts(self.shape))
         dc.SetPen(wx.Pen(wx.GREEN, 2))
         dc.DrawLines(self.ts(self.y_line))
+        dc.DrawText(str(self.t/1000), self.x0*2-50, 5)
+        vv = math.hypot(self.v[0], self.v[1])*self.V_SCALE
+        if vv>1 :
+            self.SetRotation(math.atan2(self.v[0], self.v[1]))
+            dc.SetPen(wx.Pen(wx.RED, 4))
+            dc.DrawLines(self.ts(self.MakeArrow(vv)))
+
+    def MakeArrow(self, len):
+        return [wx.Point(0,0), wx.Point(0,len),
+                     wx.Point(self.UNIT_ARROW_SIZE/2,len-self.UNIT_ARROW_SIZE/2),
+                     wx.Point(0,len),
+                     wx.Point(-self.UNIT_ARROW_SIZE/2,len-self.UNIT_ARROW_SIZE/2)
+                     ]
+
+    def SetRotation(self, angle):
+        self.r_cos=math.cos(angle)
+        self.r_sin=math.sin(angle)
 
     def ts(self, pts):
         return [self.tp(p) for p in pts]
 
     def tp(self, p):
-        x, y =p.Get()
-        x1=x*self.yaw_cos+y*self.yaw_sin
-        y1=-x*self.yaw_sin+y*self.yaw_cos
+        x, y = p.Get()
+        x1=x*self.r_cos+y*self.r_sin
+        y1=-x*self.r_sin+y*self.r_cos
         return wx.Point(x1+self.x0,-y1+self.y0)
 
 #
@@ -75,11 +95,16 @@ class UnitPanel(wx.Window):
 
 class ChartPanel(wx.Window):
     " draw panel"
+    SCALE_MSEC=2.0/1000
+    SCALE_DEG=0.5
     def __init__(self, parent):
         wx.Window.__init__(self, parent, wx.ID_ANY, style=wx.SIMPLE_BORDER, size=(240,240))
+        self.SetBackgroundColour('BLACK')
         self.Bind(wx.EVT_PAINT, self.OnPaint)
         self.Bind(wx.EVT_SIZE, self.OnSize)
-        self.points=[(0,[0,0,0]), (1000, [90,0,0])]
+        #self.points=[(0,[0,0,0]), (1000, [90,0,0])]
+        self.points=[]
+        self.t0=0
 
     def OnSize(self,event):
         w, h = self.GetSize()
@@ -89,16 +114,30 @@ class ChartPanel(wx.Window):
 
     def OnPaint(self, event=None):
         dc = wx.PaintDC(self)
+        dc.SetBackground(wx.Brush(wx.BLACK))
         dc.Clear()
-        dc.SetPen(wx.Pen(wx.BLACK, 1))
+        dc.SetPen(wx.Pen(wx.WHITE, 1))
+        dc.SetTextForeground(wx.WHITE)
+        dc.SetTextBackground(wx.BLACK)
         dc.DrawLine(0, self.h/2, self.w, self.h/2)
+        # t-grid
+        x=0
+        t=self.t0
+        while x<self.w :
+            dc.DrawLine(x, 0, x, self.h)
+            dc.DrawText(str(t/1000), x+5, self.h/2+5)
+            x = x+60000*self.SCALE_MSEC
+            t=t+60000
+
         if len(self.points)>1 :
             dc.SetPen(wx.Pen(wx.GREEN, 2))
             point0=None
             for point in self.points:
-                if point[0]/1000*2 > self.w : break
+                x1=(point[0]-self.t0)*self.SCALE_MSEC
+                if x1 > self.w : break
                 if point0 != None:
-                    dc.DrawLine(point0[0]/1000*2, self.h/2-point0[1][0]/2, point[0]/1000*2, self.h/2-point[1][0]/2)
+                    x0=(point0[0]-self.t0)*self.SCALE_MSEC
+                    dc.DrawLine(x0, self.h/2-point0[1][0]*self.SCALE_DEG, x1, self.h/2-point[1][0]*self.SCALE_DEG)
                 point0=point
 
 
@@ -106,20 +145,28 @@ class ChartPanel(wx.Window):
         self.Refresh()
         self.Update()
 
-    def UpdateData(self, t, att):
+    def UpdateData(self, t, att, v=None):
+        if len(self.points)==0 : self.t0=0
         point=(t, att)
         self.points.append(point)
-        if len(self.points)>1 and point[0]/1000*2 < self.w:
+        x1=(point[0]-self.t0)*self.SCALE_MSEC
+        if x1 > self.w :
+            # split in half
+            l = len(self.points)
+            if l>1 :
+                self.points = self.points[l/2:]
+                self.t0=self.points[0][0]
+                self.UpdateDrawing()
+        elif len(self.points)>1:
             dc = wx.ClientDC(self)
             dc.SetPen(wx.Pen(wx.GREEN, 2))
             point0=self.points[-2]
-            dc.DrawLine(point0[0]/1000*2, self.h/2-point0[1][0]/2, point[0]/1000*2, self.h/2-point[1][0]/2)
-
+            x0=(point0[0]-self.t0)*self.SCALE_MSEC
+            dc.DrawLine(x0, self.h/2-point0[1][0]*self.SCALE_DEG, x1, self.h/2-point[1][0]*self.SCALE_DEG)
 
 #
 #
 #
-
 
 class DrawPanel(wx.Window):
     " draw panel"

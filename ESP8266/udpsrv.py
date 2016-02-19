@@ -51,9 +51,12 @@ while 1:
         #s.sendto(reply , addr)
         print 'Message[' + addr[0] + ':' + str(addr[1]) + '] - ' + data.strip()
         js=json.loads(data.strip())
-        # pos: {"I":0,"C":"POS","Q":[0,1,2,3],"YPR":[0,1,2]}
+        # pos: {"C": "I", "T":12345, "R":0, "C": "L", "YPR": [59, 12, 13], "A": [0.01, 0.02, -0.03], "V": [0.1, 0.2, -0.3]}
         if js["C"]=="INFO" : js["FHS"]=99999
-        elif js["C"]=="POS" : js.update({"A":[10,20,-30], "YPR":[int((random.random()-0.5)*360),12,13]})
+        elif js["C"]=="POS" : js.update( {
+                "YPR":[int((random.random()-0.5)*360),12,13], 
+                "A":[0.01, 0.02, -0.03], 
+                "V":[random.random()-0.5, random.random()-0.5, -0.3]})
         js["R"]=0
         js["T"]=t
         #js["I"]=99

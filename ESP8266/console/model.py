@@ -18,6 +18,7 @@ class Model(dict):
         #self["X"]=0
         #self["Y"]=0
         self["YPR"]=[0,0,0]
+        self["V"]=[0,0,0]
         self["T"]=0
         self["T_ATT"]=0
         self["MHIST"]=(None,[
@@ -51,31 +52,15 @@ class Model(dict):
                 #self["Y"]=resp_json["Y"]
                 data=dict.__getitem__(self, "MHIST")
                 if len(data[1])==0  or (int(resp_json["T"]) > int(data[1][-1]["T"])) :
-                    item={"T":resp_json["T"], "A":resp_json["A"], "YPR":resp_json["YPR"]}
+                    item={"T":resp_json["T"], "YPR":resp_json["YPR"], "A":resp_json["A"], "V":resp_json["V"] }
                     data[1].append(item)
                     self["YPR"]=resp_json["YPR"]
+                    self["V"]=resp_json["V"]
                     self["T_ATT"]=resp_json["T"]
                     update_pos=True
         except KeyError: pass
         finally: self.__lock.release()
         return update_pos
-
-    def update_log(self, resp_json):
-        "from syslog"
-        '''
-        self.__lock.acquire()
-        try:
-            self["T_ATT"]=0
-            self["T"]=resp_json["T"]
-            data=dict.__getitem__(self, "MHIST")
-            if len(data[1])==0  or (int(resp_json["T"]) > int(data[1][-1]["T"])) :
-                item={"T":resp_json["T"], "A":resp_json["A"], "YPR":resp_json["YPR"]}
-                data[1].append(item)
-                self["YPR"]=resp_json["YPR"]
-                self["T_ATT"]=resp_json["T"]
-        except KeyError: pass
-        finally: self.__lock.release()
-        '''
 
     def dump(self):
         s=""
