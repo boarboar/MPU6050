@@ -308,12 +308,22 @@ void MpuDrv::getAll(float* ypr, float* af, float* vf) {
   VectorFloat gravity;    
   uint8_t i;
   mpu.dmpGetQuaternion(&q, q16);
+
+  Serial.print(F("Meas Quat\t")); Serial.print(q.w); Serial.print("\t"); Serial.print(q.x); Serial.print("\t"); Serial.print(q.y); Serial.print("\t"); Serial.print(q.z); Serial.print("\tM: "); Serial.print(q.getMagnitude());
+
+
   mpu.dmpGetQuaternion(&q0, q16_0);
   q0=q0.getConjugate();
   q=q0.getProduct(q); // real quaternion (relative to base)
   mpu.dmpGetGravity(&gravity, &q);
   mpu.dmpGetYawPitchRoll(ypr, &q, &gravity); 
-  
+
+
+  Serial.print(F("Conj Quat\t")); Serial.print(q0.w); Serial.print("\t"); Serial.print(q0.x); Serial.print("\t"); Serial.print(q0.y); Serial.print("\t"); Serial.print(q0.z);Serial.print("\tM: "); Serial.print(q0.getMagnitude());
+  Serial.print(F("Real Quat\t")); Serial.print(q.w); Serial.print("\t"); Serial.print(q.x); Serial.print("\t"); Serial.print(q.y); Serial.print("\t"); Serial.print(q.z);Serial.print("\tM: "); Serial.print(q.getMagnitude());
+
+yield();
+
   Serial.print(F("YPR")); 
   for(i=0; i<3; i++) { Serial.print("\t"); Serial.print(ypr[i]);}
   Serial.println();
@@ -322,9 +332,9 @@ void MpuDrv::getAll(float* ypr, float* af, float* vf) {
   //mpu.dmpGetLinearAccelInWorld(&aaWorld, &aaReal, &q);
   //af[0]=aaWorld.x*G_SCALE; af[1]=aaWorld.y*G_SCALE; af[2]=aaWorld.z*G_SCALE;
   //Serial.print(F("Accel (m/s^2)\t"));Serial.print(af[0]);Serial.print("\t");Serial.print(af[1]);Serial.print("\t");Serial.println(af[2]);
-
+ 
   Serial.print(F("A Tilt (m/s^2)\t"));Serial.print(a.x);Serial.print("\t");Serial.print(a.y);Serial.print("\t");Serial.println(a.z);
-  Serial.print(F("V Tilt (m/s)\t"));Serial.print(v.x);Serial.print("\t");Serial.print(v.y);Serial.print("\t");Serial.println(v.z);
+  //Serial.print(F("V Tilt (m/s)\t"));Serial.print(v.x);Serial.print("\t");Serial.print(v.y);Serial.print("\t");Serial.println(v.z);
   yield();
   
   VectorFloat ar=a.getRotated(&q0);
@@ -335,10 +345,21 @@ void MpuDrv::getAll(float* ypr, float* af, float* vf) {
   Serial.print(F("A Corr (m/s^2)")); 
     for(i=0; i<3; i++) { Serial.print("\t"); Serial.print(af[i]);}
   Serial.println();
-  Serial.print(F("V Corr (m/s)"));
-  for(i=0; i<3; i++) { Serial.print("\t"); Serial.print(vf[i]);}
-  Serial.println();
-  
+  //Serial.print(F("V Corr (m/s)"));
+  //for(i=0; i<3; i++) { Serial.print("\t"); Serial.print(vf[i]);}
+  //Serial.println();
+
+// compare 
+  VectorInt16 aaReal, aaWorld;
+  mpu.dmpGetGravity(&gravity, &q);
+  mpu.dmpGetLinearAccel(&aaReal, &aa16, &gravity);
+  mpu.dmpGetLinearAccelInWorld(&aaWorld, &aaReal, &q);
+  af[0]=aaWorld.x; af[1]=aaWorld.x; af[2]=aaWorld.x;
+  for(i=0; i<3; i++) af[i]*=G_SCALE;
+  Serial.print(F("A Cor0 (m/s^2)")); 
+    for(i=0; i<3; i++) { Serial.print("\t"); Serial.print(af[i]);}
+      
+      
 }  
 
 // ================================================================

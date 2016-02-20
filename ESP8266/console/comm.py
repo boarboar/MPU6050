@@ -31,8 +31,10 @@ class CommandThread(threading.Thread):
 
         self.__controller.log().LogString("Cmd thread starting: dev=%s:%s" % (self.__addr, str(self.__port)))
         while not self.__stop:
-            while not self.__q.empty():
-                req_json = self.__q.get()
+            try:
+                req_json = self.__q.get(timeout=1)
+            except Queue.Empty: req_json = None
+            if req_json is not None:
                 self.__controller.log().LogString("REQ: %s" % json.dumps(req_json))
                 if self.__mockup :
                     try:

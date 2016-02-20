@@ -11,7 +11,6 @@ class UnitPanel(wx.Window):
         wx.Window.__init__(self, parent, wx.ID_ANY, style=wx.SIMPLE_BORDER, size=(160,160))
         self.SetBackgroundColour(wx.WHITE)
         self.Bind(wx.EVT_PAINT, self.OnPaint)
-        #wx.EVT_SIZE(self, self.OnSize)
         self.Bind(wx.EVT_SIZE, self.OnSize)
         self.att=[0,0,0]
         self.t=0
@@ -21,6 +20,7 @@ class UnitPanel(wx.Window):
         # in real coords
         self.shape=[wx.Point(-self.UNIT_WIDTH/2, -self.UNIT_HEIGHT/2),
                     wx.Point(-self.UNIT_WIDTH/2, self.UNIT_HEIGHT/2),
+                    wx.Point(0, self.UNIT_HEIGHT*3/5),
                     wx.Point(self.UNIT_WIDTH/2, self.UNIT_HEIGHT/2),
                     wx.Point(self.UNIT_WIDTH/2, -self.UNIT_HEIGHT/2),
                     ]
@@ -68,6 +68,9 @@ class UnitPanel(wx.Window):
             self.SetRotation(math.atan2(self.v[0], self.v[1]))
             dc.SetPen(wx.Pen(wx.RED, 4))
             dc.DrawLines(self.ts(self.MakeArrow(vv)))
+        # todo - vertical
+        # Zx=cos(y)*sin(p)*cos(r)+sin(y)*sin(r)
+        # Zy=sin(y)*sin(p)*cos(r)-cos(y)*sin(r)
 
     def MakeArrow(self, len):
         return [wx.Point(0,0), wx.Point(0,len),
@@ -95,21 +98,20 @@ class UnitPanel(wx.Window):
 
 class ChartPanel(wx.Window):
     " draw panel"
-    SCALE_MSEC=2.0/1000
-    SCALE_DEG=0.5
+    SCALE_MSEC=2.0/1000.0
     def __init__(self, parent):
         wx.Window.__init__(self, parent, wx.ID_ANY, style=wx.SIMPLE_BORDER, size=(240,240))
         self.SetBackgroundColour('BLACK')
         self.Bind(wx.EVT_PAINT, self.OnPaint)
         self.Bind(wx.EVT_SIZE, self.OnSize)
-        #self.points=[(0,[0,0,0]), (1000, [90,0,0])]
-        self.points=[]
+        self.points=[] #(t, att[y,p,r], v3d_cart[x,y,z], v2d_pol[fi,r])
         self.t0=0
 
     def OnSize(self,event):
         w, h = self.GetSize()
         self.w=w
         self.h=h
+        self.y_scale=h/360.0
         self.UpdateDrawing()
 
     def OnPaint(self, event=None):
@@ -119,25 +121,33 @@ class ChartPanel(wx.Window):
         dc.SetPen(wx.Pen(wx.WHITE, 1))
         dc.SetTextForeground(wx.WHITE)
         dc.SetTextBackground(wx.BLACK)
-        dc.DrawLine(0, self.h/2, self.w, self.h/2)
         # t-grid
-        x=0
-        t=self.t0
+        t=(self.t0/60000)*60000
+        if t<self.t0 : t = t+60000
+        x = (t-self.t0)*self.SCALE_MSEC
         while x<self.w :
             dc.DrawLine(x, 0, x, self.h)
             dc.DrawText(str(t/1000), x+5, self.h/2+5)
             x = x+60000*self.SCALE_MSEC
             t=t+60000
 
+        dc.DrawLine(0, self.h/2, self.w, self.h/2)
+        dc.SetPen(wx.Pen(wx.WHITE, 1, style=wx.PENSTYLE_SHORT_DASH))
+        dc.DrawLine(0, self.h/4, self.w, self.h/4) #+90
+        dc.DrawLine(0, self.h*3/4, self.w, self.h*3/4) #-90
+
         if len(self.points)>1 :
-            dc.SetPen(wx.Pen(wx.GREEN, 2))
             point0=None
             for point in self.points:
                 x1=(point[0]-self.t0)*self.SCALE_MSEC
                 if x1 > self.w : break
                 if point0 != None:
                     x0=(point0[0]-self.t0)*self.SCALE_MSEC
-                    dc.DrawLine(x0, self.h/2-point0[1][0]*self.SCALE_DEG, x1, self.h/2-point[1][0]*self.SCALE_DEG)
+                    if x0>=0 :
+                        dc.SetPen(wx.Pen(wx.GREEN, 2))
+                        dc.DrawLine(x0, self.h/2-point0[1][0]*self.y_scale, x1, self.h/2-point[1][0]*self.y_scale)
+                        dc.SetPen(wx.Pen(wx.RED, 2))
+                        dc.DrawLine(x0, self.h/2-point0[3][0]*self.y_scale, x1, self.h/2-point[3][0]*self.y_scale)
                 point0=point
 
 
@@ -147,7 +157,7 @@ class ChartPanel(wx.Window):
 
     def UpdateData(self, t, att, v=None):
         if len(self.points)==0 : self.t0=0
-        point=(t, att)
+        point=(t, att, v, (math.atan2(v[0], v[1])*180.0/math.pi, math.hypot(v[0], v[1])))
         self.points.append(point)
         x1=(point[0]-self.t0)*self.SCALE_MSEC
         if x1 > self.w :
@@ -159,10 +169,13 @@ class ChartPanel(wx.Window):
                 self.UpdateDrawing()
         elif len(self.points)>1:
             dc = wx.ClientDC(self)
-            dc.SetPen(wx.Pen(wx.GREEN, 2))
             point0=self.points[-2]
             x0=(point0[0]-self.t0)*self.SCALE_MSEC
-            dc.DrawLine(x0, self.h/2-point0[1][0]*self.SCALE_DEG, x1, self.h/2-point[1][0]*self.SCALE_DEG)
+            if x0>=0 :
+                dc.SetPen(wx.Pen(wx.GREEN, 2))
+                dc.DrawLine(x0, self.h/2-point0[1][0]*self.y_scale, x1, self.h/2-point[1][0]*self.y_scale)
+                dc.SetPen(wx.Pen(wx.RED, 2))
+                dc.DrawLine(x0, self.h/2-point0[3][0]*self.y_scale, x1, self.h/2-point[3][0]*self.y_scale)
 
 #
 #
