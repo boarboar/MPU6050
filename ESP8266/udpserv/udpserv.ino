@@ -14,7 +14,7 @@ const char* password = "boarboar";
 const char* cfg_file = "/config.json";
 const int udp_port = 4444;
 const int CYCLE_TO = 5;
-const int CYCLE_SLOW_TO = 1000;
+const int CYCLE_SLOW_TO = 500;
 const int MPU_SDA=0;
 const int MPU_SDL=2;
 const int MPU_INT=15;
@@ -37,7 +37,7 @@ void setup() {
   WiFi.begin(ssid, password);
   Serial.print(F("\nConnecting to ")); Serial.print(ssid);
   uint8_t i = 0;
-  while (WiFi.status() != WL_CONNECTED && i++ < 20) {delay(500); Serial.print(".");}
+  while (WiFi.status() != WL_CONNECTED && i++ < 20) {delay(500); Serial.print(".");/*delay(5); MpuDrv::Mpu.cycle(5);*/}
   Serial.println();
   if(i == 21){
     Serial.print(F("Could not connect to ")); Serial.println(ssid);

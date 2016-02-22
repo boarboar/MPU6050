@@ -99,10 +99,8 @@ boolean CmdProc::sendSysLogStatus() {
   char bufout[BUF_SZ];
   rootOut["C"] = "L";
   rootOut["T"] = millis();
-  rootOut["R"] = 0; // OK, shoild be -5 if tracking is off (reserved)
-  //rootOut["X"] = rand()%100;
-  //rootOut["Y"] = rand()%100;
-  c_getpos(rootOut, rootOut);
+  //rootOut["R"] = 0; // OK, shoild be -5 if tracking is off (reserved)  
+  rootOut["R"] = c_getpos(rootOut, rootOut); 
   rootOut.printTo(bufout, BUF_SZ-1);
   udp_snd.beginPacket(CfgDrv::Cfg.log_addr, CfgDrv::Cfg.log_port);
   udp_snd.write(bufout, strlen(bufout));
@@ -169,48 +167,19 @@ int16_t c_setsyslog(JsonObject& root, JsonObject& rootOut) {
 }
 
 int16_t c_getpos(JsonObject& root, JsonObject& rootOut) {
-  //{"C": "I", "T":12345, "R":0, "C": "POS", "YPR": [59, 12, 13], "A": [0.01, 0.02, -0.03], "V": [0.1, 0.2, -0.3]}
+  //{"C": "I", "T":12345, "R":0, "C": "POS", "YPR": [59, 12, 13], "A": [0.01, 0.02, -0.03], "V": [0.1, 0.2, -0.3], "P": [100.01, 200.44, 0.445]}
   if(!MpuDrv::Mpu.isDataReady()) return -5;
-  /*
-  rootOut["X"] = rand()%100;
-  rootOut["Y"] = rand()%100;
-  */
-  /*
-  JsonArray& qa = rootOut.createNestedArray("Q");
-  Quaternion& q = MpuDrv::Mpu.getQuaternion(); 
-  qa.add(q.w); qa.add(q.x); qa.add(q.y); qa.add(q.z);
-  */
-  /*
-  JsonArray& ga = rootOut.createNestedArray("G");
-  VectorFloat& g = MpuDrv::Mpu.getGravity(); 
-  ga.add(g.x); ga.add(g.y); ga.add(g.z);
-  */
   JsonArray& ya = rootOut.createNestedArray("YPR");
-  float ypr[3], af[3], vf[3];
+  float ypr[3], af[3], vf[3], rf[3];
   uint8_t i;
-  //MpuDrv::Mpu.getYPR(ypr); 
-  MpuDrv::Mpu.getAll(ypr, af, vf); 
+  MpuDrv::Mpu.getAll(ypr, af, vf, rf); 
   for(i=0; i<3; i++) ya.add(ypr[i] * 180/M_PI);
   JsonArray& aa = rootOut.createNestedArray("A");
-  //MpuDrv::Mpu.getWorldAccel(af); 
-  for(i=0; i<3; i++) aa.add(af[i]);
-  
+  for(i=0; i<3; i++) aa.add(af[i]);  
   JsonArray& v = rootOut.createNestedArray("V");
   for(i=0; i<3; i++) v.add(vf[i]);
-
-  
-  //VectorInt16 a  = MpuDrv::Mpu.getWorldAccel(); 
-  //aa.add(a.x); aa.add(a.y); aa.add(a.z);
-
-/*
-//yield();
-            Serial.print("Cmd Acc\t");
-            Serial.print(a.x);
-            Serial.print("\t");
-            Serial.print(a.y);
-            Serial.print("\t");
-            Serial.println(a.z);
-*/
+//  JsonArray& r = rootOut.createNestedArray("P");
+//  for(i=0; i<3; i++) r.add(rf[i]);
   return 0;
 }
 

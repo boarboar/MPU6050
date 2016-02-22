@@ -24,7 +24,7 @@ class UnitPanel(wx.Window):
                     wx.Point(self.UNIT_WIDTH/2, self.UNIT_HEIGHT/2),
                     wx.Point(self.UNIT_WIDTH/2, -self.UNIT_HEIGHT/2),
                     ]
-        self.y_line=self.MakeArrow(self.UNIT_HEIGHT*3/4)
+        self.axe_line=self.MakeArrow(self.UNIT_HEIGHT*3/4)
         self.OnSize(None)
 
     def OnSize(self,event):
@@ -57,15 +57,20 @@ class UnitPanel(wx.Window):
         dc.Clear()
         dc.SetTextForeground(wx.BLACK)
         dc.SetTextBackground(wx.WHITE)
+        dc.DrawText(str(self.t/1000), self.x0*2-50, 5)
         dc.SetPen(wx.Pen(wx.BLUE, 4))
         self.SetRotation(self.att[0]*math.pi/180.0)
         dc.DrawPolygon(self.ts(self.shape))
         dc.SetPen(wx.Pen(wx.GREEN, 2))
-        dc.DrawLines(self.ts(self.y_line))
-        dc.DrawText(str(self.t/1000), self.x0*2-50, 5)
+        dc.SetTextForeground(wx.GREEN)
+        dc.DrawLines(self.ts(self.axe_line)) ## X
+        dc.DrawTextPoint("X", self.tp(self.axe_line[1]))
+        self.SetRotation((self.att[0]-90)*math.pi/180.0)
+        dc.DrawLines(self.ts(self.axe_line)) ## Y
+        dc.DrawTextPoint("Y", self.tp(self.axe_line[1]))
         vv = math.hypot(self.v[0], self.v[1])*self.V_SCALE
         if vv>1 :
-            self.SetRotation(math.atan2(self.v[0], self.v[1]))
+            self.SetRotation(math.atan2(-self.v[1], self.v[0]))
             dc.SetPen(wx.Pen(wx.RED, 4))
             dc.DrawLines(self.ts(self.MakeArrow(vv)))
         # todo - vertical
@@ -157,7 +162,8 @@ class ChartPanel(wx.Window):
 
     def UpdateData(self, t, att, v=None):
         if len(self.points)==0 : self.t0=0
-        point=(t, att, v, (math.atan2(v[0], v[1])*180.0/math.pi, math.hypot(v[0], v[1])))
+        #point=(t, att, v, (math.atan2(v[0], v[1])*180.0/math.pi, math.hypot(v[0], v[1])))
+        point=(t, att, v, (math.atan2(-v[1], v[0])*180.0/math.pi, math.hypot(v[0], v[1])))
         self.points.append(point)
         x1=(point[0]-self.t0)*self.SCALE_MSEC
         if x1 > self.w :
