@@ -14,6 +14,7 @@ class MyForm(wx.Frame):
     LOG_LINES = 20
     def __init__(self):
         wx.Frame.__init__(self, None, title="Console", size=(640,480))
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
         menuBar = wx.MenuBar()
         menu = wx.Menu()
         menuBar.Append(menu, "&File")
@@ -33,6 +34,7 @@ class MyForm(wx.Frame):
         self.btn_pos = wx.Button(panel, wx.ID_ANY, 'Pos')
         self.btn_upl = wx.Button(panel, wx.ID_ANY, 'Upload')
         self.btn_rst_mpu = wx.Button(panel, wx.ID_ANY, 'ResetMPU')
+        self.btn_rst_int = wx.Button(panel, wx.ID_ANY, 'ResetINT')
         self.btn_hist = wx.Button(panel, wx.ID_ANY, 'Measmts')
         self.btn_dump = wx.Button(panel, wx.ID_ANY, 'Dump')
         self.txt_cmd = wx.TextCtrl(panel)
@@ -58,6 +60,7 @@ class MyForm(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onPositionReq, self.btn_pos)
         self.Bind(wx.EVT_BUTTON, self.onUploadReq, self.btn_upl)
         self.Bind(wx.EVT_BUTTON, self.onResetMPUReq, self.btn_rst_mpu)
+        self.Bind(wx.EVT_BUTTON, self.onResetMPUIntReq, self.btn_rst_int)
         self.Bind(wx.EVT_BUTTON, self.onDumpModel, self.btn_dump)
         self.Bind(wx.EVT_BUTTON, self.onHistory, self.btn_hist)
         self.Bind(wx.EVT_BUTTON, self.onSendCmd, self.btn_cmd)
@@ -90,6 +93,7 @@ class MyForm(wx.Frame):
         sizer_ctrls.Add(self.btn_pos, 0, wx.ALL|wx.CENTER, 5)
         sizer_ctrls.Add(self.btn_upl, 0, wx.ALL|wx.CENTER, 5)
         sizer_ctrls.Add(self.btn_rst_mpu, 0, wx.ALL|wx.CENTER, 5)
+        sizer_ctrls.Add(self.btn_rst_int, 0, wx.ALL|wx.CENTER, 5)
         sizer_ctrls.Add(self.btn_hist, 0, wx.ALL|wx.CENTER, 5)
         sizer_ctrls.Add(self.btn_dump, 0, wx.ALL|wx.CENTER, 5)
 
@@ -109,7 +113,7 @@ class MyForm(wx.Frame):
 
         self.log.SetDefaultStyle(wx.TextAttr(color,self.log_bg))
 
-       # self.log.AppendText("%d : %s" % (self.logcnt, msg))
+        # self.log.AppendText("%d : %s" % (self.logcnt, msg))
         self.log.AppendText(msg)
         if not msg.endswith('\n'):
             self.log.AppendText('\n')
@@ -125,6 +129,10 @@ class MyForm(wx.Frame):
     def UpdatePos(self, **kwargs) :
         event = UpdEvent(**kwargs)
         wx.PostEvent(self, event)
+
+    def OnClose(self, event):
+        self.controller.stop(timeout=10.0)
+        self.Destroy()
 
     def OnSetup(self, event):
         sd = SettingsDialog(self.model, None)
@@ -150,7 +158,10 @@ class MyForm(wx.Frame):
         self.controller.reqUpload()
 
     def onResetMPUReq(self, event):
-        self.controller.reqResetMPU()
+        self.controller.reqResetMPU(action="MPU")
+
+    def onResetMPUIntReq(self, event):
+        self.controller.reqResetMPU(action="MPU_INT") # reset integrator
 
     def onScanReq(self, event):
         if self.controller.isScanning() :

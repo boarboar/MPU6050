@@ -50,7 +50,7 @@ class CommandThread(threading.Thread):
                         retr=0
                         while retr<3 :
                             d = self.__s.recvfrom(1024)
-                            self.__controller.log().LogString("From %s rsp %s" % (d[1], d[0]), 'GREY')
+                            #self.__controller.log().LogString("From %s rsp %s" % (d[1], d[0]), 'GREY')
                             resp_json=json.loads(d[0])
                             if self.__controller.resp(d[0], req_json) : break
                     except socket.timeout as msg:
@@ -89,7 +89,7 @@ class ListenerThread(threading.Thread):
         while not self.__stop:
             try :
                 d = self.__s.recvfrom(1024)
-                self.__controller.log().LogString("From %s log %s" % (d[1], d[0]), 'GREY')
+                #self.__controller.log().LogString("From %s log %s" % (d[1], d[0]), 'GREY')
                 self.__controller.resp(d[0])
             except socket.timeout as msg:
                 pass

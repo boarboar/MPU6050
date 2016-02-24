@@ -144,6 +144,9 @@ int16_t c_info(JsonObject& root, JsonObject& rootOut) {
   rootOut["FHS"]=ESP.getFreeHeap();
   rootOut["FSS"]=ESP.getFreeSketchSpace();
   rootOut["MDC"]=Stat::StatStore.cycle_mpu_dry_cnt;
+  rootOut["MOC"]=Stat::StatStore.mpu_owfl_cnt;
+  rootOut["MGC"]=Stat::StatStore.mpu_gup_cnt;
+  rootOut["MXC"]=Stat::StatStore.mpu_exc_cnt;
   JsonArray& data = rootOut.createNestedArray("CYT");
   for(int i=0; i<4; i++) data.add(Stat::StatStore.cycle_delay_cnt[i]);
   return 0;
@@ -157,8 +160,15 @@ int16_t c_reset(JsonObject& root, JsonObject& rootOut) {
 }
 
 int16_t c_resetMPU(JsonObject& root, JsonObject& rootOut) {
-  Serial.println(F("Resetting MPU...")); 
-  MpuDrv::Mpu.init();
+  const char *action=root["A"];
+  if(!action || !*action) return -3;
+  if(!strcmp(action, "MPU")) {
+    Serial.println(F("Resetting MPU...")); 
+    MpuDrv::Mpu.init();
+  } else if(!strcmp(action, "MPU_INT")) {
+    Serial.println(F("Resetting MPU integrator...")); 
+    MpuDrv::Mpu.resetIntegrator();
+  } else return -3;
   return 0;
 }
 
@@ -170,12 +180,12 @@ int16_t c_getpos(JsonObject& root, JsonObject& rootOut) {
   //{"C": "I", "T":12345, "R":0, "C": "POS", "YPR": [59, 12, 13], "A": [0.01, 0.02, -0.03], "V": [0.1, 0.2, -0.3], "P": [100.01, 200.44, 0.445]}
   if(!MpuDrv::Mpu.isDataReady()) return -5;
   JsonArray& ya = rootOut.createNestedArray("YPR");
-  float ypr[3], af[3], vf[3], rf[3];
+  float ypr[3], af[3], vf[3]/*, rf[3]*/;
   uint8_t i;
-  MpuDrv::Mpu.getAll(ypr, af, vf, rf); 
+  MpuDrv::Mpu.getAll(ypr, af, vf/*, rf*/); 
   for(i=0; i<3; i++) ya.add(ypr[i] * 180/M_PI);
-  JsonArray& aa = rootOut.createNestedArray("A");
-  for(i=0; i<3; i++) aa.add(af[i]);  
+  //JsonArray& aa = rootOut.createNestedArray("A");
+  //for(i=0; i<3; i++) aa.add(af[i]);  
   JsonArray& v = rootOut.createNestedArray("V");
   for(i=0; i<3; i++) v.add(vf[i]);
 //  JsonArray& r = rootOut.createNestedArray("P");

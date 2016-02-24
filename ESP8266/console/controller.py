@@ -25,14 +25,17 @@ class Controller():
 
     def log(self): return self.__form
 
-    def restart(self):
+    def stop(self, timeout=None):
         self.__form.LogString("Stopping...")
         if self.__comm_listener_thread is not None :
             self.__comm_listener_thread.stop()
             self.__comm_listener_thread.join()
         self.__comm_thread.stop()
         self.__comm_thread.join()
-        self.__form.LogString("Restarting...")
+        self.__form.LogString("Stopped")
+
+    def restart(self):
+        self.stop()
         self.__tstart()
 
     def startScan(self):
@@ -59,9 +62,9 @@ class Controller():
         # {"I":1,"C":"INFO"}
         self.__req({"C": "INFO"})
 
-    def reqResetMPU(self):
+    def reqResetMPU(self, action="MPU"):
         # {"I":1,"C":"RSTMPU"}
-        self.__req({"C": "RSTMPU"})
+        self.__req({"C": "RSTMPU", "A": action})
 
     def reqPosition(self):
         # {"I":1,"C":"POS"}
@@ -96,14 +99,16 @@ class Controller():
         except ValueError : return True
         except KeyError : return True
 
-        #if req_json is None : self.__model.update_log(resp_json)
-        #else : self.__model.update(resp_json)
+        model_reset = False
 
-        if self.__model.update(resp_json) :
+        if "I" in resp_json and resp_json["T"] < self.__model["T"] : # command resp has time less saved one...
+            self.__form.LogErrorString("Device time is less than old one, Device is likely to reboot")
+            model_reset = True
+
+        if self.__model.update(resp_json, model_reset) :
             self.__form.UpdatePos()
         return True
 
     def scanComplete(self, result=None):
-        if result is None :
-            self.__form.LogErrorString("Device not found")
+        if result is None : self.__form.LogErrorString("Device not found")
         else : self.__form.LogString("FOUND %s" % result, 'FOREST GREEN')

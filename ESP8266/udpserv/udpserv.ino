@@ -2,9 +2,9 @@
 #include <WiFiUdp.h>
 #include <ArduinoJson.h>
 
-#include "cmd.h"
 #include "stat.h"
 #include "cfg.h"
+#include "cmd.h"
 #include "mpu.h"
 
 void doCycle();

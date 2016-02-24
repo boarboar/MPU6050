@@ -22,7 +22,8 @@ public:
   int16_t cycle(uint16_t dt);
   int8_t getStatus();
   uint8_t isDataReady();
-  void getAll(float* ypr, float* af, float* vf, float* rf);  
+  void getAll(float* ypr, float* af, float* vf/*, float* rf*/);  
+  void resetIntegrator();
 protected:  
   MpuDrv();
   // MPU control/status vars
@@ -40,10 +41,10 @@ protected:
   VectorInt16 aa16;          // [x, y, z]            accel sensor measurements
   int16_t q16_0[4];         // [w, x, y, z]         quaternion container (int 16) - prev/base
   VectorInt16 aa16_0;          // [x, y, z]            accel sensor measurements - prev/base
-  VectorFloat a0;
+  VectorFloat a0; // base world accel
   VectorFloat a;
   VectorFloat v;
-  VectorFloat r; // not needed
+  //VectorFloat r; // not needed
   /*
   volatile uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
   */

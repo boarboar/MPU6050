@@ -59,13 +59,14 @@ class UnitPanel(wx.Window):
         dc.SetTextBackground(wx.WHITE)
         dc.DrawText(str(self.t/1000), self.x0*2-50, 5)
         dc.SetPen(wx.Pen(wx.BLUE, 4))
-        self.SetRotation(self.att[0]*math.pi/180.0)
+        yaw=self.att[0]*math.pi/180.0
+        self.SetRotation(yaw)
         dc.DrawPolygon(self.ts(self.shape))
-        dc.SetPen(wx.Pen(wx.GREEN, 2))
-        dc.SetTextForeground(wx.GREEN)
+        dc.SetPen(wx.Pen(wx.BLACK, 2))
+        dc.SetTextForeground(wx.BLACK)
         dc.DrawLines(self.ts(self.axe_line)) ## X
         dc.DrawTextPoint("X", self.tp(self.axe_line[1]))
-        self.SetRotation((self.att[0]-90)*math.pi/180.0)
+        self.SetRotation(yaw-math.pi*0.5)
         dc.DrawLines(self.ts(self.axe_line)) ## Y
         dc.DrawTextPoint("Y", self.tp(self.axe_line[1]))
         vv = math.hypot(self.v[0], self.v[1])*self.V_SCALE
@@ -76,6 +77,17 @@ class UnitPanel(wx.Window):
         # todo - vertical
         # Zx=cos(y)*sin(p)*cos(r)+sin(y)*sin(r)
         # Zy=sin(y)*sin(p)*cos(r)-cos(y)*sin(r)
+        # Zz=cos(p)*cos(r)
+        pitch=self.att[1]*math.pi/180.0
+        roll=self.att[1]*math.pi/180.0
+        spcr=math.sin(pitch)*math.cos(roll);
+        zx=math.cos(yaw)*spcr+math.sin(yaw)*math.sin(roll)
+        zy=math.sin(yaw)*spcr+math.cos(yaw)*math.sin(roll)
+        vv = math.hypot(zx, zy)*self.V_SCALE
+        if vv>2 :
+            line=[wx.Point(0, 0), wx.Point(-zy*self.V_SCALE, zx*self.V_SCALE)]
+            dc.SetPen(wx.Pen(wx.YELLOW, 4))
+            dc.DrawLines(self.ts(line))
 
     def MakeArrow(self, len):
         return [wx.Point(0,0), wx.Point(0,len),
@@ -103,7 +115,7 @@ class UnitPanel(wx.Window):
 
 class ChartPanel(wx.Window):
     " draw panel"
-    SCALE_MSEC=2.0/1000.0
+    SCALE_MSEC=5.0/1000.0
     def __init__(self, parent):
         wx.Window.__init__(self, parent, wx.ID_ANY, style=wx.SIMPLE_BORDER, size=(240,240))
         self.SetBackgroundColour('BLACK')
@@ -162,7 +174,6 @@ class ChartPanel(wx.Window):
 
     def UpdateData(self, t, att, v=None):
         if len(self.points)==0 : self.t0=0
-        #point=(t, att, v, (math.atan2(v[0], v[1])*180.0/math.pi, math.hypot(v[0], v[1])))
         point=(t, att, v, (math.atan2(-v[1], v[0])*180.0/math.pi, math.hypot(v[0], v[1])))
         self.points.append(point)
         x1=(point[0]-self.t0)*self.SCALE_MSEC

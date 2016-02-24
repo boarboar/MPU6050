@@ -15,8 +15,6 @@ class Model(dict):
         self["SYSLOGENABLE"] = 1
         self["FHS"]=0
         self["FSS"]=0
-        #self["X"]=0
-        #self["Y"]=0
         self["YPR"]=[0,0,0]
         self["V"]=[0,0,0]
         self["T"]=0
@@ -37,11 +35,17 @@ class Model(dict):
         finally: self.__lock.release()
         return value
 
-    def update(self, resp_json):
+    def update(self, resp_json, reset=False):
         "from sresp"
         update_pos=False
         self.__lock.acquire()
         try:
+            if reset==True:
+                data=dict.__getitem__(self, "MHIST")
+                data[1][:] = [] # clear history
+                self["YPR"]=[0,0,0]
+                self["V"]=[0,0,0]
+                update_pos=True
             self["T_ATT"]=0
             self["T"]=resp_json["T"]
             if resp_json["C"]=="INFO" :

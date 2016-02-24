@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "Wire.h"
+#include "stat.h"
 #include "MPU6050_6Axis_MotionApps20.h"
 #include "mpu.h"
 
@@ -32,10 +33,6 @@ MpuDrv::MpuDrv() : dmpStatus(ST_0)/*, data_ready(0), fifoCount(0), count(0)*/ {}
 
 int8_t MpuDrv::getStatus() { return dmpStatus; }
 uint8_t MpuDrv::isDataReady() { return data_ready; }
-//Quaternion& MpuDrv::getQuaternion() { return q; }
-//float* MpuDrv::getYPR() { return ypr; }
-//VectorFloat& MpuDrv::getGravity() {return gravity;}
-//VectorInt16& MpuDrv::getWorldAccel() {return aaWorld;}
 
 int16_t MpuDrv::init(uint16_t sda, uint16_t sdl, uint16_t intrp) {
   Wire.begin(sda, sdl);
@@ -51,9 +48,9 @@ int16_t MpuDrv::init() {
   fifoCount=0;
   count=0;
   conv_count=0;
-  //v[0]=v[1]=v[2]=0.0f;
-  v.x=v.y=v.z=0.0f;
-  r.x=r.y=r.z=0.0f;
+  resetIntegrator();
+  //v.x=v.y=v.z=0.0f;
+  //r.x=r.y=r.z=0.0f;
   Serial.println(F("Init I2C dev..."));
   mpu.initialize();
   // verify connection
@@ -76,7 +73,7 @@ int16_t MpuDrv::init() {
     mpu.setXGyroOffset(220);
     mpu.setYGyroOffset(76);
     mpu.setZGyroOffset(-85);
-   // mpu.setZAccelOffset(1788); // 1688 factory default for my test chip
+    mpu.setZAccelOffset(1788); // 1688 factory default for my test chip
   
     // turn on the DMP, now that it's ready
     Serial.println(F("Enab DMP..."));
@@ -119,24 +116,33 @@ int16_t MpuDrv::cycle(uint16_t dt) {
     // reset so we can continue cleanly
     mpu.resetFIFO();
     fifoCount=0;
+    Stat::StatStore.mpu_owfl_cnt++;
     Serial.println(F("FIFO overflow!!!"));
     return -2;
   } 
   // otherwise, check for DMP data ready interrupt (this should happen frequently)
-  if (mpuIntStatus & 0x02 || fifoCount >= packetSize) {
+
+  if (!(mpuIntStatus & 0x02) && (fifoCount < packetSize) ) return 0; // nothing to read
+  
+  /*if (mpuIntStatus & 0x02 || fifoCount >= packetSize)*/ {
     uint8_t i=0;
-    bool transition=false;
+    bool settled=false;
     fifoCount = mpu.getFIFOCount();
-    //if(fifoCount < packetSize) return 0;
+    //if(fifoCount < packetSize) return 0; // ???
     while (fifoCount < packetSize && i++<5) { fifoCount = mpu.getFIFOCount(); yield(); } 
     if(fifoCount < packetSize) {
       Serial.println(F("FIFO wait - giveup!!!"));
+      Stat::StatStore.mpu_gup_cnt++;
       return 0; // giveup
     }
     // read a packet from FIFO
     mpu.getFIFOBytes(fifoBuffer, packetSize);
+    //mpu.resetFIFO(); fifoCount=0; // this is in case of overflows... 
     fifoCount -= packetSize;
-    if(fifoCount >0) { Serial.print(F("FIFO excess : ")); Serial.println(fifoCount);}   
+    if(fifoCount >0) { 
+      Serial.print(F("FIFO excess : ")); Serial.println(fifoCount);
+      Stat::StatStore.mpu_exc_cnt++;
+      }   
     
     mpu.dmpGetQuaternion(q16, fifoBuffer);
     mpu.dmpGetAccel(&aa16, fifoBuffer);
@@ -168,28 +174,24 @@ int16_t MpuDrv::cycle(uint16_t dt) {
         
         if(qe<QUAT_INIT_TOL && ae<ACC_INIT_TOL) {
           conv_count++;
-          if((millis()-start)/1000 > INIT_PERIOD_MIN && conv_count>3) {
-            // TODO add conv count seq !!! (at least 3) 
-            Serial.print(F("===MPU Converged, cnvcnt=")); Serial.println(conv_count);
-            dmpStatus=ST_READY;
-            //start=millis();
-            start=micros();
-            transition=true;
-          }
+          if((millis()-start)/1000 > INIT_PERIOD_MIN && conv_count>3) settled=true;            
         } else
           conv_count=0;  
           if((millis()-start)/1000 > INIT_PERIOD_MAX) {
-            Serial.print(F("===MPU Failed to converge, cnvcnt=")); Serial.println(conv_count);
-            dmpStatus=ST_READY; // temporarily
-            //start=millis();
-            start=micros();
-            transition=true;
+            Serial.println(F("===MPU Failed to converge, stilling switch to settled status...")); // TODO -?
+            settled=true;
         }
 
         for(i=0; i<4; i++) q16_0[i]=q16[i];
         aa16_0 = aa16;
         
-      } // if count      
+      } // if count    
+
+      if(settled) {
+        Serial.print(F("===MPU Converged, cnvcnt=")); Serial.println(conv_count);
+        start=micros();
+        dmpStatus=ST_READY;        
+      }
     } // warmup
 
     if(dmpStatus==ST_READY) {
@@ -198,9 +200,8 @@ int16_t MpuDrv::cycle(uint16_t dt) {
       VectorFloat gravity;    
       VectorInt16 aaReal, aaWorld;
       float ts;
-      uint8_t i;
       uint32_t mcs;
-      // do in a tilted frame
+      // get world frame accel (with adjustment) - needed for V-integration
       mpu.dmpGetQuaternion(&q, q16);
       mpu.dmpGetQuaternion(&q0, q16_0);
       q0=q0.getConjugate();
@@ -210,39 +211,40 @@ int16_t MpuDrv::cycle(uint16_t dt) {
       mpu.dmpGetLinearAccelInWorld(&aaWorld, &aaReal, &q);
       
       a.x=aaWorld.x*G_SCALE; a.y=aaWorld.y*G_SCALE; a.z=aaWorld.z*G_SCALE;
-      if(transition) {
+      
+      if(settled) {
         a0=a;
         Serial.print(F("A Base (m/s^2)\t"));Serial.print(a0.x);Serial.print("\t");Serial.print(a0.y);Serial.print("\t");Serial.println(a0.z);        
       }
       
       a.x-=a0.x; a.y-=a0.y; a.z-=a0.z;
  //          a=a.getRotated(&q0);
-//      ts=(float)(millis()-start)/1000.0f;
       mcs=micros();
       ts=(float)(micros()-start)/1000000.0f;
       start=mcs;
       v.x+=a.x*ts; v.y+=a.y*ts; v.z+=a.z*ts;
 //      r.x+=v.x*ts; r.y+=v.y*ts; r.z+=v.z*ts;
-//      start=millis();
-      // TODO use microseconds for V/R integration - TODO!!!
+// todo - LOW pass filter
+// float A_K=0.3f;
+// val = val - A_K * (val - new_meas_val);
       data_ready=1; 
     }
     count++;       
     return 1;
-  } // if data
+  } // if data // to remove...
   return 0;
 }
 
+void MpuDrv::resetIntegrator() {
+  v.x=v.y=v.z=0.0f;  
+}
 
-void MpuDrv::getAll(float* ypr, float* af, float* vf, float *rf) {        
+void MpuDrv::getAll(float* ypr, float* af, float* vf/*, float *rf*/) {        
   Quaternion q, q0;
   VectorFloat gravity;    
   uint8_t i;
   mpu.dmpGetQuaternion(&q, q16);
-
   //Serial.print(F("Meas Quat\t")); Serial.print(q.w); Serial.print("\t"); Serial.print(q.x); Serial.print("\t"); Serial.print(q.y); Serial.print("\t"); Serial.print(q.z); Serial.print("\tM: "); Serial.println(q.getMagnitude());
-
-
   mpu.dmpGetQuaternion(&q0, q16_0);
   q0=q0.getConjugate();
   q=q0.getProduct(q); // real quaternion (relative to base)
@@ -252,24 +254,23 @@ void MpuDrv::getAll(float* ypr, float* af, float* vf, float *rf) {
 /*
   Serial.print(F("Conj Quat\t")); Serial.print(q0.w); Serial.print("\t"); Serial.print(q0.x); Serial.print("\t"); Serial.print(q0.y); Serial.print("\t"); Serial.print(q0.z);Serial.print("\tM: "); Serial.println(q0.getMagnitude());
   Serial.print(F("Real Quat\t")); Serial.print(q.w); Serial.print("\t"); Serial.print(q.x); Serial.print("\t"); Serial.print(q.y); Serial.print("\t"); Serial.print(q.z);Serial.print("\tM: "); Serial.println(q.getMagnitude());
-
 yield();
 */
 
   af[0]=a.x; af[1]=a.y; af[2]=a.z;
   vf[0]=v.x; vf[1]=v.y; vf[2]=v.z;
-  rf[0]=r.x; rf[1]=r.y; rf[2]=r.z;
-
+//  rf[0]=r.x; rf[1]=r.y; rf[2]=r.z;
 
   Serial.print(F("YPR")); 
   for(i=0; i<3; i++) { Serial.print("\t"); Serial.print(ypr[i]);}
   Serial.println();
-  
+
+  /*
   Serial.print(F("A")); 
   for(i=0; i<3; i++) { Serial.print("\t"); Serial.print(af[i]);}
   Serial.println();
-
-yield();
+*/
+  yield();
   
   Serial.print(F("V")); 
   for(i=0; i<3; i++) { Serial.print("\t"); Serial.print(vf[i]);}

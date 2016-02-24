@@ -6,6 +6,9 @@ public:
   static Stat StatStore; // singleton  
   uint32_t cycle_delay_cnt[4];
   uint32_t cycle_mpu_dry_cnt;
+  uint32_t mpu_owfl_cnt;
+  uint32_t mpu_gup_cnt;
+  uint32_t mpu_exc_cnt;
 protected:  
   Stat();
 };
