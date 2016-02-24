@@ -56,7 +56,9 @@ class Model(dict):
                 #self["Y"]=resp_json["Y"]
                 data=dict.__getitem__(self, "MHIST")
                 if len(data[1])==0  or (int(resp_json["T"]) > int(data[1][-1]["T"])) :
-                    item={"T":resp_json["T"], "YPR":resp_json["YPR"], "A":resp_json["A"], "V":resp_json["V"] }
+                    item={"T":resp_json["T"], "YPR":resp_json["YPR"],
+                          #"A":resp_json["A"],
+                          "V":resp_json["V"] }
                     data[1].append(item)
                     self["YPR"]=resp_json["YPR"]
                     self["V"]=resp_json["V"]
