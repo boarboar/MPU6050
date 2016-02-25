@@ -9,6 +9,7 @@ public:
   uint32_t mpu_owfl_cnt;
   uint32_t mpu_gup_cnt;
   uint32_t mpu_exc_cnt;
+  uint32_t mpu_ndt_cnt;
 protected:  
   Stat();
 };

@@ -34,6 +34,25 @@ THE SOFTWARE.
 ===============================================
 */
 
+
+/*
+ FS_SEL | Full Scale Range   | LSB Sensitivity (dividers)
+ -------+--------------------+----------------
+ 0      | +/- 250 degrees/s  | 131 LSB/deg/s
+ 1      | +/- 500 degrees/s  | 65.5 LSB/deg/s
+ 2      | +/- 1000 degrees/s | 32.8 LSB/deg/s
+ 3      | +/- 2000 degrees/s | 16.4 LSB/deg/s
+ 
+  AFS_SEL | Full Scale Range | LSB Sensitivity (dividers)
+ --------+------------------+----------------
+ 0       | +/- 2g           | 8192 LSB/mg
+ 1       | +/- 4g           | 4096 LSB/mg
+ 2       | +/- 8g           | 2048 LSB/mg
+ 3       | +/- 16g          | 1024 LSB/mg
+ 
+ */
+
+ 
 #include "MPU6050.h"
 
 /** Default constructor, uses default I2C address.

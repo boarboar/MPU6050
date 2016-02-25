@@ -4,26 +4,8 @@
 #include "MPU6050_6Axis_MotionApps20.h"
 #include "mpu.h"
 
-/*
- FS_SEL | Full Scale Range   | LSB Sensitivity (dividers)
- -------+--------------------+----------------
- 0      | +/- 250 degrees/s  | 131 LSB/deg/s
- 1      | +/- 500 degrees/s  | 65.5 LSB/deg/s
- 2      | +/- 1000 degrees/s | 32.8 LSB/deg/s
- 3      | +/- 2000 degrees/s | 16.4 LSB/deg/s
- 
-  AFS_SEL | Full Scale Range | LSB Sensitivity (dividers)
- --------+------------------+----------------
- 0       | +/- 2g           | 8192 LSB/mg
- 1       | +/- 4g           | 4096 LSB/mg
- 2       | +/- 8g           | 2048 LSB/mg
- 3       | +/- 16g          | 1024 LSB/mg
- 
- */
-
 //#define SCALE_A (2.0f*8192.0f) // 1g = (9.80665 m/s^2)
 #define SCALE_A (8192.0f) // 1g = (9.80665 m/s^2)
-//#define SCALE_G 131.0f      // 
 #define G_FORCE 9.80665f
 #define G_SCALE (G_FORCE/SCALE_A)
 
@@ -32,7 +14,7 @@ MpuDrv MpuDrv::Mpu; // singleton
 MpuDrv::MpuDrv() : dmpStatus(ST_0)/*, data_ready(0), fifoCount(0), count(0)*/ {}
 
 int8_t MpuDrv::getStatus() { return dmpStatus; }
-uint8_t MpuDrv::isDataReady() { return data_ready; }
+uint8_t MpuDrv::isDataReady() { return dmpStatus==ST_READY && data_ready; }
 
 int16_t MpuDrv::init(uint16_t sda, uint16_t sdl, uint16_t intrp) {
   Wire.begin(sda, sdl);
@@ -49,7 +31,6 @@ int16_t MpuDrv::init() {
   count=0;
   conv_count=0;
   resetIntegrator();
-  //v.x=v.y=v.z=0.0f;
   //r.x=r.y=r.z=0.0f;
   Serial.println(F("Init I2C dev..."));
   mpu.initialize();
@@ -103,7 +84,16 @@ int16_t MpuDrv::init() {
 }
 
 int16_t MpuDrv::cycle(uint16_t dt) {
+  uint8_t i=0;
+  bool settled=false;
   if (dmpStatus==ST_0 || dmpStatus==ST_FAIL) return -1;
+
+  if(data_ready && (micros()-start)/1000000L>1) {
+    // no data from MPU after 1sec
+    Serial.println(F("MPU - no data in 1s!!!"));
+    Stat::StatStore.mpu_ndt_cnt++;
+    data_ready=false;
+  }
 /*
     // wait for MPU interrupt or extra packet(s) available
     if (!mpuInterrupt && fifoCount < packetSize) return ;
@@ -124,44 +114,46 @@ int16_t MpuDrv::cycle(uint16_t dt) {
 
   if (!(mpuIntStatus & 0x02) && (fifoCount < packetSize) ) return 0; // nothing to read
   
-  /*if (mpuIntStatus & 0x02 || fifoCount >= packetSize)*/ {
-    uint8_t i=0;
-    bool settled=false;
-    fifoCount = mpu.getFIFOCount();
-    //if(fifoCount < packetSize) return 0; // ???
-    while (fifoCount < packetSize && i++<5) { fifoCount = mpu.getFIFOCount(); yield(); } 
-    if(fifoCount < packetSize) {
-      Serial.println(F("FIFO wait - giveup!!!"));
-      Stat::StatStore.mpu_gup_cnt++;
-      return 0; // giveup
-    }
-    // read a packet from FIFO
-    mpu.getFIFOBytes(fifoBuffer, packetSize);
-    //mpu.resetFIFO(); fifoCount=0; // this is in case of overflows... 
-    fifoCount -= packetSize;
-    if(fifoCount >0) { 
-      Serial.print(F("FIFO excess : ")); Serial.println(fifoCount);
-      Stat::StatStore.mpu_exc_cnt++;
-      }   
+  fifoCount = mpu.getFIFOCount();
+  //if(fifoCount < packetSize) return 0; // ???
+  while (fifoCount < packetSize && i++<5) { fifoCount = mpu.getFIFOCount(); yield(); } 
+  if(fifoCount < packetSize) {
+    Serial.println(F("FIFO wait - giveup!!!"));
+    Stat::StatStore.mpu_gup_cnt++;
+    return 0; // giveup
+  }
+  // read a packet from FIFO
+  mpu.getFIFOBytes(fifoBuffer, packetSize);
+  //mpu.resetFIFO(); fifoCount=0; // this is in case of overflows... 
+  fifoCount -= packetSize;
+  if(fifoCount >0) { 
+    Serial.print(F("FIFO excess : ")); Serial.println(fifoCount);
+    Stat::StatStore.mpu_exc_cnt++;
+  }   
     
-    mpu.dmpGetQuaternion(q16, fifoBuffer);
-    mpu.dmpGetAccel(&aa16, fifoBuffer);
+  mpu.dmpGetQuaternion(q16, fifoBuffer);
+  mpu.dmpGetAccel(&aa16, fifoBuffer);
     
-    if(dmpStatus==ST_WUP) { // warmup covergence state
+  if(dmpStatus==ST_WUP) { // warmup covergence state
       if(count%200==1) { // 1,201,401,...
         // check convergence
         //
         Serial.println((millis()-start)/1000);
         yield();
+        /*
         Serial.print("\tQ16-0");
         for(i=0; i<4; i++) {Serial.print("\t"); Serial.print(q16_0[i]);}
         Serial.println();
         Serial.print("\tQ16-1");
         for(i=0; i<4; i++) {Serial.print("\t"); Serial.print(q16[i]);}
         Serial.println();
-        //Serial.print("\tAcc-0\t"); Serial.print(aa16_0[0]); Serial.print("\t"); Serial.print(aa16_0[1]); Serial.print("\t"); Serial.println(aa16_0[2]);
         Serial.print("\tAcc-0\t"); Serial.print(aa16_0.x); Serial.print("\t"); Serial.print(aa16_0.y); Serial.print("\t"); Serial.println(aa16_0.z);
         Serial.print("\tAcc-1\t"); Serial.print(aa16.x); Serial.print("\t"); Serial.print(aa16.y); Serial.print("\t"); Serial.println(aa16.z);
+        */
+        DbgPrintQInt16("\tQ16-0", q16_0);
+        DbgPrintQInt16("\tQ16-1", q16);
+        DbgPrintVectorInt16("\tAcc-0\t", &aa16_0);
+        DbgPrintVectorInt16("\tAcc-1\t", &aa16);
         //
         int16_t ad16[3];
         int32_t qe=0, ae=0, e;
@@ -169,7 +161,7 @@ int16_t MpuDrv::cycle(uint16_t dt) {
         for(i=0; i<4; i++) {e=q16[i]-q16_0[i]; if(e<0) e=-e; if(e>qe) qe=e;}
         for(i=0; i<3; i++) {e=ad16[i]; if(e<0) e=-e; if(e>ae) ae=e;}        
         
-        Serial.print("Q16 Err:\t"); Serial.print(qe); Serial.print("\tA16 Err:\t"); Serial.print(ae); 
+        Serial.print(F("Q16 Err:\t")); Serial.print(qe); Serial.print(F("\tA16 Err:\t")); Serial.print(ae); 
         Serial.print("\tCC:\t"); Serial.print(conv_count); Serial.print("\tT:\t"); Serial.println((millis()-start)/1000);
         
         if(qe<QUAT_INIT_TOL && ae<ACC_INIT_TOL) {
@@ -178,7 +170,7 @@ int16_t MpuDrv::cycle(uint16_t dt) {
         } else
           conv_count=0;  
           if((millis()-start)/1000 > INIT_PERIOD_MAX) {
-            Serial.println(F("===MPU Failed to converge, stilling switch to settled status...")); // TODO -?
+            Serial.println(F("===MPU Failed to converge, however switching to settled status...")); // TODO -?
             settled=true;
         }
 
@@ -192,9 +184,9 @@ int16_t MpuDrv::cycle(uint16_t dt) {
         start=micros();
         dmpStatus=ST_READY;        
       }
-    } // warmup
+  } // warmup
 
-    if(dmpStatus==ST_READY) {
+  if(dmpStatus==ST_READY) {
       // integrate motion
       Quaternion q, q0;
       VectorFloat gravity;    
@@ -214,7 +206,8 @@ int16_t MpuDrv::cycle(uint16_t dt) {
       
       if(settled) {
         a0=a;
-        Serial.print(F("A Base (m/s^2)\t"));Serial.print(a0.x);Serial.print("\t");Serial.print(a0.y);Serial.print("\t");Serial.println(a0.z);        
+        //Serial.print(F("A Base (m/s^2)\t"));Serial.print(a0.x);Serial.print("\t");Serial.print(a0.y);Serial.print("\t");Serial.println(a0.z);        
+        DbgPrintVectorFloat("A Base (m/s^2)\t", &a0);
       }
       
       a.x-=a0.x; a.y-=a0.y; a.z-=a0.z;
@@ -228,15 +221,14 @@ int16_t MpuDrv::cycle(uint16_t dt) {
 // float A_K=0.3f;
 // val = val - A_K * (val - new_meas_val);
       data_ready=1; 
-    }
-    count++;       
-    return 1;
-  } // if data // to remove...
-  return 0;
+  }
+  count++;       
+  return 1;
 }
 
 void MpuDrv::resetIntegrator() {
   v.x=v.y=v.z=0.0f;  
+  //r.x=r.y=r.z=0.0f;
 }
 
 void MpuDrv::getAll(float* ypr, float* af, float* vf/*, float *rf*/) {        
@@ -244,44 +236,52 @@ void MpuDrv::getAll(float* ypr, float* af, float* vf/*, float *rf*/) {
   VectorFloat gravity;    
   uint8_t i;
   mpu.dmpGetQuaternion(&q, q16);
-  //Serial.print(F("Meas Quat\t")); Serial.print(q.w); Serial.print("\t"); Serial.print(q.x); Serial.print("\t"); Serial.print(q.y); Serial.print("\t"); Serial.print(q.z); Serial.print("\tM: "); Serial.println(q.getMagnitude());
   mpu.dmpGetQuaternion(&q0, q16_0);
   q0=q0.getConjugate();
   q=q0.getProduct(q); // real quaternion (relative to base)
   mpu.dmpGetGravity(&gravity, &q);
   mpu.dmpGetYawPitchRoll(ypr, &q, &gravity); 
 
-/*
-  Serial.print(F("Conj Quat\t")); Serial.print(q0.w); Serial.print("\t"); Serial.print(q0.x); Serial.print("\t"); Serial.print(q0.y); Serial.print("\t"); Serial.print(q0.z);Serial.print("\tM: "); Serial.println(q0.getMagnitude());
-  Serial.print(F("Real Quat\t")); Serial.print(q.w); Serial.print("\t"); Serial.print(q.x); Serial.print("\t"); Serial.print(q.y); Serial.print("\t"); Serial.print(q.z);Serial.print("\tM: "); Serial.println(q.getMagnitude());
-yield();
-*/
-
   af[0]=a.x; af[1]=a.y; af[2]=a.z;
   vf[0]=v.x; vf[1]=v.y; vf[2]=v.z;
 //  rf[0]=r.x; rf[1]=r.y; rf[2]=r.z;
 
+  DbgPrintArr3Float("YPR", ypr);
+  yield();
+  DbgPrintArr3Float("V", vf);
+
+/*
   Serial.print(F("YPR")); 
   for(i=0; i<3; i++) { Serial.print("\t"); Serial.print(ypr[i]);}
   Serial.println();
 
-  /*
-  Serial.print(F("A")); 
-  for(i=0; i<3; i++) { Serial.print("\t"); Serial.print(af[i]);}
-  Serial.println();
-*/
   yield();
   
   Serial.print(F("V")); 
   for(i=0; i<3; i++) { Serial.print("\t"); Serial.print(vf[i]);}
   Serial.println();
-
-  /*
-  Serial.print(F("R")); 
-  for(i=0; i<3; i++) { Serial.print("\t"); Serial.print(rf[i]);}
-  Serial.println();
 */
 }  
+
+void MpuDrv::DbgPrintVectorInt16(const char *s, VectorInt16 *v) {
+  Serial.print(s); Serial.print(v->x); Serial.print("\t"); Serial.print(v->y); Serial.print("\t"); Serial.println(v->z);
+}
+
+void MpuDrv::DbgPrintQInt16(const char *s, int16_t *q) {
+  Serial.print(s);
+  for(uint8_t i=0; i<4; i++) {Serial.print("\t"); Serial.print(q[i]);}
+  Serial.println();
+}
+
+void MpuDrv::DbgPrintVectorFloat(const char *s, VectorFloat *v) {
+  Serial.print(s); Serial.print(v->x); Serial.print("\t"); Serial.print(v->y); Serial.print("\t"); Serial.println(v->z);
+}
+
+void MpuDrv::DbgPrintArr3Float(const char *s, float *q) {
+  Serial.print(s);
+  for(uint8_t i=0; i<3; i++) {Serial.print("\t"); Serial.print(q[i]);}
+  Serial.println();
+}
 
 // ================================================================
 // ===               INTERRUPT DETECTION ROUTINE                ===
@@ -292,4 +292,6 @@ void dmpDataReady() {
     mpuInterrupt = true;
 }
 */
+
+
 

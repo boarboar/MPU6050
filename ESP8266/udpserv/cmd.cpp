@@ -147,6 +147,7 @@ int16_t c_info(JsonObject& root, JsonObject& rootOut) {
   rootOut["MOC"]=Stat::StatStore.mpu_owfl_cnt;
   rootOut["MGC"]=Stat::StatStore.mpu_gup_cnt;
   rootOut["MXC"]=Stat::StatStore.mpu_exc_cnt;
+  rootOut["MND"]=Stat::StatStore.mpu_ndt_cnt;
   JsonArray& data = rootOut.createNestedArray("CYT");
   for(int i=0; i<4; i++) data.add(Stat::StatStore.cycle_delay_cnt[i]);
   return 0;

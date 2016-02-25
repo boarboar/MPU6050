@@ -59,7 +59,7 @@ class UnitPanel(wx.Window):
         dc.SetTextBackground(wx.WHITE)
         dc.DrawText(str(self.t/1000), self.x0*2-50, 5)
         dc.SetPen(wx.Pen(wx.BLUE, 4))
-        yaw=self.att[0]*math.pi/180.0
+        yaw, pitch, roll = [a*math.pi/180.0 for a in self.att]
         self.SetRotation(yaw)
         dc.DrawPolygon(self.ts(self.shape))
         dc.SetPen(wx.Pen(wx.BLACK, 2))
@@ -78,14 +78,15 @@ class UnitPanel(wx.Window):
         # Zx=cos(y)*sin(p)*cos(r)+sin(y)*sin(r)
         # Zy=sin(y)*sin(p)*cos(r)-cos(y)*sin(r)
         # Zz=cos(p)*cos(r)
-        pitch=self.att[1]*math.pi/180.0
-        roll=self.att[1]*math.pi/180.0
         spcr=math.sin(pitch)*math.cos(roll);
         zx=math.cos(yaw)*spcr+math.sin(yaw)*math.sin(roll)
-        zy=math.sin(yaw)*spcr+math.cos(yaw)*math.sin(roll)
+        zy=math.sin(yaw)*spcr-math.cos(yaw)*math.sin(roll)
         vv = math.hypot(zx, zy)*self.V_SCALE
         if vv>2 :
-            line=[wx.Point(0, 0), wx.Point(-zy*self.V_SCALE, zx*self.V_SCALE)]
+            #self.SetRotation(0)
+            #line=[wx.Point(0, 0), wx.Point(-zy*self.V_SCALE, zx*self.V_SCALE)]
+            line=[wx.Point(0, 0), wx.Point(0, vv)]
+            self.SetRotation(math.atan2(-zy, zx))
             dc.SetPen(wx.Pen(wx.YELLOW, 4))
             dc.DrawLines(self.ts(line))
 
