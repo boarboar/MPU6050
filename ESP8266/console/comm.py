@@ -24,7 +24,7 @@ class CommandThread(threading.Thread):
     def run (self):
         try:
             self.__s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            self.__s.settimeout(1)
+            self.__s.settimeout(2)
         except socket.error:
             self.__controller.log().LogErrorString("Failed to create socket!")
             return

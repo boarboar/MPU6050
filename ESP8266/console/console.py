@@ -42,7 +42,7 @@ class MyForm(wx.Frame):
 
         self.unitPan = draw.UnitPanel(panel)
         self.chart = draw.ChartPanel(panel)
-        self.canvas = draw.DrawPanel(panel)
+        self.map = draw.MapPanel(panel)
 
         self.unitPan.SetMaxSize((240, 240))
         #self.canvas.SetMaxSize((240, 240))
@@ -87,7 +87,7 @@ class MyForm(wx.Frame):
         sizer_charts.Add(self.chart, 1, wx.ALL|wx.EXPAND, border=0)
         sizer_pan.Add(sizer_charts, 1, wx.ALL|wx.EXPAND, border=0)
 
-        sizer_pan.Add(self.canvas, 1, wx.ALL|wx.EXPAND, border=0)
+        sizer_pan.Add(self.map, 1, wx.ALL|wx.EXPAND, border=0)
         sizer_pan.Add(sizer_ctrls, 0, wx.ALL|wx.RIGHT, 5)
         sizer_ctrls.Add(self.btn_st, 0, wx.ALL|wx.CENTER, 5)
         sizer_ctrls.Add(self.btn_pos, 0, wx.ALL|wx.CENTER, 5)
@@ -183,8 +183,7 @@ class MyForm(wx.Frame):
         self.statusbar.SetStatusText("%(YPR)s" % self.model, 1)
         self.unitPan.UpdateData(self.model["T_ATT"], self.model["YPR"], self.model["V"])
         self.chart.UpdateData(self.model["T_ATT"], self.model["YPR"], self.model["V"])
-        #self.canvas.AddPoint(self.model["X"], self.model["Y"])
-
+        self.map.UpdateData(self.model["T_ATT"], None)
 
 class SettingsDialog(wx.Dialog):
     def __init__(self, model, *args, **kw):

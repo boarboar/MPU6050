@@ -83,10 +83,8 @@ class UnitPanel(wx.Window):
         zy=math.sin(yaw)*spcr-math.cos(yaw)*math.sin(roll)
         vv = math.hypot(zx, zy)*self.V_SCALE
         if vv>2 :
-            #self.SetRotation(0)
-            #line=[wx.Point(0, 0), wx.Point(-zy*self.V_SCALE, zx*self.V_SCALE)]
             line=[wx.Point(0, 0), wx.Point(0, vv)]
-            self.SetRotation(math.atan2(-zy, zx))
+            self.SetRotation(math.atan2(zy, zx))
             dc.SetPen(wx.Pen(wx.YELLOW, 4))
             dc.DrawLines(self.ts(line))
 
@@ -199,12 +197,19 @@ class ChartPanel(wx.Window):
 #
 #
 
-class DrawPanel(wx.Window):
+class MapPanel(wx.Window):
     " draw panel"
     def __init__(self, parent):
         wx.Window.__init__(self, parent, wx.ID_ANY, style=wx.SIMPLE_BORDER, size=(240,240))
         self.Bind(wx.EVT_PAINT, self.OnPaint)
-        self.points=[(0,0), (50, 50)]
+        self.Bind(wx.EVT_SIZE, self.OnSize)
+        #self.points=[(0,0), (50, 50)]
+
+    def OnSize(self,event):
+        w, h = self.GetSize()
+        self.w=w
+        self.h=h
+        self.UpdateDrawing()
 
     def OnPaint(self, event=None):
         dc = wx.PaintDC(self)
@@ -213,14 +218,12 @@ class DrawPanel(wx.Window):
         #dc.DrawLine(0, 0, 50, 50)
         #if len(self.points)>1 :
         #dc.DrawLine(self.points[0][0], self.points[0][1], self.points[1][0], self.points[1][0])
-        for point in self.points:
-            dc.DrawCheckMark(point[0], point[1], 10, 10)
+        #for point in self.points:
+        #    dc.DrawCheckMark(point[0], point[1], 10, 10)
 
-    def AddPoint(self, x, y):
-        self.points.append((x, y))
+    def UpdateDrawing(self) :
+        self.Refresh()
+        self.Update()
 
-        #print self.points
-
-        dc = wx.ClientDC(self)
-        dc.DrawCheckMark(x, y, 10, 10)
-        dc.SetPen(wx.Pen(wx.BLACK, 4))
+    def UpdateData(self, t, pos=None):
+        pass

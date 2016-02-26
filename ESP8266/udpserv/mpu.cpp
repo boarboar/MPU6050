@@ -22,9 +22,6 @@ int16_t MpuDrv::init(uint16_t sda, uint16_t sdl, uint16_t intrp) {
 }
 
 int16_t MpuDrv::init() {
-  // TODO - split into 2 stages
-  // initialize device
-  // STAGE-0
   dmpStatus=ST_0;
   data_ready=0;
   fifoCount=0;
@@ -44,11 +41,7 @@ int16_t MpuDrv::init() {
   Serial.println(F("Init DMP..."));
   yield();
   uint8_t devStatus = mpu.dmpInitialize();
-  yield();
-  
-  // // STAGE-1 ?
-  
-  // make sure it worked (returns 0 if so)
+  yield();  
   if (devStatus == 0) {
     // supply your own gyro offsets here, scaled for min sensitivity
     mpu.setXGyroOffset(220);
@@ -134,33 +127,24 @@ int16_t MpuDrv::cycle(uint16_t dt) {
   mpu.dmpGetQuaternion(q16, fifoBuffer);
   mpu.dmpGetAccel(&aa16, fifoBuffer);
     
-  if(dmpStatus==ST_WUP) { // warmup covergence state
-      if(count%200==1) { // 1,201,401,...
-        // check convergence
-        //
-        Serial.println((millis()-start)/1000);
-        yield();
-        /*
-        Serial.print("\tQ16-0");
-        for(i=0; i<4; i++) {Serial.print("\t"); Serial.print(q16_0[i]);}
-        Serial.println();
-        Serial.print("\tQ16-1");
-        for(i=0; i<4; i++) {Serial.print("\t"); Serial.print(q16[i]);}
-        Serial.println();
-        Serial.print("\tAcc-0\t"); Serial.print(aa16_0.x); Serial.print("\t"); Serial.print(aa16_0.y); Serial.print("\t"); Serial.println(aa16_0.z);
-        Serial.print("\tAcc-1\t"); Serial.print(aa16.x); Serial.print("\t"); Serial.print(aa16.y); Serial.print("\t"); Serial.println(aa16.z);
-        */
-        DbgPrintQInt16("\tQ16-0", q16_0);
-        DbgPrintQInt16("\tQ16-1", q16);
-        DbgPrintVectorInt16("\tAcc-0\t", &aa16_0);
-        DbgPrintVectorInt16("\tAcc-1\t", &aa16);
-        //
+  if(dmpStatus==ST_WUP && count%200==1) { // warmup covergence state, check every 200th reading: 1,201,401,...
+    //if(count%200==1) { // 1,201,401,...
+    // check convergence
+    //
         int16_t ad16[3];
         int32_t qe=0, ae=0, e;
+        
+        //
         ad16[0]=aa16.x-aa16_0.x; ad16[1]=aa16.y-aa16_0.y; ad16[2]=aa16.z-aa16_0.z;                   
         for(i=0; i<4; i++) {e=q16[i]-q16_0[i]; if(e<0) e=-e; if(e>qe) qe=e;}
         for(i=0; i<3; i++) {e=ad16[i]; if(e<0) e=-e; if(e>ae) ae=e;}        
         
+        Serial.println((millis()-start)/1000);
+        DbgPrintQInt16("\tQ16-0", q16_0);
+        DbgPrintQInt16("\tQ16-1", q16);
+        yield();
+        DbgPrintVectorInt16("\tAcc-0\t", &aa16_0);
+        DbgPrintVectorInt16("\tAcc-1\t", &aa16);
         Serial.print(F("Q16 Err:\t")); Serial.print(qe); Serial.print(F("\tA16 Err:\t")); Serial.print(ae); 
         Serial.print("\tCC:\t"); Serial.print(conv_count); Serial.print("\tT:\t"); Serial.println((millis()-start)/1000);
         
@@ -177,7 +161,7 @@ int16_t MpuDrv::cycle(uint16_t dt) {
         for(i=0; i<4; i++) q16_0[i]=q16[i];
         aa16_0 = aa16;
         
-      } // if count    
+      //} // if count    
 
       if(settled) {
         Serial.print(F("===MPU Converged, cnvcnt=")); Serial.println(conv_count);
@@ -206,7 +190,6 @@ int16_t MpuDrv::cycle(uint16_t dt) {
       
       if(settled) {
         a0=a;
-        //Serial.print(F("A Base (m/s^2)\t"));Serial.print(a0.x);Serial.print("\t");Serial.print(a0.y);Serial.print("\t");Serial.println(a0.z);        
         DbgPrintVectorFloat("A Base (m/s^2)\t", &a0);
       }
       
@@ -249,18 +232,6 @@ void MpuDrv::getAll(float* ypr, float* af, float* vf/*, float *rf*/) {
   DbgPrintArr3Float("YPR", ypr);
   yield();
   DbgPrintArr3Float("V", vf);
-
-/*
-  Serial.print(F("YPR")); 
-  for(i=0; i<3; i++) { Serial.print("\t"); Serial.print(ypr[i]);}
-  Serial.println();
-
-  yield();
-  
-  Serial.print(F("V")); 
-  for(i=0; i<3; i++) { Serial.print("\t"); Serial.print(vf[i]);}
-  Serial.println();
-*/
 }  
 
 void MpuDrv::DbgPrintVectorInt16(const char *s, VectorInt16 *v) {
