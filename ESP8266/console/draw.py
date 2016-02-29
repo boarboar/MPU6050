@@ -3,8 +3,9 @@ import math
 
 class UnitPanel(wx.Window):
     " draw panel with double buffering"
-    UNIT_WIDTH=80
-    UNIT_HEIGHT=100
+    UNIT_WIDTH=85
+    UNIT_HEIGHT=110
+    UNIT_LEVEL_RAD=36
     UNIT_ARROW_SIZE=10
     V_SCALE=100  # 1 cm/s = 0.01 m/s * 1000 = 1 pix
     def __init__(self, parent):
@@ -53,8 +54,10 @@ class UnitPanel(wx.Window):
         self.UpdateDrawing()
 
     def Draw(self, dc):
-        dc.SetBackground(wx.Brush(wx.WHITE))
+        #dc.SetBackground(wx.Brush(wx.WHITE))
         dc.Clear()
+        dc.SetBackgroundMode(wx.TRANSPARENT)
+        dc.SetBrush(wx.TRANSPARENT_BRUSH)
         dc.SetTextForeground(wx.BLACK)
         dc.SetTextBackground(wx.WHITE)
         dc.DrawText(str(self.t/1000), self.x0*2-50, 5)
@@ -69,23 +72,24 @@ class UnitPanel(wx.Window):
         self.SetRotation(yaw-math.pi*0.5)
         dc.DrawLines(self.ts(self.axe_line)) ## Y
         dc.DrawTextPoint("Y", self.tp(self.axe_line[1]))
+        dc.DrawCirclePoint(self.tp(wx.Point(0, 0)), self.UNIT_LEVEL_RAD)
         vv = math.hypot(self.v[0], self.v[1])*self.V_SCALE
         if vv>1 :
             self.SetRotation(math.atan2(-self.v[1], self.v[0]))
             dc.SetPen(wx.Pen(wx.RED, 4))
             dc.DrawLines(self.ts(self.MakeArrow(vv)))
-        # todo - vertical
+        # draw - vertical
         # Zx=cos(y)*sin(p)*cos(r)+sin(y)*sin(r)
         # Zy=sin(y)*sin(p)*cos(r)-cos(y)*sin(r)
         # Zz=cos(p)*cos(r)
         spcr=math.sin(pitch)*math.cos(roll);
         zx=math.cos(yaw)*spcr+math.sin(yaw)*math.sin(roll)
         zy=math.sin(yaw)*spcr-math.cos(yaw)*math.sin(roll)
-        vv = math.hypot(zx, zy)*self.V_SCALE
+        vv = math.hypot(zx, zy)*self.UNIT_LEVEL_RAD
         if vv>2 :
             line=[wx.Point(0, 0), wx.Point(0, vv)]
             self.SetRotation(math.atan2(zy, zx))
-            dc.SetPen(wx.Pen(wx.YELLOW, 4))
+            dc.SetPen(wx.Pen("SALMON", 4))
             dc.DrawLines(self.ts(line))
 
     def MakeArrow(self, len):
@@ -193,6 +197,10 @@ class ChartPanel(wx.Window):
                 dc.SetPen(wx.Pen(wx.RED, 2))
                 dc.DrawLine(x0, self.h/2-point0[3][0]*self.y_scale, x1, self.h/2-point[3][0]*self.y_scale)
 
+    def Reset(self):
+        self.points[:] = []
+        self.t0=0
+        self.UpdateDrawing()
 #
 #
 #

@@ -11,10 +11,11 @@
 
 MpuDrv MpuDrv::Mpu; // singleton
 
-MpuDrv::MpuDrv() : dmpStatus(ST_0)/*, data_ready(0), fifoCount(0), count(0)*/ {}
+MpuDrv::MpuDrv() : dmpStatus(ST_0) {}
 
 int8_t MpuDrv::getStatus() { return dmpStatus; }
 uint8_t MpuDrv::isDataReady() { return dmpStatus==ST_READY && data_ready; }
+uint8_t MpuDrv::isNeedReset() { return need_reset; }
 
 int16_t MpuDrv::init(uint16_t sda, uint16_t sdl, uint16_t intrp) {
   Wire.begin(sda, sdl);
@@ -27,6 +28,7 @@ int16_t MpuDrv::init() {
   fifoCount=0;
   count=0;
   conv_count=0;
+  need_reset=0;
   resetIntegrator();
   //r.x=r.y=r.z=0.0f;
   Serial.println(F("Init I2C dev..."));
@@ -35,6 +37,7 @@ int16_t MpuDrv::init() {
   Serial.println(F("Test device conn..."));
   if(!mpu.testConnection()) {
     Serial.println(F("MPU6050 conn fail"));
+    need_reset=1;
     return 0;
   }
   // load and configure the DMP  
@@ -72,6 +75,7 @@ int16_t MpuDrv::init() {
     // (if it's going to break, usually the code will be 1)
     Serial.print(F("DMP Init fail, code ")); Serial.println(devStatus);
     dmpStatus = ST_FAIL;
+    need_reset=1;
   }
   return dmpStatus;
 }
@@ -85,7 +89,10 @@ int16_t MpuDrv::cycle(uint16_t dt) {
     // no data from MPU after 1sec
     Serial.println(F("MPU - no data in 1s!!!"));
     Stat::StatStore.mpu_ndt_cnt++;
-    data_ready=false;
+    //init(); // RESET MPU
+    need_reset=1;
+    data_ready=0;
+    return -10;
   }
 /*
     // wait for MPU interrupt or extra packet(s) available
@@ -128,82 +135,72 @@ int16_t MpuDrv::cycle(uint16_t dt) {
   mpu.dmpGetAccel(&aa16, fifoBuffer);
     
   if(dmpStatus==ST_WUP && count%200==1) { // warmup covergence state, check every 200th reading: 1,201,401,...
-    //if(count%200==1) { // 1,201,401,...
-    // check convergence
-    //
-        int16_t ad16[3];
-        int32_t qe=0, ae=0, e;
+    int16_t ad16[3];
+    int32_t qe=0, ae=0, e;        
+    ad16[0]=aa16.x-aa16_0.x; ad16[1]=aa16.y-aa16_0.y; ad16[2]=aa16.z-aa16_0.z;                   
+    for(i=0; i<4; i++) {e=q16[i]-q16_0[i]; if(e<0) e=-e; if(e>qe) qe=e;}
+    for(i=0; i<3; i++) {e=ad16[i]; if(e<0) e=-e; if(e>ae) ae=e;}        
         
-        //
-        ad16[0]=aa16.x-aa16_0.x; ad16[1]=aa16.y-aa16_0.y; ad16[2]=aa16.z-aa16_0.z;                   
-        for(i=0; i<4; i++) {e=q16[i]-q16_0[i]; if(e<0) e=-e; if(e>qe) qe=e;}
-        for(i=0; i<3; i++) {e=ad16[i]; if(e<0) e=-e; if(e>ae) ae=e;}        
+   Serial.println((millis()-start)/1000);
+   DbgPrintQInt16("\tQ16-0", q16_0);
+   DbgPrintQInt16("\tQ16-1", q16);
+   yield();
+   DbgPrintVectorInt16("\tAcc-0\t", &aa16_0);
+   DbgPrintVectorInt16("\tAcc-1\t", &aa16);
+   Serial.print(F("Q16 Err:\t")); Serial.print(qe); Serial.print(F("\tA16 Err:\t")); Serial.print(ae); 
+   Serial.print("\tCC:\t"); Serial.print(conv_count); Serial.print("\tT:\t"); Serial.println((millis()-start)/1000);
         
-        Serial.println((millis()-start)/1000);
-        DbgPrintQInt16("\tQ16-0", q16_0);
-        DbgPrintQInt16("\tQ16-1", q16);
-        yield();
-        DbgPrintVectorInt16("\tAcc-0\t", &aa16_0);
-        DbgPrintVectorInt16("\tAcc-1\t", &aa16);
-        Serial.print(F("Q16 Err:\t")); Serial.print(qe); Serial.print(F("\tA16 Err:\t")); Serial.print(ae); 
-        Serial.print("\tCC:\t"); Serial.print(conv_count); Serial.print("\tT:\t"); Serial.println((millis()-start)/1000);
-        
-        if(qe<QUAT_INIT_TOL && ae<ACC_INIT_TOL) {
-          conv_count++;
-          if((millis()-start)/1000 > INIT_PERIOD_MIN && conv_count>3) settled=true;            
-        } else
-          conv_count=0;  
-          if((millis()-start)/1000 > INIT_PERIOD_MAX) {
-            Serial.println(F("===MPU Failed to converge, however switching to settled status...")); // TODO -?
-            settled=true;
-        }
+   if(qe<QUAT_INIT_TOL && ae<ACC_INIT_TOL) {
+      conv_count++;
+      if((millis()-start)/1000 > INIT_PERIOD_MIN && conv_count>3) settled=true;            
+    } else conv_count=0;  
+   if((millis()-start)/1000 > INIT_PERIOD_MAX) {
+      Serial.println(F("===MPU Failed to converge, however switching to settled status...")); // TODO -?
+      settled=true;
+    }
 
-        for(i=0; i<4; i++) q16_0[i]=q16[i];
-        aa16_0 = aa16;
+   for(i=0; i<4; i++) q16_0[i]=q16[i];
+   aa16_0 = aa16;
         
-      //} // if count    
-
-      if(settled) {
-        Serial.print(F("===MPU Converged, cnvcnt=")); Serial.println(conv_count);
-        start=micros();
-        dmpStatus=ST_READY;        
-      }
+   if(settled) {
+      Serial.print(F("===MPU Converged, cnvcnt=")); Serial.println(conv_count);
+      start=micros();
+      dmpStatus=ST_READY;        
+     }
   } // warmup
 
   if(dmpStatus==ST_READY) {
-      // integrate motion
-      Quaternion q, q0;
-      VectorFloat gravity;    
-      VectorInt16 aaReal, aaWorld;
-      float ts;
-      uint32_t mcs;
-      // get world frame accel (with adjustment) - needed for V-integration
-      mpu.dmpGetQuaternion(&q, q16);
-      mpu.dmpGetQuaternion(&q0, q16_0);
-      q0=q0.getConjugate();
-      q=q0.getProduct(q); // real quaternion (relative to base)
-      mpu.dmpGetGravity(&gravity, &q);
-      mpu.dmpGetLinearAccel(&aaReal, &aa16, &gravity);
-      mpu.dmpGetLinearAccelInWorld(&aaWorld, &aaReal, &q);
-      
-      a.x=aaWorld.x*G_SCALE; a.y=aaWorld.y*G_SCALE; a.z=aaWorld.z*G_SCALE;
-      
-      if(settled) {
-        a0=a;
-        DbgPrintVectorFloat("A Base (m/s^2)\t", &a0);
-      }
-      
-      a.x-=a0.x; a.y-=a0.y; a.z-=a0.z;
+    // integrate motion
+    Quaternion q, q0;
+    VectorFloat gravity;    
+    VectorInt16 aaReal, aaWorld;
+    float ts;
+    uint32_t mcs;
+    // get world frame accel (with adjustment) - needed for V-integration
+    mpu.dmpGetQuaternion(&q, q16);
+    mpu.dmpGetQuaternion(&q0, q16_0);
+    q0=q0.getConjugate();
+    q=q0.getProduct(q); // real quaternion (relative to base)
+    mpu.dmpGetGravity(&gravity, &q);
+    mpu.dmpGetLinearAccel(&aaReal, &aa16, &gravity);
+    mpu.dmpGetLinearAccelInWorld(&aaWorld, &aaReal, &q);      
+    a.x=aaWorld.x*G_SCALE; a.y=aaWorld.y*G_SCALE; a.z=aaWorld.z*G_SCALE;      
+    if(settled) { // first time only - store base accel
+      a0=a;
+      DbgPrintVectorFloat("A Base (m/s^2)\t", &a0);
+    }      
+    // adjust to base accel
+    a.x-=a0.x; a.y-=a0.y; a.z-=a0.z;
  //          a=a.getRotated(&q0);
-      mcs=micros();
-      ts=(float)(micros()-start)/1000000.0f;
-      start=mcs;
-      v.x+=a.x*ts; v.y+=a.y*ts; v.z+=a.z*ts;
+    mcs=micros();
+    ts=(float)(micros()-start)/1000000.0f;
+    start=mcs;
+    v.x+=a.x*ts; v.y+=a.y*ts; v.z+=a.z*ts;
 //      r.x+=v.x*ts; r.y+=v.y*ts; r.z+=v.z*ts;
 // todo - LOW pass filter
 // float A_K=0.3f;
 // val = val - A_K * (val - new_meas_val);
-      data_ready=1; 
+    data_ready=1; 
   }
   count++;       
   return 1;

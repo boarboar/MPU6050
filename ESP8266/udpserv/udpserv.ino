@@ -90,18 +90,22 @@ void doCycle() {
   if(dt < CYCLE_TO) return;
   last_cycle = t;
   
+  // Do fast cycle
   int16_t mpu_res = MpuDrv::Mpu.cycle(dt);
-  
   // collect delay statistics
   int i=0;
   while(i<3 && dt>(CYCLE_TO<<i)) i++;
   Stat::StatStore.cycle_delay_cnt[i]++;
-
   if(!mpu_res) Stat::StatStore.cycle_mpu_dry_cnt++;
-   
   dt=t-last_slow_cycle;
   if(dt < CYCLE_SLOW_TO) return;
   last_slow_cycle = t;
+  
+  // Do slow cycle
+  if(MpuDrv::Mpu.isNeedReset()) {
+    cmd.sendAlarm(CmdProc::ALR_MPU_RESET);
+    MpuDrv::Mpu.init();
+  }
   if(CfgDrv::Cfg.needToStore()) CfgDrv::Cfg.store(cfg_file);
   if(cmd.isSysLog()) cmd.sendSysLogStatus();
 }

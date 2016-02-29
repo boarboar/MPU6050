@@ -77,33 +77,64 @@ int16_t CmdProc::doCmd() {
 
 boolean CmdProc::isSysLog() { return CfgDrv::Cfg.log_on;}
 
+
 boolean CmdProc::sendSysLog(const char *buf) {
   if(!CfgDrv::Cfg.log_on) return false;
   StaticJsonBuffer<200> jsonBufferOut;
   JsonObject& rootOut = jsonBufferOut.createObject();
-  char bufout[BUF_SZ];
+  //char bufout[BUF_SZ];
   rootOut["C"] = "I";
   rootOut["T"] = millis();
   rootOut["M"] = buf;
+  _sendToSysLog(rootOut);
+  /*
   rootOut.printTo(bufout, BUF_SZ-1);
   udp_snd.beginPacket(CfgDrv::Cfg.log_addr, CfgDrv::Cfg.log_port);
   udp_snd.write(bufout, strlen(bufout));
   udp_snd.endPacket();  
+  */
 }
 
 boolean CmdProc::sendSysLogStatus() {
-  //{"C": "I", "T":12345, "R":0, "C": "L", "YPR": [59, 12, 13], "A": [0.01, 0.02, -0.03], "V": [0.1, 0.2, -0.3]}
+  //{"C": "L", "T":12345, "R":0, "YPR": [59, 12, 13], "A": [0.01, 0.02, -0.03], "V": [0.1, 0.2, -0.3]}
   if(!CfgDrv::Cfg.log_on) return false;
   StaticJsonBuffer<400> jsonBufferOut;
   JsonObject& rootOut = jsonBufferOut.createObject();
-  char bufout[BUF_SZ];
+  //char bufout[BUF_SZ];
   rootOut["C"] = "L";
   rootOut["T"] = millis();
-  //rootOut["R"] = 0; // OK, shoild be -5 if tracking is off (reserved)  
   rootOut["R"] = c_getpos(rootOut, rootOut); 
+  _sendToSysLog(rootOut);
+  /*
   rootOut.printTo(bufout, BUF_SZ-1);
   udp_snd.beginPacket(CfgDrv::Cfg.log_addr, CfgDrv::Cfg.log_port);
   udp_snd.write(bufout, strlen(bufout));
+  udp_snd.endPacket();  
+  */
+}
+
+boolean CmdProc::sendAlarm(uint8_t alr) {
+  //{"C": "A", "T":12345, "R":1123} 
+  if(!CfgDrv::Cfg.log_on) return false;
+  StaticJsonBuffer<200> jsonBufferOut;
+  JsonObject& rootOut = jsonBufferOut.createObject();
+  //char bufout[BUF_SZ];
+  rootOut["C"] = "A";
+  rootOut["T"] = millis();
+  rootOut["R"] = alr;
+  _sendToSysLog(rootOut);
+  /*
+  rootOut.printTo(bufout, BUF_SZ-1);
+  udp_snd.beginPacket(CfgDrv::Cfg.log_addr, CfgDrv::Cfg.log_port);
+  udp_snd.write(bufout, strlen(bufout));
+  udp_snd.endPacket();  
+  */
+}
+
+void CmdProc::_sendToSysLog(JsonObject& rootOut) {
+  rootOut.printTo(packetBuffer, BUF_SZ-1);
+  udp_snd.beginPacket(CfgDrv::Cfg.log_addr, CfgDrv::Cfg.log_port);
+  udp_snd.write(packetBuffer, strlen(packetBuffer));
   udp_snd.endPacket();  
 }
 
@@ -179,6 +210,7 @@ int16_t c_setsyslog(JsonObject& root, JsonObject& rootOut) {
 
 int16_t c_getpos(JsonObject& root, JsonObject& rootOut) {
   //{"C": "I", "T":12345, "R":0, "C": "POS", "YPR": [59, 12, 13], "A": [0.01, 0.02, -0.03], "V": [0.1, 0.2, -0.3], "P": [100.01, 200.44, 0.445]}
+  rootOut["MST"]=MpuDrv::Mpu.getStatus();
   if(!MpuDrv::Mpu.isDataReady()) return -5;
   JsonArray& ya = rootOut.createNestedArray("YPR");
   float ypr[3], af[3], vf[3]/*, rf[3]*/;

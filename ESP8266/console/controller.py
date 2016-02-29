@@ -88,14 +88,18 @@ class Controller():
 
     def resp(self, js, req_json=None):
         " resp callback, called in thread context!!! "
-        if req_json is None : self.__form.LogString("SYS:"+js, 'BLUE') #syslog
         try:
             resp_json = json.loads(js)
-            if req_json is not None : #cmd-rsp
+            if req_json is None : # syslog
+                if resp_json["C"]=="A" :
+                    self.__form.LogString(js, 'RED') #alarm
+                else :
+                    self.__form.LogString(js, 'BLUE') #event
+            elif req_json is not None : #cmd-rsp
                 if int(req_json["I"]) != int(resp_json["I"]) :
                     self.__form.LogErrorString("UNMATCHED: "+js)
                     return False
-                self.__form.LogString("RSP:"+js, 'FOREST GREEN')
+                self.__form.LogString(js, 'FOREST GREEN')
         except ValueError : return True
         except KeyError : return True
 
@@ -106,7 +110,7 @@ class Controller():
             model_reset = True
 
         if self.__model.update(resp_json, model_reset) :
-            self.__form.UpdatePos()
+            self.__form.UpdatePos(reset=model_reset)
         return True
 
     def scanComplete(self, result=None):

@@ -181,6 +181,8 @@ class MyForm(wx.Frame):
     def onUpdEvent(self, evt):
         self.statusbar.SetStatusText(str(self.model["FHS"]), 0)
         self.statusbar.SetStatusText("%(YPR)s" % self.model, 1)
+        if evt.reset==True :
+            self.chart.Reset()
         self.unitPan.UpdateData(self.model["T_ATT"], self.model["YPR"], self.model["V"])
         self.chart.UpdateData(self.model["T_ATT"], self.model["YPR"], self.model["V"])
         self.map.UpdateData(self.model["T_ATT"], None)
