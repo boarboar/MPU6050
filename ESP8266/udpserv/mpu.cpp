@@ -8,6 +8,7 @@
 #define SCALE_A (8192.0f) // 1g = (9.80665 m/s^2)
 #define G_FORCE 9.80665f
 #define G_SCALE (G_FORCE/SCALE_A)
+#define A_K 0.3f
 
 MpuDrv MpuDrv::Mpu; // singleton
 
@@ -172,8 +173,9 @@ int16_t MpuDrv::cycle(uint16_t dt) {
   if(dmpStatus==ST_READY) {
     // integrate motion
     Quaternion q, q0;
-    VectorFloat gravity;    
+    VectorFloat ga;    
     VectorInt16 aaReal, aaWorld;
+    
     float ts;
     uint32_t mcs;
     // get world frame accel (with adjustment) - needed for V-integration
@@ -181,25 +183,28 @@ int16_t MpuDrv::cycle(uint16_t dt) {
     mpu.dmpGetQuaternion(&q0, q16_0);
     q0=q0.getConjugate();
     q=q0.getProduct(q); // real quaternion (relative to base)
-    mpu.dmpGetGravity(&gravity, &q);
-    mpu.dmpGetLinearAccel(&aaReal, &aa16, &gravity);
+    mpu.dmpGetGravity(&ga, &q);
+    mpu.dmpGetLinearAccel(&aaReal, &aa16, &ga);
     mpu.dmpGetLinearAccelInWorld(&aaWorld, &aaReal, &q);      
-    a.x=aaWorld.x*G_SCALE; a.y=aaWorld.y*G_SCALE; a.z=aaWorld.z*G_SCALE;      
+    //a.x=aaWorld.x*G_SCALE; a.y=aaWorld.y*G_SCALE; a.z=aaWorld.z*G_SCALE;      
+    ga.x=aaWorld.x*G_SCALE; ga.y=aaWorld.y*G_SCALE; ga.z=aaWorld.z*G_SCALE;      
     if(settled) { // first time only - store base accel
-      a0=a;
+      //a0=a;
+      a0=ga;
       DbgPrintVectorFloat("A Base (m/s^2)\t", &a0);
     }      
     // adjust to base accel
-    a.x-=a0.x; a.y-=a0.y; a.z-=a0.z;
- //          a=a.getRotated(&q0);
+    //a.x-=a0.x; a.y-=a0.y; a.z-=a0.z;
+    ga.x-=a0.x; ga.y-=a0.y; ga.z-=a0.z;
+    // low-pass filter for acceleration
+    a.x = a.x - A_K * (a.x - ga.x);
+    a.y = a.y - A_K * (a.y - ga.y);
+    a.z = a.z - A_K * (a.z - ga.z);
     mcs=micros();
     ts=(float)(micros()-start)/1000000.0f;
     start=mcs;
     v.x+=a.x*ts; v.y+=a.y*ts; v.z+=a.z*ts;
 //      r.x+=v.x*ts; r.y+=v.y*ts; r.z+=v.z*ts;
-// todo - LOW pass filter
-// float A_K=0.3f;
-// val = val - A_K * (val - new_meas_val);
     data_ready=1; 
   }
   count++;       
@@ -207,6 +212,7 @@ int16_t MpuDrv::cycle(uint16_t dt) {
 }
 
 void MpuDrv::resetIntegrator() {
+  a.x=a.y=a.z=0.0f;
   v.x=v.y=v.z=0.0f;  
   //r.x=r.y=r.z=0.0f;
 }

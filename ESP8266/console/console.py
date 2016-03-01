@@ -1,11 +1,13 @@
 import wx
 import wx.lib.newevent
 import socket
-import draw
+import logging
 import model
 import controller
 import config
 import history
+import draw
+import map
 
 LogEvent, EVT_LOG_EVENT = wx.lib.newevent.NewEvent()
 UpdEvent, EVT_UPD_EVENT = wx.lib.newevent.NewEvent()
@@ -42,7 +44,7 @@ class MyForm(wx.Frame):
 
         self.unitPan = draw.UnitPanel(panel)
         self.chart = draw.ChartPanel(panel)
-        self.map = draw.MapPanel(panel)
+        self.map = map.MapPanel(panel, "map.json")
 
         self.unitPan.SetMaxSize((240, 240))
         #self.canvas.SetMaxSize((240, 240))
@@ -107,6 +109,7 @@ class MyForm(wx.Frame):
 
 
     def AddLine(self, msg, color) :
+        logging.info(msg)
         while self.log.GetNumberOfLines()>self.LOG_LINES:
             self.log.Remove(0, self.log.GetLineLength(0)+1)
         if color is None : color= wx.BLACK
@@ -289,6 +292,7 @@ class SettingsDialog(wx.Dialog):
 
 # Run the program
 if __name__ == "__main__":
+    logging.basicConfig(filename='console.log',level=logging.INFO)
     app = wx.App(False)
     frame = MyForm().Show()
     app.MainLoop()

@@ -29,10 +29,9 @@ class UnitPanel(wx.Window):
         self.OnSize(None)
 
     def OnSize(self,event):
-        w, h = self.GetSize()
-        self.x0=w/2
-        self.y0=h/2
         Size  = self.ClientSize
+        self.x0=Size.width/2
+        self.y0=Size.height/2
         self._Buffer = wx.EmptyBitmap(*Size)
         self.UpdateDrawing()
 
@@ -128,10 +127,10 @@ class ChartPanel(wx.Window):
         self.t0=0
 
     def OnSize(self,event):
-        w, h = self.GetSize()
-        self.w=w
-        self.h=h
-        self.y_scale=h/360.0
+        Size  = self.ClientSize
+        self.w=Size.width
+        self.h=Size.height
+        self.y_scale=self.h/360.0
         self.UpdateDrawing()
 
     def OnPaint(self, event=None):
@@ -201,37 +200,3 @@ class ChartPanel(wx.Window):
         self.points[:] = []
         self.t0=0
         self.UpdateDrawing()
-#
-#
-#
-
-class MapPanel(wx.Window):
-    " draw panel"
-    def __init__(self, parent):
-        wx.Window.__init__(self, parent, wx.ID_ANY, style=wx.SIMPLE_BORDER, size=(240,240))
-        self.Bind(wx.EVT_PAINT, self.OnPaint)
-        self.Bind(wx.EVT_SIZE, self.OnSize)
-        #self.points=[(0,0), (50, 50)]
-
-    def OnSize(self,event):
-        w, h = self.GetSize()
-        self.w=w
-        self.h=h
-        self.UpdateDrawing()
-
-    def OnPaint(self, event=None):
-        dc = wx.PaintDC(self)
-        dc.Clear()
-        dc.SetPen(wx.Pen(wx.BLACK, 1))
-        #dc.DrawLine(0, 0, 50, 50)
-        #if len(self.points)>1 :
-        #dc.DrawLine(self.points[0][0], self.points[0][1], self.points[1][0], self.points[1][0])
-        #for point in self.points:
-        #    dc.DrawCheckMark(point[0], point[1], 10, 10)
-
-    def UpdateDrawing(self) :
-        self.Refresh()
-        self.Update()
-
-    def UpdateData(self, t, pos=None):
-        pass
