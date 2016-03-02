@@ -14,6 +14,10 @@
 
 void setup()
 {
+    delay(2000);
+    Serial.begin(9600);
+    Serial.println("Init Wire...");
+    
   digitalWrite(RED_LED, LOW); 
   pinMode(RED_LED, OUTPUT);  
   Wire.begin(4);                // join i2c bus with address #4
@@ -38,9 +42,14 @@ void receiveEvent(int howMany)
   int x = Wire.read();    // receive byte as an integer
   Serial.println(x);         // print the integer
   */
+    Serial.print("Received...");
+    
   while(Wire.available()) {
     char c = Wire.read();
+    Serial.print(c, HEX);
   }
+  
+  Serial.println();
   
   digitalWrite(RED_LED, HIGH); 
 }

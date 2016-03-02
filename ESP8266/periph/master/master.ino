@@ -8,10 +8,12 @@ const int DEV_ID=4;
 void setup() {
     delay(2000);
     Serial.begin(115200);
+    Serial.println("Init Wire...");
+
     Wire.begin(MPU_SDA, MPU_SDL);
 
-    Serial.print("Sending...");
-    bool res = I2Cdev::writeByte(DEV_ID, 0, 0);
+    Serial.println("Sending...");
+    bool res = I2Cdev::writeByte(DEV_ID, 0x01, 0x02);
     Serial.println(res);
 }
 
