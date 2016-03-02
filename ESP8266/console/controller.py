@@ -111,6 +111,8 @@ class Controller():
 
         if self.__model.update(resp_json, model_reset) :
             self.__form.UpdatePos(reset=model_reset)
+        else :
+            self.__form.UpdateStatus(reset=model_reset)
         return True
 
     def scanComplete(self, result=None):

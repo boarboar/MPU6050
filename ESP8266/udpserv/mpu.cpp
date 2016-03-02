@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include "Wire.h"
+//#include "Wire.h"
 #include "stat.h"
 #include "MPU6050_6Axis_MotionApps20.h"
 #include "mpu.h"
@@ -18,8 +18,8 @@ int8_t MpuDrv::getStatus() { return dmpStatus; }
 uint8_t MpuDrv::isDataReady() { return dmpStatus==ST_READY && data_ready; }
 uint8_t MpuDrv::isNeedReset() { return need_reset; }
 
-int16_t MpuDrv::init(uint16_t sda, uint16_t sdl, uint16_t intrp) {
-  Wire.begin(sda, sdl);
+int16_t MpuDrv::init(/*uint16_t sda, uint16_t sdl,*/ uint16_t intrp) {
+  //Wire.begin(sda, sdl);
   return init();
 }
 

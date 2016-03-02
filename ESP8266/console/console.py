@@ -11,6 +11,7 @@ import map
 
 LogEvent, EVT_LOG_EVENT = wx.lib.newevent.NewEvent()
 UpdEvent, EVT_UPD_EVENT = wx.lib.newevent.NewEvent()
+UpdStatusEvent, EVT_UPD_STAT_EVENT = wx.lib.newevent.NewEvent()
 
 class MyForm(wx.Frame):
     LOG_LINES = 20
@@ -58,6 +59,7 @@ class MyForm(wx.Frame):
         self.logcnt=0
         self.Bind(EVT_LOG_EVENT, self.onLogEvent)
         self.Bind(EVT_UPD_EVENT, self.onUpdEvent)
+        self.Bind(EVT_UPD_STAT_EVENT, self.onUpdStatEvent)
         self.Bind(wx.EVT_BUTTON, self.onStatusReq, self.btn_st)
         self.Bind(wx.EVT_BUTTON, self.onPositionReq, self.btn_pos)
         self.Bind(wx.EVT_BUTTON, self.onUploadReq, self.btn_upl)
@@ -133,6 +135,10 @@ class MyForm(wx.Frame):
         event = UpdEvent(**kwargs)
         wx.PostEvent(self, event)
 
+    def UpdateStatus(self, **kwargs) :
+        event = UpdStatusEvent(**kwargs)
+        wx.PostEvent(self, event)
+
     def OnClose(self, event):
         self.controller.stop(timeout=10.0)
         self.Destroy()
@@ -182,13 +188,16 @@ class MyForm(wx.Frame):
         self.AddLine(evt.msg, evt.color)
 
     def onUpdEvent(self, evt):
-        self.statusbar.SetStatusText(str(self.model["FHS"]), 0)
+        #self.statusbar.SetStatusText(str(self.model["FHS"]), 0)
         self.statusbar.SetStatusText("%(YPR)s" % self.model, 1)
         if evt.reset==True :
             self.chart.Reset()
         self.unitPan.UpdateData(self.model["T_ATT"], self.model["YPR"], self.model["V"])
         self.chart.UpdateData(self.model["T_ATT"], self.model["YPR"], self.model["V"])
         self.map.UpdateData(self.model["T_ATT"], None)
+
+    def onUpdStatEvent(self, evt):
+        self.statusbar.SetStatusText(str(self.model["FHS"]), 0)
 
 class SettingsDialog(wx.Dialog):
     def __init__(self, model, *args, **kw):

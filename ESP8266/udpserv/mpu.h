@@ -11,13 +11,15 @@ class MpuDrv {
   static const int8_t ST_WUP=-12;
   static const int8_t ST_NOTCONV=-13;
   static const int8_t ST_READY=1;
-  static const int16_t QUAT_INIT_TOL=10; 
-  static const int16_t ACC_INIT_TOL=10;
+  //static const int16_t QUAT_INIT_TOL=10; 
+  //static const int16_t ACC_INIT_TOL=10;
+  static const int16_t QUAT_INIT_TOL=16; 
+  static const int16_t ACC_INIT_TOL=20;
   static const int16_t INIT_PERIOD_MIN=20;
   static const int16_t INIT_PERIOD_MAX=60;
 public:
   static MpuDrv Mpu; // singleton  
-  int16_t init(uint16_t sda, uint16_t sdl, uint16_t intr);
+  int16_t init(/*uint16_t sda, uint16_t sdl,*/ uint16_t intr);
   int16_t init();
   int16_t cycle(uint16_t dt);
   int8_t getStatus();

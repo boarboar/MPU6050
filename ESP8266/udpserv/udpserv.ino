@@ -1,6 +1,7 @@
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
 #include <ArduinoJson.h>
+#include <Wire.h>
 
 #include "stat.h"
 #include "cfg.h"
@@ -59,8 +60,10 @@ void setup() {
   } 
    
   yield();
-  
-  if(MpuDrv::Mpu.init(MPU_SDA, MPU_SDL, MPU_INT)) { //sda, sdl, intr
+
+  Wire.begin(MPU_SDA, MPU_SDL);
+    
+  if(MpuDrv::Mpu.init(/*MPU_SDA, MPU_SDL, */MPU_INT)) { //sda, sdl, intr
     Serial.println(F("MPU Ready!"));
   } else {
     Serial.println(F("Failed to init MPU!"));
