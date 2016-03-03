@@ -23,6 +23,7 @@ class MapPanel(wx.Window):
                     self.adjustBound(wall["C"][0], wall["C"][1])
                     self.adjustBound(wall["C"][2], wall["C"][3])
             print("Map loaded")
+            print(self.__boundRect)
         #except IOError: pass
         except : pass
 
@@ -33,8 +34,8 @@ class MapPanel(wx.Window):
         if y>self.__boundRect[3] : self.__boundRect[3]=y
 
     def tc(self, x, y):
-        x1=(x-(self.__boundRect[2]-self.__boundRect[0])/2)*self.__scale
-        y1=(y-(self.__boundRect[3]-self.__boundRect[1])/2)*self.__scale
+        x1=(x-(self.__boundRect[2]+self.__boundRect[0])/2)*self.__scale
+        y1=(y-(self.__boundRect[3]+self.__boundRect[1])/2)*self.__scale
         return wx.Point(x1+self.__x0,-y1+self.__y0)
 
     def OnSize(self,event):
