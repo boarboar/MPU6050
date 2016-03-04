@@ -18,6 +18,10 @@ class MyForm(wx.Frame):
     def __init__(self):
         wx.Frame.__init__(self, None, title="Console", size=(640,480))
         self.Bind(wx.EVT_CLOSE, self.OnClose)
+
+        self.model=model.Model("ROBO")
+
+
         menuBar = wx.MenuBar()
         menu = wx.Menu()
         menuBar.Append(menu, "&File")
@@ -45,7 +49,7 @@ class MyForm(wx.Frame):
 
         self.unitPan = draw.UnitPanel(panel)
         self.chart = draw.ChartPanel(panel)
-        self.map = map.MapPanel(panel, "map.json")
+        self.map = map.MapPanel(panel, self.model, "map.json")
 
         self.unitPan.SetMaxSize((240, 240))
         #self.canvas.SetMaxSize((240, 240))
@@ -68,7 +72,7 @@ class MyForm(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onDumpModel, self.btn_dump)
         self.Bind(wx.EVT_BUTTON, self.onHistory, self.btn_hist)
         self.Bind(wx.EVT_BUTTON, self.onSendCmd, self.btn_cmd)
-        self.model=model.Model("ROBO")
+
         self.config=config.Config(self, self.model)
         self.controller=controller.Controller(self, self.model)
         self.LogString("Local address is %s" % socket.gethostbyname(socket.gethostname()))
@@ -91,7 +95,7 @@ class MyForm(wx.Frame):
         sizer_charts.Add(self.chart, 1, wx.ALL|wx.EXPAND, border=0)
         sizer_pan.Add(sizer_charts, 1, wx.ALL|wx.EXPAND, border=0)
 
-        sizer_pan.Add(self.map, 1, wx.ALL|wx.EXPAND, border=0)
+        sizer_pan.Add(self.map, 2, wx.ALL|wx.EXPAND, border=0)
         sizer_pan.Add(sizer_ctrls, 0, wx.ALL|wx.RIGHT, 5)
         sizer_ctrls.Add(self.btn_st, 0, wx.ALL|wx.CENTER, 5)
         sizer_ctrls.Add(self.btn_pos, 0, wx.ALL|wx.CENTER, 5)
@@ -194,7 +198,7 @@ class MyForm(wx.Frame):
             self.chart.Reset()
         self.unitPan.UpdateData(self.model["T_ATT"], self.model["YPR"], self.model["V"])
         self.chart.UpdateData(self.model["T_ATT"], self.model["YPR"], self.model["V"])
-        self.map.UpdateData(self.model["T_ATT"], None)
+        self.map.UpdateData()
 
     def onUpdStatEvent(self, evt):
         self.statusbar.SetStatusText(str(self.model["FHS"]), 0)

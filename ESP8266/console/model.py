@@ -17,11 +17,12 @@ class Model(dict):
         self["FSS"]=0
         self["YPR"]=[0,0,0]
         self["V"]=[0,0,0]
+        self["CRD"]=[0,0,0] #coord X, Y, Z
+        self["S"]=[0,0,0] #sens  Sl, Sc, Sr
         self["T"]=0
         self["T_ATT"]=0
         self["MHIST"]=(None,[
-                        #{"T":1000, "A":[1, 0, 0], "YPR":[90.0, 0.0, 0.0]},
-                        #{"T":2000, "A":[9, 1000, 1], "YPR":[92.0, -10.0, -5.0]}
+                        #{"T":1000, "V":[0.1, 0, 0], "YPR":[90.0, 0.0, 0.0]},
                         ]
                        )
         self.__lock=threading.Lock()
@@ -45,6 +46,8 @@ class Model(dict):
                 data[1][:] = [] # clear history
                 self["YPR"]=[0,0,0]
                 self["V"]=[0,0,0]
+                self["CRD"]=[0,0,0]
+                self["S"]=[0,0,0]
                 update_pos=True
             self["T_ATT"]=0
             self["T"]=resp_json["T"]
@@ -52,16 +55,18 @@ class Model(dict):
                 self["FHS"]=resp_json["FHS"]
                 self["FSS"]=resp_json["FSS"]
             elif resp_json["C"]=="POS" or resp_json["C"]=="L":
-                #self["X"]=resp_json["X"]
-                #self["Y"]=resp_json["Y"]
                 data=dict.__getitem__(self, "MHIST")
                 if len(data[1])==0  or (int(resp_json["T"]) > int(data[1][-1]["T"])) :
                     item={"T":resp_json["T"], "YPR":resp_json["YPR"],
-                          #"A":resp_json["A"],
                           "V":resp_json["V"] }
                     data[1].append(item)
                     self["YPR"]=resp_json["YPR"]
                     self["V"]=resp_json["V"]
+                    # get additional data
+                    try:
+                        self["CRD"]=resp_json["CRD"]
+                        self["S"]=resp_json["S"]
+                    except KeyError: pass
                     self["T_ATT"]=resp_json["T"]
                     update_pos=True
         except KeyError: pass
