@@ -49,8 +49,6 @@ class Controller():
 
     def isScanning(self):
         return self.__comm_scan_thread!=None
-        #if self.__comm_scan_thread==None : return False
-        #return True
 
     def reqCmdRaw(self, cmd):
         try:
