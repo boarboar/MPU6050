@@ -27,25 +27,56 @@ Wire.setClock(100000L);
 byte x = 0;
 
 void loop() {
-  uint8_t buf[2];
+  uint8_t buf[4];
   delay(500);
 //  digitalWrite(RED_LED, HIGH);
+
+  I2Cdev::writeByte(DEV_ID, 2, x%2);
+  I2Cdev::writeByte(DEV_ID, 3, (x+1)%2);
+  I2Cdev::writeByte(DEV_ID, 1, (x*10)%256);
+
+  Serial.println("Requesting...\t ");
+  bool res;
+  uint32_t t, dt;
   
+  t=millis();  
+  res = I2Cdev::readBytes(DEV_ID, 0x01, 1, buf);
+  res = I2Cdev::readBytes(DEV_ID, 0x02, 1, buf+1);
+  res = I2Cdev::readBytes(DEV_ID, 0x03, 1, buf+2);
+  dt=millis()-t;
+
+         for(int i=0; i<3; i++) { Serial.print(buf[i]); Serial.print("\t "); }
+Serial.println();
+
+  //Serial.print("Byte  U8:\t"); Serial.print(res); Serial.print("\tV:\t"); Serial.print(buf[0]); Serial.print("\t in "); Serial.print(dt); Serial.println("ms");
+
+  /*
   Serial.println("Requesting...");
-  uint32_t t=millis();  
-  //bool res = I2Cdev::writeByte(DEV_ID, 0xAB, x);
-  bool res = I2Cdev::readBytes(DEV_ID, 0xAB, 2, buf);
-  uint32_t dt=millis()-t;  
-  
-  Serial.print("R:\t");
-  Serial.print(res);
-  Serial.print("\tV:\t");
-  Serial.print(buf[0], HEX);
-  Serial.print(",");
-  Serial.print(buf[1], HEX);
-  Serial.print("\tT:\t");
-  Serial.print(dt);
-  Serial.println("ms");
+  bool res;
+  uint32_t t, dt;
+  t=millis();  
+  res = I2Cdev::readBytes(DEV_ID, 0x01, 1, buf);
+  dt=millis()-t;   
+  Serial.print("Byte  U8:\t"); Serial.print(res); Serial.print("\tV:\t"); Serial.print(buf[0]); Serial.print("\t in "); Serial.print(dt); Serial.println("ms");
+
+  t=millis();  
+  res = I2Cdev::readBytes(DEV_ID, 0x02, 2, buf);
+  uint16_t w = (((uint16_t)buf[0]) << 8) | buf[1];
+  dt=millis()-t;   
+  Serial.print("Word U16:\t"); Serial.print(res); Serial.print("\tV:\t"); Serial.print(w); Serial.print("\t in "); Serial.print(dt); Serial.println("ms");
+
+  t=millis();  
+  res = I2Cdev::readBytes(DEV_ID, 0x03, 1, buf);
+  dt=millis()-t;
+  int8_t i8= (int8_t)buf[0];   
+  Serial.print("Byte  I8:\t"); Serial.print(res); Serial.print("\tV:\t"); Serial.print(i8); Serial.print("\t in "); Serial.print(dt); Serial.println("ms");
+
+  t=millis();  
+  res = I2Cdev::readBytes(DEV_ID, 0x04, 2, buf);
+  int16_t i16 = (((int16_t)buf[0]) << 8) | buf[1];
+  dt=millis()-t;   
+  Serial.print("Word I16:\t"); Serial.print(res); Serial.print("\tV:\t"); Serial.print(i16); Serial.print("\t in "); Serial.print(dt); Serial.println("ms");
+*/
   delay(500);
 //  digitalWrite(RED_LED, LOW);
   

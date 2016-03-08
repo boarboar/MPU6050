@@ -20,10 +20,15 @@ const int MPU_SDA=0;
 const int MPU_SDL=2;
 const int MPU_INT=15;
 
+const int PERIPH_UNIT_ID=4;
+
 uint32_t last_cycle;
 uint32_t last_slow_cycle;
 
 CmdProc& cmd = CmdProc::Cmd; 
+
+
+void test_periph_unit();
 
 void setup() {
   delay(2000);
@@ -111,5 +116,26 @@ void doCycle() {
   }
   if(CfgDrv::Cfg.needToStore()) CfgDrv::Cfg.store(cfg_file);
   if(cmd.isSysLog()) cmd.sendSysLogStatus();
+  
+  test_periph_unit();
+}
+
+void test_periph_unit() {
+  uint8_t buf[2];
+//  Serial.println("Requesting...");
+  uint32_t t=millis();  
+  //bool res = I2Cdev::writeByte(PERIPH_UNIT_ID, 0xAB, x);
+  bool res = I2Cdev::readBytes(PERIPH_UNIT_ID, 0xAB, 2, buf);
+  uint32_t dt=millis()-t;  
+  
+  Serial.print("PUnit:\t");
+  Serial.print(res);
+  Serial.print("\tV:\t");
+  Serial.print(buf[0], HEX);
+  Serial.print(",");
+  Serial.print(buf[1], HEX);
+  Serial.print("\tT:\t");
+  Serial.print(dt);
+  Serial.println("ms");
 }
 
