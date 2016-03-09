@@ -58,7 +58,8 @@ while 1:
                 #"YPR":[0,20,0], 
                 #"A":[0.01, 0.02, -0.03], 
                 "V":[random.random()-0.5, random.random()-0.5, -0.3],
-                "CRD":[(random.random()-0.5)*3, (random.random()-0.5)*3, 0],
+                #"CRD":[(random.random()-0.5)*3, (random.random()-0.5)*3, 0],
+                "CRD":[(random.random()-0.5)*4, (random.random()-0.5)*5, 0],
                 "S":[(random.random()-0.5)*3, (random.random()-0.5)*3, (random.random()-0.5)*3]
                 })
         js["R"]=0

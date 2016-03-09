@@ -34,7 +34,7 @@ void loop() {
   I2Cdev::writeByte(DEV_ID, 2, x%2);
   I2Cdev::writeByte(DEV_ID, 3, (x+1)%2);
   I2Cdev::writeByte(DEV_ID, 1, (x*10)%256);
-
+/*
   Serial.println("Requesting...\t ");
   bool res;
   uint32_t t, dt;
@@ -47,6 +47,7 @@ void loop() {
 
          for(int i=0; i<3; i++) { Serial.print(buf[i]); Serial.print("\t "); }
 Serial.println();
+*/
 
   //Serial.print("Byte  U8:\t"); Serial.print(res); Serial.print("\tV:\t"); Serial.print(buf[0]); Serial.print("\t in "); Serial.print(dt); Serial.println("ms");
 
