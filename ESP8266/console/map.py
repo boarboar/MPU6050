@@ -1,7 +1,7 @@
 import wx
+import math
 import json
 import sys
-import math
 from unitmap import UnitMap
 import model
 
@@ -20,9 +20,8 @@ class MapPanel(wx.Window, UnitMap):
         self.__map=[]
         self.__x0, self.__y0 = (0, 0) # canvas center
         self.__scale=1
-        self.__r_cos, self.__r_sin= (1.0, 0.0)    # unit cosine matrix
-        self.__r_x, self.__r_y = (0, 0)    # unit position
         self.__inside=False
+        self.__scans=[-1,-1,-1]
         self.__shape=[wx.Point(-self.UNIT_WIDTH/2, -self.UNIT_HEIGHT/2),
                     wx.Point(-self.UNIT_WIDTH/2, self.UNIT_HEIGHT/2),
                     wx.Point(0, self.UNIT_HEIGHT*3/5),
@@ -75,12 +74,29 @@ class MapPanel(wx.Window, UnitMap):
             else :
                 dc.SetPen(wx.Pen(wx.RED, 1))
             dc.DrawPolygon(self.tsu(self.__shape))
-            dc.SetPen(wx.Pen(wx.BLACK, 1))
-            dc.DrawPolygon(self.tsu([wx.Point(0, 0), wx.Point(0, 300)]))
-            dc.DrawPolygon(self.tsu([wx.Point(0, 0), wx.Point(220, 210)]))
-            dc.DrawPolygon(self.tsu([wx.Point(0, 0), wx.Point(-220, 220)]))
-            self.getIntersections(0, 0, 0, 500)
-
+            # draw sensor rays
+            if self.__inside :
+                #rays=[(-350, 350), (0, 500), (350, 350)]
+                c45=math.cos(math.pi/4)
+                rays1=[(-c45, c45), (0, 1.0), (c45, c45)]
+                i=0
+                ray_pen=wx.Pen(wx.BLACK, 1, wx.PENSTYLE_LONG_DASH)
+                inters_pen=wx.Pen(wx.RED, 2)
+                for ray in rays1:
+                    dc.SetPen(ray_pen)
+                    #dc.DrawLinePoint(self.tpu(wx.Point(0, 0)), self.tpu(wx.Point(ray[0], ray[1])))
+                    dc.DrawLinePoint(self.tpu(wx.Point(0, 0)), self.tpu(wx.Point(ray[0]*500, ray[1]*500)))
+                    idist=self.__scans[i]
+                    i=i+1
+                    if idist>0 :
+                        dc.SetPen(inters_pen)
+                        intrs = self.tpu(wx.Point(ray[0]*idist, ray[1]*idist))
+                        dc.DrawCirclePoint(intrs, 10)
+                    #intrs=self.getIntersection(0, 0, ray[0], ray[1])
+                    #if intrs!=None :
+                    #    dc.SetPen(inters_pen)
+                    #    intrs = self.tc(intrs[0], intrs[1])
+                    #    dc.DrawCircle(intrs[0], intrs[1], 10)
         except KeyError : pass
         except IndexError : pass
 
@@ -95,18 +111,13 @@ class MapPanel(wx.Window, UnitMap):
     def UpdateData(self):
         try:
             yaw, pitch, roll = [a*math.pi/180.0 for a in self.__model["YPR"]]
-            x, y, z = [int(a*100) for a in self.__model["CRD"]]
+            x, y, z = [int(a) for a in self.__model["CRD"]]
+            self.__scans=self.__model["S"]
             self.SetUnitPos(x, y, yaw)
+            self.__inside = self.isInside(x, y)
         except KeyError : pass
         except IndexError : pass
-        self.__inside = self.isInside(x, y)
         self.UpdateDrawing()
-
-    def SetUnitPos(self, x, y, angle):
-        self.__r_cos=math.cos(angle)
-        self.__r_sin=math.sin(angle)
-        self.__r_x=x
-        self.__r_y=y
 
     def tc(self, x, y):
         x1=(x-(self.boundRect[2]+self.boundRect[0])/2)*self.__scale
@@ -118,7 +129,8 @@ class MapPanel(wx.Window, UnitMap):
 
     def tpu(self, p):
         x, y = p.Get()
-        x1=x*self.__r_cos+y*self.__r_sin+self.__r_x+self.xu0
-        y1=-x*self.__r_sin+y*self.__r_cos+self.__r_y+self.yu0
+        #x1=x*self.__r_cos+y*self.__r_sin+self.__r_x+self.xu0
+        #y1=-x*self.__r_sin+y*self.__r_cos+self.__r_y+self.yu0
+        x1, y1 = self.UnitToMap(x, y)
         return self.tc(x1,y1)
 

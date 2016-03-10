@@ -28,12 +28,42 @@ byte x = 0;
 
 void loop() {
   uint8_t buf[4];
+  bool res;
+  uint32_t t, dt;
   delay(500);
 //  digitalWrite(RED_LED, HIGH);
 
+  if(x%2) {
+    int16_t left=x;
+    int16_t right=-x;
+    buf[0] = (uint8_t)(left>>8);
+    buf[1] = (uint8_t)(left&0xFF);   
+    buf[2] = (uint8_t)(right>>8);
+    buf[3] = (uint8_t)(right&0xFF);   
+
+    Serial.print("Writing...\t ");
+    t=millis();  
+    bool res = I2Cdev::writeBytes(DEV_ID, 0x03, 4, buf);
+    dt=millis()-t;
+    Serial.print(dt); Serial.println("ms");
+  } else {
+    Serial.print("Requesting...\t ");
+    t=millis();  
+    bool res = I2Cdev::readBytes(DEV_ID, 0x03, 4, buf);
+    dt=millis()-t;
+    Serial.print(dt); Serial.print("ms\t ");
+    int16_t left = (((int16_t)buf[0]) << 8) | buf[1];
+    int16_t right = (((int16_t)buf[2]) << 8) | buf[3];
+    Serial.print(left); Serial.print("\t "); Serial.println(right);
+  }
+  
+  
+/*
   I2Cdev::writeByte(DEV_ID, 2, x%2);
   I2Cdev::writeByte(DEV_ID, 3, (x+1)%2);
   I2Cdev::writeByte(DEV_ID, 1, (x*10)%256);
+  */
+  
 /*
   Serial.println("Requesting...\t ");
   bool res;

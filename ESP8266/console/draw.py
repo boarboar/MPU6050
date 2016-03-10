@@ -72,10 +72,10 @@ class UnitPanel(wx.Window):
         dc.DrawLines(self.ts(self.axe_line)) ## Y
         dc.DrawTextPoint("Y", self.tp(self.axe_line[1]))
         dc.DrawCirclePoint(self.tp(wx.Point(0, 0)), self.UNIT_LEVEL_RAD)
-        vv = math.hypot(self.v[0], self.v[1])*self.V_SCALE
+        vv = math.hypot(self.v[0]/10, self.v[1]/10)*self.V_SCALE
         if vv>1 :
             self.SetRotation(math.atan2(-self.v[1], self.v[0]))
-            dc.SetPen(wx.Pen(wx.RED, 4))
+            dc.SetPen(wx.Pen(wx.RED, 2))
             dc.DrawLines(self.ts(self.MakeArrow(vv)))
         # draw - vertical
         # Zx=cos(y)*sin(p)*cos(r)+sin(y)*sin(r)

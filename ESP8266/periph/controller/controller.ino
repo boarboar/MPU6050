@@ -34,6 +34,7 @@
 #define M_POW_MAX  120
 #define M_POW_STEP 2
 
+#define M_PID_NORM 1000
 #define M_PID_KP_0   25
 #define M_PID_KD_0  140
 #define M_PID_KI_0    2
@@ -77,6 +78,8 @@ int16_t targ_new_rot_rate[2]={0, 0}; // RPS, 10000 = 1 RPS  (use DRV_RPS_NORM), 
 uint32_t lastEvTime, lastPidTime;
 uint8_t setEvent = 0, getEvent = 0, eventRegister = 0;
 uint8_t isDriving=0;
+
+uint8_t buffer[4];
 
 void setup()
 {
@@ -127,7 +130,7 @@ void loop()
       // comm lost!
       Serial.println("Comm lost!");
       lastEvTime = cycleTime;
-      //if(isDriving) stopDrive();
+      if(isDriving) stopDrive();
     } 
     
     readEnc();
@@ -138,59 +141,71 @@ void loop()
   } // PID cycle 
           
   if(setEvent) {
-    Serial.print("Set Reg ");
-    Serial.println(eventRegister);
+    Serial.print("SetReg ");
+    Serial.print(eventRegister);
+    Serial.print(" : ");
+    if(eventRegister==REG_TARG_ROT_RATE) {
+      Serial.print(targ_new_rot_rate[0]);
+      Serial.print(", ");
+      Serial.print(targ_new_rot_rate[1]);
+      startDrive();    
+    }
+    Serial.println();
     setEvent=0;
   } 
   if(getEvent) {
-    Serial.print("Get Reg ");
+    Serial.print("GetReg ");
     Serial.println(eventRegister);
     getEvent=0;
   } 
 }
 
-void receiveEvent(int howMany)
-{
-  /*
-  boolean set=false;
-  while(Wire.available()>0) {
-    int c = Wire.read();
-    if(i==0) reg=(int)c;
-    else if(i==1) { val=(int)c; set=true; }
-    i++;
-  }*/
-  if(Wire.available()==0) return;
-  eventRegister=Wire.read();
-  if(Wire.available()==0) return;
+
+void startDrive() {
+  Serial.print("Start drive: "); 
+   
+  for(int i=0; i<2; i++) {
+    if(targ_new_rot_rate[i]==0) {
+      drv_dir[i]=0;
+      targ_rot_rate[i]=0;
+    } else if(targ_new_rot_rate[i]>0) {
+      drv_dir[i]=1;
+      targ_rot_rate[i]=(uint16_t)(targ_new_rot_rate[i]);
+    } else {
+      drv_dir[i]=2;
+      targ_rot_rate[i]=(uint16_t)(-targ_new_rot_rate[i]);
+    }
+    
+    if(drv_dir[i]) {
+       cur_power[i]=map(targ_rot_rate[i], 0, 30000, 0, 255); // temp
+     } else cur_power[i]=0;
+     
+    prev_err[i]=0;
+    int_err[i]=0;   
+    
+    Serial.print(drv_dir[i]); Serial.print("\t "); Serial.print(targ_rot_rate[i]); Serial.print("\t "); Serial.print(cur_power[i]); Serial.print("\t : \t");
+  }
+  Serial.println();
   
-  setEvent=1;  
-  lastEvTime = millis();
-}
   
-void requestEvent()
-{
-  getEvent=1;
-  lastEvTime = millis();
+  readEnc();
+  Drive(drv_dir[0], cur_power[0], drv_dir[1], cur_power[1]); 
+  isDriving=true;
+  pid_cnt=0;
+  lastPidTime=millis(); 
 }
 
-void encodeInterrupt_1() { baseInterrupt(0); }
-
-void encodeInterrupt_2() { baseInterrupt(1); } 
-
-void baseInterrupt(uint8_t i) {
-  const uint8_t encp[]={ENC1_IN, ENC2_IN};
-  uint8_t v=digitalRead(encp[i]);  
-  if(v_es[i]==v) return;
-  v_es[i]=v;  
-  /*if(v_enc_cnt[i]==255) F_SETOVERFLOW();
-  else*/
-  v_enc_cnt[i]++; 
-} 
+void stopDrive() {
+  if(!isDriving) return;
+  Drive(0, 0, 0, 0);
+  cur_power[0]=cur_power[1]=0;
+  Serial.println("Stop drive"); 
+}
 
 void readEnc()
 {
   int16_t s[2];
-  for(uint8_t i=0; i<2; i++) {
+  for(int i=0; i<2; i++) {
     enc_cnt[i]=v_enc_cnt[i];
     v_enc_cnt[i] = 0;
     if(drv_dir[i]==2) s[i]=-enc_cnt[i];
@@ -202,9 +217,9 @@ void readEnc()
 void doPID(uint16_t ctime)
 {
   if(ctime>0) {
-    uint8_t i;
+    int i;
     
-    Serial.print(pid_cnt); 
+    Serial.print(pid_cnt); Serial.print(" "); Serial.print(ctime);
     
     for(i=0; i<2; i++) {      
       int16_t p_err=0, d_err;
@@ -212,7 +227,7 @@ void doPID(uint16_t ctime)
       act_rot_rate[i]=CHGST_TO_RPS_NORM(enc_cnt[i], ctime); 
       Serial.print(act_rot_rate[i]);
       if(pid_cnt>=M_WUP_PID_CNT) { // do not correct for the first cycles - ca 100-200ms(warmup)
-        p_err = (targ_rot_rate[i]-act_rot_rate[i]);
+        p_err = (targ_rot_rate[i]-act_rot_rate[i])/M_PID_NORM;
         d_err = p_err-prev_err[i];
         int_err[i]=int_err[i]+p_err;
         Serial.print(" , "); Serial.print(p_err);
@@ -232,6 +247,28 @@ void doPID(uint16_t ctime)
     Serial.println();
   }
 }
+
+void Drive(uint8_t ldir, uint8_t lpow, uint8_t rdir, uint8_t rpow) 
+{
+  Drive_s(ldir, lpow, M1_EN, M1_OUT_1, M1_OUT_2);
+  Drive_s(rdir, rpow, M2_EN, M2_OUT_1, M2_OUT_2);
+}
+
+void Drive_s(uint8_t dir, uint8_t pow, int16_t p_en, uint8_t p1, uint8_t p2) 
+{
+  if(dir==0 || pow==0) {
+    digitalWrite(p_en, LOW); digitalWrite(p1, LOW); digitalWrite(p2, LOW); 
+    return;
+  }
+  else if(dir==1) {
+    digitalWrite(p1, LOW); digitalWrite(p2, HIGH); 
+  }
+  else {
+    digitalWrite(p1, HIGH); digitalWrite(p2, LOW);
+  } 
+  analogWrite(p_en, pow);
+}
+
 
 void readUSDist() {
   /*
@@ -289,3 +326,65 @@ void readUSDist() {
   */
 }
 
+void encodeInterrupt_1() { baseInterrupt(0); }
+
+void encodeInterrupt_2() { baseInterrupt(1); } 
+
+void baseInterrupt(uint8_t i) {
+  const uint8_t encp[]={ENC1_IN, ENC2_IN};
+  uint8_t v=digitalRead(encp[i]);  
+  if(v_es[i]==v) return;
+  v_es[i]=v;  
+  /*if(v_enc_cnt[i]==255) F_SETOVERFLOW();
+  else*/
+  v_enc_cnt[i]++; 
+} 
+
+void receiveEvent(int howMany)
+{
+
+  if(Wire.available()==0) return;
+  eventRegister=Wire.read();
+  if(Wire.available()==0) return;
+  
+  switch(eventRegister) {
+    case REG_TARG_ROT_RATE:
+      readInt16(targ_new_rot_rate);
+      readInt16(targ_new_rot_rate+1);
+      break;
+    default:;
+  }
+  
+  while(Wire.available()) Wire.read(); // consume whatever left
+  
+  setEvent=1;  
+  lastEvTime = millis();
+}
+  
+void requestEvent()
+{
+  if(!eventRegister) return;
+  
+  switch(eventRegister) {
+    case REG_TARG_ROT_RATE:
+      writeInt16(targ_new_rot_rate);
+      writeInt16(targ_new_rot_rate+1);
+      break;
+    default:;
+  }
+  getEvent=1;
+  lastEvTime = millis();
+}
+
+
+void readInt16(int16_t *reg) {
+  if(Wire.available()) buffer[0]=Wire.read();
+  if(Wire.available()) buffer[1]=Wire.read();
+  *reg = (((int16_t)buffer[0]) << 8) | buffer[1];
+}
+
+void writeInt16(int16_t *reg) {
+  buffer[0] = (uint8_t)((*reg)>>8);
+  buffer[1] = (uint8_t)((*reg)&0xFF);      
+  Wire.write(buffer, 2);
+}
