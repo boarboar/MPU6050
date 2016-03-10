@@ -24,7 +24,7 @@ Wire.setClock(100000L);
 
 }
 
-byte x = 0;
+uint16_t x = 0;
 
 void loop() {
   uint8_t buf[4];
@@ -33,7 +33,7 @@ void loop() {
   delay(500);
 //  digitalWrite(RED_LED, HIGH);
 
-  if(x%2) {
+  if(x%2000) {
     int16_t left=x;
     int16_t right=-x;
     buf[0] = (uint8_t)(left>>8);
@@ -57,7 +57,7 @@ void loop() {
     Serial.print(left); Serial.print("\t "); Serial.println(right);
   }
   
-  
+  x+=1000;
 /*
   I2Cdev::writeByte(DEV_ID, 2, x%2);
   I2Cdev::writeByte(DEV_ID, 3, (x+1)%2);
@@ -111,6 +111,5 @@ Serial.println();
   delay(500);
 //  digitalWrite(RED_LED, LOW);
   
-  x++;
 }
 

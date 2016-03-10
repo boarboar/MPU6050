@@ -24,7 +24,7 @@
 #define V_NORM_PI2 62832L
 
 #define  PID_TIMEOUT 100
-#define  CMD_TIMEOUT 600 
+#define  CMD_TIMEOUT 6000 // !!!! 
 #define  WHEEL_CHGSTATES 40
 #define  WHEEL_RAD_MM   33 // measured 32
 
@@ -134,7 +134,7 @@ void loop()
     } 
     
     readEnc();
-    if (isDriving) doPID(ctime);    
+ //   if (isDriving) doPID(ctime);    
     readUSDist(); 
     
     lastPidTime=cycleTime;
@@ -147,7 +147,7 @@ void loop()
     if(eventRegister==REG_TARG_ROT_RATE) {
       Serial.print(targ_new_rot_rate[0]);
       Serial.print(", ");
-      Serial.print(targ_new_rot_rate[1]);
+      Serial.println(targ_new_rot_rate[1]);
       startDrive();    
     }
     Serial.println();
@@ -199,6 +199,7 @@ void stopDrive() {
   if(!isDriving) return;
   Drive(0, 0, 0, 0);
   cur_power[0]=cur_power[1]=0;
+  isDriving=0;
   Serial.println("Stop drive"); 
 }
 
@@ -367,8 +368,9 @@ void requestEvent()
   
   switch(eventRegister) {
     case REG_TARG_ROT_RATE:
-      writeInt16(targ_new_rot_rate);
-      writeInt16(targ_new_rot_rate+1);
+      //writeInt16(targ_new_rot_rate);
+      //writeInt16(targ_new_rot_rate+1);
+      writeInt16_2(targ_new_rot_rate);
       break;
     default:;
   }
@@ -387,4 +389,12 @@ void writeInt16(int16_t *reg) {
   buffer[0] = (uint8_t)((*reg)>>8);
   buffer[1] = (uint8_t)((*reg)&0xFF);      
   Wire.write(buffer, 2);
+}
+
+void writeInt16_2(int16_t *reg) {
+  buffer[0] = (uint8_t)((reg[0])>>8);
+  buffer[1] = (uint8_t)((reg[0])&0xFF);
+  buffer[2] = (uint8_t)((reg[1])>>8);
+  buffer[3] = (uint8_t)((reg[1])&0xFF);  
+  Wire.write(buffer, 4);
 }
