@@ -58,6 +58,8 @@ class MapPanel(wx.Window, UnitMap):
         ray_pen=wx.Pen(wx.BLACK, 1, wx.PENSTYLE_LONG_DASH)
         p_ray_pen=wx.Pen("GRAY", 1, wx.PENSTYLE_SHORT_DASH)
 
+        #draw map
+
         try:
             for area in self.map["AREAS"] :
                 for wall in area["WALLS"] :
@@ -72,26 +74,10 @@ class MapPanel(wx.Window, UnitMap):
             dc.DrawLine(zero.x, zero.y-10, zero.x, zero.y+10)
             zero = self.tc(0, 0)
             dc.DrawTextPoint("(0,0)", zero)
-            if self.isInside :
-                dc.SetPen(wx.Pen(wx.BLUE, 1))
-            else :
-                dc.SetPen(wx.Pen(wx.RED, 1))
-            dc.DrawPolygon(self.tsu(self.__shape))
-            # draw sensor rays
-            if self.isInside :
-                i=0
-                inters_pen=wx.Pen(wx.GREEN, 2)
-                for ray in self.scan_rays:
-                    dc.SetPen(ray_pen)
-                    dc.DrawLinePoint(self.tpu(wx.Point(0, 0)), self.tpu(wx.Point(ray[0]*500, ray[1]*500)))
-                    idist=self.scans[i]
-                    i=i+1
-                    if idist>0 :
-                        dc.SetPen(inters_pen)
-                        intrs = self.tpu(wx.Point(ray[0]*idist, ray[1]*idist))
-                        dc.DrawCirclePoint(intrs, 10)
         except KeyError : pass
         except IndexError : pass
+
+        #draw particles
 
         c_pen=wx.Pen(wx.RED, 1)
         a_pen=wx.Pen(wx.BLACK, 2)
@@ -119,6 +105,29 @@ class MapPanel(wx.Window, UnitMap):
                 if i != None :
                     c=self.tc(i[0], i[1])
                     dc.DrawCirclePoint(c, 5)
+
+        # draw robot
+        dc.SetBackgroundMode(wx.TRANSPARENT)
+        dc.SetBrush(wx.TRANSPARENT_BRUSH)
+
+        if self.isInside :
+            dc.SetPen(wx.Pen(wx.BLUE, 2))
+        else :
+            dc.SetPen(wx.Pen(wx.RED, 2))
+        dc.DrawPolygon(self.tsu(self.__shape))
+        # draw sensor rays
+        if self.isInside :
+            i=0
+            inters_pen=wx.Pen(wx.GREEN, 2)
+            for ray in self.scan_rays:
+                dc.SetPen(ray_pen)
+                dc.DrawLinePoint(self.tpu(wx.Point(0, 0)), self.tpu(wx.Point(ray[0]*500, ray[1]*500)))
+                idist=self.scans[i]
+                i=i+1
+                if idist>0 :
+                    dc.SetPen(inters_pen)
+                    intrs = self.tpu(wx.Point(ray[0]*idist, ray[1]*idist))
+                    dc.DrawCirclePoint(intrs, 10)
 
     def UpdateDrawing(self) :
         dc = wx.MemoryDC()

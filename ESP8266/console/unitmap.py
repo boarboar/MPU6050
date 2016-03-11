@@ -35,7 +35,7 @@ class UnitMap:
         self.scan_angles=[-45*math.pi/180.0, 0, 45*math.pi/180.0]
         self.scan_rays=[(-c45, c45), (0, 1.0), (c45, c45)]
         self.scan_max_dist=400
-        self.sense_noise=10
+        self.sense_noise=20
         try:
             with open(mapfile) as data_file:
                 self.map = json.load(data_file)
@@ -66,8 +66,8 @@ class UnitMap:
 
     def InitParticles(self):
         self.particles = [] #clean
-        for i in range(4) :
-            for j in range(4) :
+        for i in range(8) :
+            for j in range(8) :
                 a=(random.random()-0.5)*60
                 x=(random.random()-0.5)*100+self.xu0
                 y=(random.random()-0.5)*100+self.yu0
@@ -133,12 +133,14 @@ class UnitMap:
         wsum=0
         for p in self.particles :
             p.move_d(mov, self.__a_rot)
+            #todo - inside test (note that isInsideTest is for relative to xu0, yu0!
             self.updateParticleProbabilities(p, scans)
             wsum=wsum+p.w
         if wsum>0 :
             for p in self.particles :
                 p.w = p.w/wsum
                 print(p)
+        #todo resmple here
 
     def getParticleRays(self, p): #just for visual debugging
         rays=[]
