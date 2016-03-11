@@ -31,7 +31,8 @@
 // for 7.5v
 #define M_POW_LOWEST_LIM   10
 #define M_POW_HIGH_LIM 100
-#define M_POW_MAX  120
+//#define M_POW_MAX  120
+#define M_POW_MAX  240
 #define M_POW_STEP 2
 
 #define M_PID_NORM 1000
@@ -45,6 +46,8 @@
 #define M_PID_KI M_PID_KI_0
 
 #define M_WUP_PID_CNT 3
+
+#define M_USS_N       3 // number of sensors 
 
 #define REG_TARG_ROT_RATE_1  0x01  // signed int (2 bytes)
 #define REG_TARG_ROT_RATE_2  0x02  // signed int (2 bytes)
@@ -78,6 +81,8 @@ int16_t targ_new_rot_rate[2]={0, 0}; // RPS, 10000 = 1 RPS  (use DRV_RPS_NORM), 
 uint32_t lastEvTime, lastPidTime;
 uint8_t setEvent = 0, getEvent = 0, eventRegister = 0;
 uint8_t isDriving=0;
+
+uint8_t current_sens=0;
 
 uint8_t buffer[4];
 
@@ -131,10 +136,10 @@ void loop()
       Serial.println("Comm lost!");
       lastEvTime = cycleTime;
       if(isDriving) stopDrive();
-    } 
-    
+    }    
     readEnc();
- //   if (isDriving) doPID(ctime);    
+    if (isDriving) doPID(ctime);    
+    
     readUSDist(); 
     
     lastPidTime=cycleTime;
@@ -183,7 +188,7 @@ void startDrive() {
     prev_err[i]=0;
     int_err[i]=0;   
     
-    Serial.print(drv_dir[i]); Serial.print("\t "); Serial.print(targ_rot_rate[i]); Serial.print("\t "); Serial.print(cur_power[i]); Serial.print("\t : \t");
+    Serial.print(drv_dir[i]); Serial.print(", "); Serial.print(targ_rot_rate[i]); Serial.print(", "); Serial.print(cur_power[i]); Serial.print("\t : ");
   }
   Serial.println();
   
@@ -272,59 +277,26 @@ void Drive_s(uint8_t dir, uint8_t pow, int16_t p_en, uint8_t p1, uint8_t p2)
 
 
 void readUSDist() {
-  /*
-  int16_t tmp = us_dist;
-  digitalWrite(US_OUT, LOW);
+  int ports[M_USS_N]={US_1_OUT, US_2_OUT, US_3_OUT};
+  int out_port=ports[current_sens];
+  //int16_t tmp = us_dist;
+  digitalWrite(out_port, LOW);
   delayMicroseconds(2);
-  digitalWrite(US_OUT, HIGH);
+  digitalWrite(out_port, HIGH);
   delayMicroseconds(10);
-  digitalWrite(US_OUT, LOW);
-  us_dist=(int16_t)(pulseIn(US_IN, HIGH, 25000)/58);  
+  digitalWrite(out_port, LOW);
+  int16_t d =(int16_t)(pulseIn(US_IN, HIGH, 25000)/58);  
+  /*
   if(!us_dist) {
     us_dist = tmp;
     return;
   }
-  if(F_ISDRIVE()) {
-      int8_t adv=0, ada=0;
-      int16_t usd=0;
-      adv=task.adv_d/100; //cm
-      ada=RADN_TO_GRAD(task.adv_a); //grad
-      
-      if(tmp!=0xFFF)
-        usd=tmp-us_dist;              
-      else 
-        usd=0;  
-
-      for(uint8_t i=WALL_LOG_SZ-1; i>=1; i--) logw[i]=logw[i-1];
-
-      if(logw[1].adv_k!=-127) {
-        usd=( ((int16_t)usd*SENS_K_K+(int16_t)logw[1].usd_k*(SENS_K_DIV-SENS_K_K))/SENS_K_DIV ); // Kalman
-        adv=(int8_t)( ((int16_t)adv*SENS_K_K+(int16_t)logw[1].adv_k*(SENS_K_DIV-SENS_K_K))/SENS_K_DIV ); // Kalman
-        ada=(int8_t)( ((int16_t)ada*SENS_K_K+(int16_t)logw[1].ada_k*(SENS_K_DIV-SENS_K_K))/SENS_K_DIV ); // Kalman
-      }
-      logw[0].usd_k=usd;
-      logw[0].adv_k=(int8_t)adv;      
-      logw[0].ada_k=(int8_t)ada;
-      
-      uint8_t i;
-      tmp=0;
-      for(i=0; i<WALL_LOG_SZ; i++) if(logw[i].adv_k!=-127) tmp+=abs(logw[i].adv_k-logw[i].usd_k);
-      tmp/=WALL_LOG_SZ; 
-              
-      if(tmp<4) { 
-        us_dist_ver=us_dist; // verified dist // todo: add a check that the pows[] are comparable )
-        bad_us_cnt=0;
-      }
-      else {
-        //if(bad_us_cnt==0 && abs(logw[0].adv_k-logw[0].usd_k)>50) { // wild reflection ???
-        if(bad_us_cnt==0 && abs(logw[0].usd_k)>50) { // wild reflection ???
-          logw[0].usd_k=logw[1].usd_k; // use old val
-        } else us_dist_ver = 0;
-        bad_us_cnt++;        
-      }
-      
-  }
-  */
+*/
+  Serial.print("U."); Serial.print(current_sens); Serial.print("=");Serial.println(d);
+  
+  // do LPM filter here
+  
+  current_sens=(current_sens+1)%M_USS_N;
 }
 
 void encodeInterrupt_1() { baseInterrupt(0); }
@@ -354,10 +326,8 @@ void receiveEvent(int howMany)
       readInt16(targ_new_rot_rate+1);
       break;
     default:;
-  }
-  
-  while(Wire.available()) Wire.read(); // consume whatever left
-  
+  }  
+  while(Wire.available()) Wire.read(); // consume whatever left  
   setEvent=1;  
   lastEvTime = millis();
 }
@@ -368,8 +338,6 @@ void requestEvent()
   
   switch(eventRegister) {
     case REG_TARG_ROT_RATE:
-      //writeInt16(targ_new_rot_rate);
-      //writeInt16(targ_new_rot_rate+1);
       writeInt16_2(targ_new_rot_rate);
       break;
     default:;

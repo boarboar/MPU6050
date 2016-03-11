@@ -6,7 +6,8 @@ const int MPU_SDA=0;
 const int MPU_SDL=2;
 const int DEV_ID=4;
 
-
+uint8_t buf[4];
+uint32_t t, dt;
 void setup() {
 //  digitalWrite(RED_LED, LOW); 
 //  pinMode(RED_LED, OUTPUT);
@@ -20,41 +21,26 @@ void setup() {
 
 //Wire.begin();
 
-Wire.setClock(100000L);
+//Wire.setClock(100000L);
+
+int16_t d[2]={5000, -5000};
+writeInt16_2(d);
 
 }
 
 uint16_t x = 0;
 
 void loop() {
-  uint8_t buf[4];
-  bool res;
-  uint32_t t, dt;
+
   delay(500);
 //  digitalWrite(RED_LED, HIGH);
 
   if(x%2000) {
-    int16_t left=x;
-    int16_t right=-x;
-    buf[0] = (uint8_t)(left>>8);
-    buf[1] = (uint8_t)(left&0xFF);   
-    buf[2] = (uint8_t)(right>>8);
-    buf[3] = (uint8_t)(right&0xFF);   
-
-    Serial.print("Writing...\t ");
-    t=millis();  
-    bool res = I2Cdev::writeBytes(DEV_ID, 0x03, 4, buf);
-    dt=millis()-t;
-    Serial.print(dt); Serial.println("ms");
+    //int16_t d[2]={x, -x};
+    //writeInt16_2(d);
   } else {
-    Serial.print("Requesting...\t ");
-    t=millis();  
-    bool res = I2Cdev::readBytes(DEV_ID, 0x03, 4, buf);
-    dt=millis()-t;
-    Serial.print(dt); Serial.print("ms\t ");
-    int16_t left = (((int16_t)buf[0]) << 8) | buf[1];
-    int16_t right = (((int16_t)buf[2]) << 8) | buf[3];
-    Serial.print(left); Serial.print("\t "); Serial.println(right);
+    int16_t d[2];
+    readInt16_2(d);
   }
   
   x+=1000;
@@ -111,5 +97,33 @@ Serial.println();
   delay(500);
 //  digitalWrite(RED_LED, LOW);
   
+}
+
+bool writeInt16_2(int16_t *d) {
+    int16_t left=d[0];
+    int16_t right=d[1];
+    buf[0] = (uint8_t)(left>>8);
+    buf[1] = (uint8_t)(left&0xFF);   
+    buf[2] = (uint8_t)(right>>8);
+    buf[3] = (uint8_t)(right&0xFF);   
+
+    Serial.print("Writing...\t ");
+    t=millis();  
+    bool res = I2Cdev::writeBytes(DEV_ID, 0x03, 4, buf);
+    dt=millis()-t;
+    Serial.print(res); Serial.print(" "); Serial.print(dt); Serial.println("ms");
+    return res;
+}
+
+bool readInt16_2(int16_t *d) {
+    Serial.print("Requesting...\t ");
+    t=millis();  
+    bool res = I2Cdev::readBytes(DEV_ID, 0x03, 4, buf);
+    dt=millis()-t;
+    Serial.print(res); Serial.print(" "); Serial.print(dt); Serial.print("ms\t ");
+    *d = (((int16_t)buf[0]) << 8) | buf[1];
+    *(d+1) = (((int16_t)buf[2]) << 8) | buf[3];
+    Serial.print(d[0]); Serial.print("\t "); Serial.println(d[1]);
+    return res;
 }
 

@@ -20,14 +20,15 @@ class MapPanel(wx.Window, UnitMap):
         self.__map=[]
         self.__x0, self.__y0 = (0, 0) # canvas center
         self.__scale=1
-        self.__inside=False
-        self.__scans=[-1,-1,-1]
+        #self.__inside=False
+        #self.__scans=[-1,-1,-1]
         self.__shape=[wx.Point(-self.UNIT_WIDTH/2, -self.UNIT_HEIGHT/2),
                     wx.Point(-self.UNIT_WIDTH/2, self.UNIT_HEIGHT/2),
                     wx.Point(0, self.UNIT_HEIGHT*3/5),
                     wx.Point(self.UNIT_WIDTH/2, self.UNIT_HEIGHT/2),
                     wx.Point(self.UNIT_WIDTH/2, -self.UNIT_HEIGHT/2),
                     ]
+        self.InitParticles()
         self.OnSize(None)
 
     def OnSize(self,event):
@@ -54,6 +55,8 @@ class MapPanel(wx.Window, UnitMap):
         dc.SetBrush(wx.TRANSPARENT_BRUSH)
         dc.SetTextForeground(wx.BLACK)
         dc.SetTextBackground(wx.WHITE)
+        ray_pen=wx.Pen(wx.BLACK, 1, wx.PENSTYLE_LONG_DASH)
+        p_ray_pen=wx.Pen("GRAY", 1, wx.PENSTYLE_SHORT_DASH)
 
         try:
             for area in self.map["AREAS"] :
@@ -69,36 +72,53 @@ class MapPanel(wx.Window, UnitMap):
             dc.DrawLine(zero.x, zero.y-10, zero.x, zero.y+10)
             zero = self.tc(0, 0)
             dc.DrawTextPoint("(0,0)", zero)
-            if self.__inside :
+            if self.isInside :
                 dc.SetPen(wx.Pen(wx.BLUE, 1))
             else :
                 dc.SetPen(wx.Pen(wx.RED, 1))
             dc.DrawPolygon(self.tsu(self.__shape))
             # draw sensor rays
-            if self.__inside :
-                #rays=[(-350, 350), (0, 500), (350, 350)]
-                c45=math.cos(math.pi/4)
-                rays1=[(-c45, c45), (0, 1.0), (c45, c45)]
+            if self.isInside :
                 i=0
-                ray_pen=wx.Pen(wx.BLACK, 1, wx.PENSTYLE_LONG_DASH)
-                inters_pen=wx.Pen(wx.RED, 2)
-                for ray in rays1:
+                inters_pen=wx.Pen(wx.GREEN, 2)
+                for ray in self.scan_rays:
                     dc.SetPen(ray_pen)
-                    #dc.DrawLinePoint(self.tpu(wx.Point(0, 0)), self.tpu(wx.Point(ray[0], ray[1])))
                     dc.DrawLinePoint(self.tpu(wx.Point(0, 0)), self.tpu(wx.Point(ray[0]*500, ray[1]*500)))
-                    idist=self.__scans[i]
+                    idist=self.scans[i]
                     i=i+1
                     if idist>0 :
                         dc.SetPen(inters_pen)
                         intrs = self.tpu(wx.Point(ray[0]*idist, ray[1]*idist))
                         dc.DrawCirclePoint(intrs, 10)
-                    #intrs=self.getIntersection(0, 0, ray[0], ray[1])
-                    #if intrs!=None :
-                    #    dc.SetPen(inters_pen)
-                    #    intrs = self.tc(intrs[0], intrs[1])
-                    #    dc.DrawCircle(intrs[0], intrs[1], 10)
         except KeyError : pass
         except IndexError : pass
+
+        c_pen=wx.Pen(wx.RED, 1)
+        a_pen=wx.Pen(wx.BLACK, 2)
+        dc.SetBackgroundMode(wx.SOLID)
+        dc.SetBrush(wx.RED_BRUSH)
+
+        for p in self.particles :
+            rad=1+math.log10(1+p.w*10)*5
+            #rad=5
+            c=self.tc(p.x,p.y)
+            dc.SetPen(c_pen)
+            dc.DrawCirclePoint(c, rad)
+            ca=wx.Point(c.x+10*math.sin(p.a), c.y-10*math.cos(p.a))
+            dc.SetPen(a_pen)
+            dc.DrawLinePoint(c, ca)
+            continue
+            dc.SetPen(p_ray_pen)
+            rays=self.getParticleRays(p)
+            for r in rays:
+                cr=self.tc(r[1][0], r[1][1])
+                dc.DrawLinePoint(c, cr)
+            ints=self.getParticleIntersects(p)
+            dc.SetPen(wx.Pen(wx.BLUE, 1))
+            for i in ints:
+                if i != None :
+                    c=self.tc(i[0], i[1])
+                    dc.DrawCirclePoint(c, 5)
 
     def UpdateDrawing(self) :
         dc = wx.MemoryDC()
@@ -112,9 +132,7 @@ class MapPanel(wx.Window, UnitMap):
         try:
             yaw, pitch, roll = [a*math.pi/180.0 for a in self.__model["YPR"]]
             x, y, z = [int(a) for a in self.__model["CRD"]]
-            self.__scans=self.__model["S"]
-            self.SetUnitPos(x, y, yaw)
-            self.__inside = self.isInside(x, y)
+            self.MoveUnit(x, y, yaw, self.__model["S"])
         except KeyError : pass
         except IndexError : pass
         self.UpdateDrawing()

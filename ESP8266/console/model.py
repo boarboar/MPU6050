@@ -16,11 +16,14 @@ class Model(dict):
         self["FHS"]=0
         self["FSS"]=0
         self["YPR"]=[0,0,0]
+        #self["PREV_YPR"]=[0,0,0]
         self["V"]=[0,0,0]
         self["CRD"]=[0,0,0] #coord X, Y, Z
+        #self["PREV_CRD"]=[0,0,0] #prev coord X, Y, Z
         self["S"]=[0,0,0] #sens  Sl, Sc, Sr
         self["T"]=0
         self["T_ATT"]=0
+        self["TURN"]=0 #YAW change
         self["MHIST"]=(None,[
                         #{"T":1000, "V":[0.1, 0, 0], "YPR":[90.0, 0.0, 0.0]},
                         ]
@@ -60,13 +63,12 @@ class Model(dict):
                     item={"T":resp_json["T"], "YPR":resp_json["YPR"],
                           "V":resp_json["V"] }
                     data[1].append(item)
+                    #self["PREV_YPR"]=self["YPR"]
+                    #self["PREV_CRD"]=self["CRD"]
                     self["YPR"]=resp_json["YPR"]
                     self["V"]=resp_json["V"]
-                    # get additional data
-                    try:
-                        self["CRD"]=resp_json["CRD"]
-                        self["S"]=resp_json["S"]
-                    except KeyError: pass
+                    self["CRD"]=resp_json["CRD"]
+                    self["S"]=resp_json["S"]
                     self["T_ATT"]=resp_json["T"]
                     update_pos=True
         except KeyError: pass

@@ -57,6 +57,7 @@ t=1000
 yaw=0
 rx, ry = (0, 0)
 corr=0
+init =True
 while 1:
     try:
         # receive data from client (data, addr)
@@ -71,19 +72,30 @@ while 1:
         js=json.loads(data.strip())
         # pos: {"C": "I", "T":12345, "R":0, "C": "L", "YPR": [59, 12, 13], "A": [0.01, 0.02, -0.03], "V": [0.1, 0.2, -0.3]}
         if js["C"]=="INFO" : js["FHS"]=99999
+        elif js["C"]=="RSTMPU" : init=True
         elif js["C"]=="POS" : 
-            yaw = yaw + gauss_lim(10, 10, 20) #tends to turn right
-            #yaw = yaw + corr
-            yaw=int(yaw)%360
-            if yaw>180 : yaw = yaw-360
-            dvy= yaw+gauss_lim(0, 2, 4)
-            vx = math.cos(dvy*math.pi/180.0)*10.0 #in X-UP/Y-LEFT SYSTEM
-            vy =-math.sin(dvy*math.pi/180.0)*10.0
-            rvx=-vy  #in X-RIGHT/Y-UP SYSTEM
-            rvy=vx
-            rx=rx+rvx #CM
-            ry=ry+rvy #CM  
-            map.SetUnitPos(rx, ry, yaw*math.pi/180.0)
+            if init : 
+                yaw=0
+                rx=0
+                ry=0
+                vx=0
+                vy=0
+                init=False
+            else :    
+                #yaw = yaw + gauss_lim(10, 10, 20) #tends to turn right
+                yaw = yaw + gauss_lim(-10, 10, 20) #tends to turn left
+                #yaw = yaw + corr
+                yaw=int(yaw)%360
+                if yaw>180 : yaw = yaw-360
+                dvy= yaw+gauss_lim(0, 2, 4)
+                vx = math.cos(dvy*math.pi/180.0)*10.0 #in X-UP/Y-LEFT SYSTEM
+                vy =-math.sin(dvy*math.pi/180.0)*10.0                
+                rvx=-vy  #in X-RIGHT/Y-UP SYSTEM
+                rvy=vx
+                rx=rx+rvx #CM
+                ry=ry+rvy #CM  
+                
+            map.MoveUnit(rx, ry, yaw*math.pi/180.0, [-1,-1,-1])
             mapx, mapy = map.UnitToMap(0, 0)
             print mapx, mapy
             

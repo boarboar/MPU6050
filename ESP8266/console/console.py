@@ -171,6 +171,7 @@ class MyForm(wx.Frame):
         self.controller.reqUpload()
 
     def onResetMPUReq(self, event):
+        self.map.Reset()
         self.controller.reqResetMPU(action="MPU")
 
     def onResetMPUIntReq(self, event):
