@@ -25,7 +25,7 @@ void setup() {
 
 int16_t d[2]={5000, -5000};
 writeInt16_2(d);
-
+readInt16_2(d);
 }
 
 uint16_t x = 0;
@@ -40,7 +40,7 @@ void loop() {
     //writeInt16_2(d);
   } else {
     int16_t d[2];
-    readInt16_2(d);
+    //readInt16_2(d);
   }
   
   x+=1000;

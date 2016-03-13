@@ -292,7 +292,7 @@ void readUSDist() {
     return;
   }
 */
-  Serial.print("U."); Serial.print(current_sens); Serial.print("=");Serial.println(d);
+  //Serial.print("U."); Serial.print(current_sens); Serial.print("=");Serial.println(d);
   
   // do LPM filter here
   
