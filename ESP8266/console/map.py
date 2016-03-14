@@ -80,20 +80,23 @@ class MapPanel(wx.Window, UnitMap):
         #draw particles
 
         c_pen=wx.Pen(wx.RED, 1)
+        c_pen_0=wx.Pen("GRAY", 1)
         a_pen=wx.Pen(wx.BLACK, 2)
         dc.SetBackgroundMode(wx.SOLID)
         dc.SetBrush(wx.RED_BRUSH)
 
         for p in self.particles :
-            rad=1+math.log10(1+p.w*10)*5
+            rad=1+math.log10(1+p.w*10)*8
             #rad=5
             c=self.tc(p.x,p.y)
-            dc.SetPen(c_pen)
+            if rad>1 : dc.SetPen(c_pen)
+            else : dc.SetPen(c_pen_0)
             dc.DrawCirclePoint(c, rad)
             ca=wx.Point(c.x+10*math.sin(p.a), c.y-10*math.cos(p.a))
-            dc.SetPen(a_pen)
+            #dc.SetPen(a_pen)
             dc.DrawLinePoint(c, ca)
             continue
+            # this staff below is for test purposes, skip it
             dc.SetPen(p_ray_pen)
             rays=self.getParticleRays(p)
             for r in rays:
@@ -106,14 +109,22 @@ class MapPanel(wx.Window, UnitMap):
                     c=self.tc(i[0], i[1])
                     dc.DrawCirclePoint(c, 5)
 
-        # draw robot
+
         dc.SetBackgroundMode(wx.TRANSPARENT)
         dc.SetBrush(wx.TRANSPARENT_BRUSH)
+
+        # draw estimation and robot
+
+        mx, my, var = self.getMeanDistribution()
+        c=self.tc(mx,my)
+        dc.SetPen(wx.Pen(wx.BLACK, 1))
+        dc.DrawCirclePoint(c, var*self.__scale)
 
         if self.isInside :
             dc.SetPen(wx.Pen(wx.BLUE, 2))
         else :
             dc.SetPen(wx.Pen(wx.RED, 2))
+
         dc.DrawPolygon(self.tsu(self.__shape))
         # draw sensor rays
         if self.isInside :

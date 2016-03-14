@@ -2,6 +2,7 @@ import json
 import sys
 import math
 import random
+import copy
 
 from pprint import pprint
 
@@ -36,6 +37,8 @@ class UnitMap:
         self.scan_rays=[(-c45, c45), (0, 1.0), (c45, c45)]
         self.scan_max_dist=400
         self.sense_noise=20
+        self.fwd_noise=5
+        self.rot_noise=0.5
         try:
             with open(mapfile) as data_file:
                 self.map = json.load(data_file)
@@ -65,17 +68,17 @@ class UnitMap:
         self.InitParticles()
 
     def InitParticles(self):
+        N_D=20
+        W=1.0/(N_D*N_D)
+        LOC_VAR=150
+        ANG_VAR=math.pi/2
         self.particles = [] #clean
-        for i in range(8) :
-            for j in range(8) :
-                a=(random.random()-0.5)*60
-                x=(random.random()-0.5)*100+self.xu0
-                y=(random.random()-0.5)*100+self.yu0
-                self.particles.append(Particle(a=a, x=x, y=y, id=1))
-
-        #self.particles.append(Particle(a=-30.0*math.pi/180.0, id=1))
-        #self.particles.append(Particle(a=0, id=2))
-        #self.particles.append(Particle(a=30.0*math.pi/180.0, id=3))
+        for i in range(N_D) :
+            for j in range(N_D) :
+                a=(random.random()-0.5)*ANG_VAR*2
+                x=(random.random()-0.5)*LOC_VAR+self.xu0
+                y=(random.random()-0.5)*LOC_VAR+self.yu0
+                self.particles.append(Particle(a=a, x=x, y=y, id=i*N_D+j, w=W))
 
     def MoveUnit(self, x, y, angle, scans):
         if self.__move == 0 : # first step
@@ -99,9 +102,10 @@ class UnitMap:
         self.__r_y=y
         self.__angle=angle
         self.scans=scans
-        self.isInside=self.isInsideTest(x, y)
+        self.isInside=self.isInsideTest(x+self.xu0, y+self.yu0)
         self.__move = self.__move+1
-        self.updateParticles(move_dist, self.__a_rot, scans)
+        if len(self.particles)>0 :
+            self.updateParticles(move_dist, self.__a_rot, scans)
 
 
     def UnitToMap(self, x, y):
@@ -116,7 +120,7 @@ class UnitMap:
         if y>self.boundRect[3] : self.boundRect[3]=y
 
     def isInsideTest(self, x, y):
-        x, y=(x+self.xu0, y+self.yu0)
+        #x, y=(x+self.xu0, y+self.yu0)
         for area in self.map["AREAS"] :
             left, right = (0, 0)
             for wall in area["WALLS"] :
@@ -130,17 +134,56 @@ class UnitMap:
         return False
 
     def updateParticles(self, mov, rot, scans):
-        wsum=0
+
         for p in self.particles :
-            p.move_d(mov, self.__a_rot)
-            #todo - inside test (note that isInsideTest is for relative to xu0, yu0!
-            self.updateParticleProbabilities(p, scans)
-            wsum=wsum+p.w
+            p.move_d(mov+random.gauss(0, self.fwd_noise), self.__a_rot+random.gauss(0, self.rot_noise))
+            if self.isInsideTest(p.x, p.y) :
+                self.updateParticleProbabilities(p, scans)
+            else : p.w=0.0
+
+        #print self.particles
+
+        mw=max(p.w for p in self.particles)
+
+#        if self.__move < 5 or self.__move%5==0 :
+        if True :
+            #resmple
+            # use algorithm from udacity
+            print("Resample")
+            N=len(self.particles)
+            p3 = []
+            index = int(random.random() * N)
+            beta = 0.0
+            for i in range(N):
+                beta += random.random() * 2.0 * mw
+                while beta > self.particles[index].w:
+                    beta -= self.particles[index].w
+                    index = (index + 1) % N
+                p3.append(copy.copy(self.particles[index]))
+            self.particles = p3
+            #print self.particles
+
+        #normalize
+        wsum=sum(p.w for p in self.particles)
         if wsum>0 :
             for p in self.particles :
                 p.w = p.w/wsum
-                print(p)
-        #todo resmple here
+
+        #print self.particles
+
+    def getMeanDistribution(self):
+        x,y, var=0,0,0
+        for p in self.particles :
+            x+=p.x*p.w
+            y+=p.y*p.w
+
+        for p in self.particles :
+            ex=p.x-x
+            ey=p.y-y
+            var += (ex*ex+ey*ey)*p.w
+        var= math.sqrt(var)
+        print("Variance %s" % str(round(var,2)))
+        return (x, y, var)
 
     def getParticleRays(self, p): #just for visual debugging
         rays=[]

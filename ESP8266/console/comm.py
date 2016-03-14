@@ -3,6 +3,7 @@ import Queue
 import random
 import json
 import socket
+import time
 
 class CommandThread(threading.Thread):
     # device command-resp communication
@@ -142,3 +143,23 @@ class ScanThread(threading.Thread):
         self.__controller.scanComplete(result)
 
         self.__controller.log().LogString("Scanner thread stopped")
+
+class SimulationThread(threading.Thread):
+    # device command-resp communication
+    def __init__(self, controller):
+        threading.Thread.__init__(self)
+        self.__controller = controller
+        self.__stop = False
+        self.setDaemon(1)
+    def stop(self) : self.__stop=True
+    def run (self):
+
+        self.__controller.log().LogString("Starting simulation")
+
+        self.__controller.reqResetMPU()
+
+        while not self.__stop :
+            time.sleep(0.5)
+            self.__controller.reqPosition()
+
+        self.__controller.log().LogString("Simulation thread stopped")

@@ -9,7 +9,10 @@ class Controller():
         self.__form = form
         self.__model = model
         self.__cmdid=0
+        self.__comm_thread = None
+        self.__comm_listener_thread = None
         self.__comm_scan_thread = None
+        self.__comm_sim_thread = None
         self.__tstart()
 
     def __tstart(self):
@@ -32,6 +35,8 @@ class Controller():
             self.__comm_listener_thread.join()
         self.__comm_thread.stop()
         self.__comm_thread.join()
+        self.stopScan()
+        self.stopSimulation()
         self.__form.LogString("Stopped")
 
     def restart(self):
@@ -43,12 +48,26 @@ class Controller():
         self.__comm_scan_thread.start()
 
     def stopScan(self):
-        self.__comm_scan_thread.stop()
-        self.__comm_scan_thread.join()
-        self.__comm_scan_thread = None
+        if self.__comm_scan_thread!=None:
+            self.__comm_scan_thread.stop()
+            self.__comm_scan_thread.join()
+            self.__comm_scan_thread = None
 
     def isScanning(self):
         return self.__comm_scan_thread!=None
+
+    def startSimulation(self):
+        self.__comm_sim_thread=comm.SimulationThread(self)
+        self.__comm_sim_thread.start()
+
+    def stopSimulation(self):
+        if self.__comm_sim_thread!=None:
+            self.__comm_sim_thread.stop()
+            self.__comm_sim_thread.join()
+            self.__comm_sim_thread = None
+
+    def isSimulating(self):
+        return self.__comm_sim_thread!=None
 
     def reqCmdRaw(self, cmd):
         try:

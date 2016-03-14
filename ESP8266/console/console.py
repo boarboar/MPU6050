@@ -44,6 +44,7 @@ class MyForm(wx.Frame):
         self.btn_rst_int = wx.Button(panel, wx.ID_ANY, 'ResetINT')
         self.btn_hist = wx.Button(panel, wx.ID_ANY, 'Measmts')
         self.btn_dump = wx.Button(panel, wx.ID_ANY, 'Dump')
+        self.btn_sim = wx.Button(panel, wx.ID_ANY, 'Sim')
         self.txt_cmd = wx.TextCtrl(panel)
         self.btn_cmd = wx.Button(panel, wx.ID_ANY, 'Send')
 
@@ -72,6 +73,7 @@ class MyForm(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onDumpModel, self.btn_dump)
         self.Bind(wx.EVT_BUTTON, self.onHistory, self.btn_hist)
         self.Bind(wx.EVT_BUTTON, self.onSendCmd, self.btn_cmd)
+        self.Bind(wx.EVT_BUTTON, self.onSimReq, self.btn_sim)
 
         self.config=config.Config(self, self.model)
         self.controller=controller.Controller(self, self.model)
@@ -104,6 +106,7 @@ class MyForm(wx.Frame):
         sizer_ctrls.Add(self.btn_rst_int, 0, wx.ALL|wx.CENTER, 5)
         sizer_ctrls.Add(self.btn_hist, 0, wx.ALL|wx.CENTER, 5)
         sizer_ctrls.Add(self.btn_dump, 0, wx.ALL|wx.CENTER, 5)
+        sizer_ctrls.Add(self.btn_sim, 0, wx.ALL|wx.CENTER, 5)
 
         sizer_cmd.Add(self.txt_cmd, 10, wx.ALL|wx.CENTER, 5)
         sizer_cmd.Add(self.btn_cmd, 0, wx.ALL|wx.CENTER, 5)
@@ -171,8 +174,9 @@ class MyForm(wx.Frame):
         self.controller.reqUpload()
 
     def onResetMPUReq(self, event):
-        self.map.Reset()
         self.controller.reqResetMPU(action="MPU")
+        self.map.Reset()
+        self.map.UpdateDrawing()
 
     def onResetMPUIntReq(self, event):
         self.controller.reqResetMPU(action="MPU_INT") # reset integrator
@@ -182,6 +186,12 @@ class MyForm(wx.Frame):
             self.controller.stopScan()
         else :
             self.controller.startScan()
+
+    def onSimReq(self, event):
+        if self.controller.isSimulating() :
+            self.controller.stopSimulation()
+        else :
+            self.controller.startSimulation()
 
     def onDumpModel(self, event):
         self.LogString(str(self.model.dump()))
@@ -197,9 +207,12 @@ class MyForm(wx.Frame):
         self.statusbar.SetStatusText("%(YPR)s" % self.model, 1)
         if evt.reset==True :
             self.chart.Reset()
+            self.map.Reset()
+        else :
+            self.map.UpdateData()
         self.unitPan.UpdateData(self.model["T_ATT"], self.model["YPR"], self.model["V"])
         self.chart.UpdateData(self.model["T_ATT"], self.model["YPR"], self.model["V"])
-        self.map.UpdateData()
+
 
     def onUpdStatEvent(self, evt):
         self.statusbar.SetStatusText(str(self.model["FHS"]), 0)
