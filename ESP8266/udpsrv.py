@@ -80,11 +80,13 @@ while 1:
                 ry=0
                 vx=0
                 vy=0
+                rvx=0
+                rvy=0
                 init=False
             else :    
-                #yaw = yaw + gauss_lim(10, 10, 20) #tends to turn right
+                yaw = yaw + gauss_lim(0, 20, 20) #tends to turn right
                 yaw = yaw + gauss_lim(-10, 10, 20) #tends to turn left
-                #yaw = yaw + corr
+                yaw = yaw + corr
                 yaw=int(yaw)%360
                 if yaw>180 : yaw = yaw-360
                 dvy= yaw+gauss_lim(0, 2, 4)
@@ -104,19 +106,33 @@ while 1:
             for ray in rays:
                 intrs=map.getIntersection(0, 0, ray[0], ray[1])  
                 if intrs!=None :
-                    errx=gauss_lim(0, 10, 20)
-                    erry=gauss_lim(0, 10, 20)
-                    intrs=(intrs[0]-mapx+errx, intrs[1]-mapy+erry)
-                    dist=round(math.sqrt(intrs[0]*intrs[0]+intrs[1]*intrs[1]), 2)                    
+                    #errx=gauss_lim(0, 20, 40)
+                    #erry=gauss_lim(0, 20, 40)
+                    #intrs=(intrs[0]-mapx+errx, intrs[1]-mapy+erry)                    
+                    #dist=round(math.sqrt(intrs[0]*intrs[0]+intrs[1]*intrs[1]), 2)     
+                    intrs=(intrs[0]-mapx, intrs[1]-mapy)                                        
+                    dist=math.sqrt(intrs[0]*intrs[0]+intrs[1]*intrs[1])
+                    err=gauss_lim(0, dist/6, 50) 
+                    print ("DIST %s ERR %s" % (str(dist), str(err)))
+                    dist=dist+err
+                    if dist<0 : dist=0
+                    dist=round(dist, 2)
                 else :
                     dist=-1
                 intrsects.append(dist)                
             
             print(intrsects)
             
-            if intrsects[1]>=0 and intrsects[1]<50:
-                if intrsects[0]<intrsects[2] : corr=-20
-                else : corr=20
+            if not map.isInside : corr=180
+            elif intrsects[1]>=0 and intrsects[1]<100:
+                value=10
+                if intrsects[1]<20 : value=90
+                elif intrsects[1]<40 : value=45    
+                elif intrsects[1]<60 : value=30    
+                
+                if intrsects[0]<intrsects[2] : corr=value
+                else : corr=-value
+                print ("Correct with %s" % corr)
             else : corr=0
             
             js.update( {
@@ -124,7 +140,8 @@ while 1:
                 #"YPR":[0,20,0], 
                 #"A":[0.01, 0.02, -0.03], 
                 #"V":[random.random()-0.5, random.random()-0.5, -0.3],
-                "V":[round(vx,2), round(vy,2), 0.0],
+                #"V":[round(vx,2), round(vy,2), 0.0],
+                "V":[round(rvx,2), round(rvy,2), 0.0],
                 "CRD":[round(rx,2), round(ry,2), 0],
                 #"CRD":[(random.random()-0.5)*4, (random.random()-0.5)*5, 0],
                 #"S":[(random.random()-0.5)*3, (random.random()-0.5)*3, (random.random()-0.5)*3]
