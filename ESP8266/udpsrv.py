@@ -102,14 +102,10 @@ while 1:
             print mapx, mapy
             
             intrsects = []
-            rays=[(-350, 350), (0, 500), (350, 350)]
-            for ray in rays:
-                intrs=map.getIntersection(0, 0, ray[0], ray[1])  
+                
+            for a in map.scan_angles :
+                intrs=map.getIntersection(0, 0, math.sin(a)*map.scan_max_dist, rvy+math.cos(a)*map.scan_max_dist)  
                 if intrs!=None :
-                    #errx=gauss_lim(0, 20, 40)
-                    #erry=gauss_lim(0, 20, 40)
-                    #intrs=(intrs[0]-mapx+errx, intrs[1]-mapy+erry)                    
-                    #dist=round(math.sqrt(intrs[0]*intrs[0]+intrs[1]*intrs[1]), 2)     
                     intrs=(intrs[0]-mapx, intrs[1]-mapy)                                        
                     dist=math.sqrt(intrs[0]*intrs[0]+intrs[1]*intrs[1])
                     err=gauss_lim(0, dist/6, 50) 
@@ -122,15 +118,16 @@ while 1:
                 intrsects.append(dist)                
             
             print(intrsects)
-            
+            sr=len(intrsects)-1
+            sm=(len(intrsects)-1)/2
             if not map.isInside : corr=180
-            elif intrsects[1]>=0 and intrsects[1]<100:
+            elif intrsects[sm]>=0 and intrsects[sm]<100:
                 value=10
-                if intrsects[1]<20 : value=90
-                elif intrsects[1]<40 : value=45    
-                elif intrsects[1]<60 : value=30    
+                if intrsects[sm]<20 : value=90
+                elif intrsects[sm]<40 : value=45    
+                elif intrsects[sm]<60 : value=30    
                 
-                if intrsects[0]<intrsects[2] : corr=value
+                if intrsects[0]<intrsects[sr] : corr=value
                 else : corr=-value
                 print ("Correct with %s" % corr)
             else : corr=0

@@ -1,5 +1,7 @@
 #include <Wire.h>
 
+#define _SIMULATION_
+
 // MOTOR OUT
 
 #define M2_OUT_1  P1_4
@@ -21,6 +23,7 @@
 #define US_3_OUT   P2_7   // XTAL remove sel
 
 #define V_NORM 10000
+#define V_NORM_MAX 30000
 #define V_NORM_PI2 62832L
 
 #define  PID_TIMEOUT 100
@@ -47,11 +50,15 @@
 
 #define M_WUP_PID_CNT 3
 
-#define M_USS_N       3 // number of sensors 
+#define M_SENS_N       3 // number of sensors 
 
-#define REG_TARG_ROT_RATE_1  0x01  // signed int (2 bytes)
-#define REG_TARG_ROT_RATE_2  0x02  // signed int (2 bytes)
+//#define REG_TARG_ROT_RATE_1  0x01  // signed int (2 bytes)
+//#define REG_TARG_ROT_RATE_2  0x02  // signed int (2 bytes)
 #define REG_TARG_ROT_RATE    0x03  // 2 signed ints (4 bytes)
+#define REG_ACT_ROT_RATE     0x06  // 2 signed ints (4 bytes)
+#define REG_ACT_ADV_ACC      0x09  // 2 signed ints (4 bytes)
+#define REG_SENSORS_CNT      0x20  // 8 unsigned ints
+#define REG_SENSORS_ALL      0x28  // 8 unsigned ints
 
 #define CHGST_TO_MM(CNT)  ((int32_t)(CNT)*V_NORM_PI2*WHEEL_RAD_MM/WHEEL_CHGSTATES/V_NORM)
 #define CHGST_TO_ANG_NORM(CNT)  ((int32_t)(CNT)*V_NORM_PI2/WHEEL_CHGSTATES)
@@ -63,8 +70,8 @@ volatile uint8_t v_es[2]={0,0};
 
 uint8_t  drv_dir[2]={0,0}; // (0,1,2) - NO, FWD, REV
 uint16_t targ_rot_rate[2]={0,0}; // RPS, 10000 = 1 RPS  (use DRV_RPS_NORM)
-
-uint16_t act_rot_rate[2]={0,0}; // OUT - actual rate, 10000 = 1 RPS  (use DRV_RPS_NORM)
+int16_t targ_new_rot_rate[2]={0, 0}; // RPS, 10000 = 1 RPS  (use DRV_RPS_NORM), +/-
+int16_t act_rot_rate[2]={0,0}; // OUT - actual rate, 10000 = 1 RPS  (use DRV_RPS_NORM)
 int16_t act_adv_accu_mm[2]={0,0};  // OUT - in mm, after last request. Should be zeored after get request
 
 uint8_t enc_cnt[2]={0,0}; 
@@ -76,15 +83,15 @@ int16_t  prev_err[2]={0,0};
 uint8_t cur_power[2]={0,0};
 
 // 
-int16_t targ_new_rot_rate[2]={0, 0}; // RPS, 10000 = 1 RPS  (use DRV_RPS_NORM), +/-
-
 uint32_t lastEvTime, lastPidTime;
 uint8_t setEvent = 0, getEvent = 0, eventRegister = 0;
 uint8_t isDriving=0;
 
 uint8_t current_sens=0;
 
-uint8_t buffer[4];
+int16_t sens[M_SENS_N];
+
+uint8_t buffer[16];
 
 void setup()
 {
@@ -113,6 +120,11 @@ void setup()
   delay(1000);
   Serial.begin(9600);
   
+#ifdef   _SIMULATION_
+  delay(5000);
+  Serial.println("===SIMULATION===");
+#endif  
+
   Serial.println("Init Wire...");
     
   Wire.begin(4);                // join i2c bus with address #4
@@ -120,6 +132,7 @@ void setup()
   Wire.onRequest(requestEvent); // register event  
   
   analogFrequency(32); 
+  for(int i=0; i<M_SENS_N; i++) sens[i]=0;
   
   lastEvTime = lastPidTime = millis();  
 }
@@ -137,7 +150,7 @@ void loop()
       lastEvTime = cycleTime;
       if(isDriving) stopDrive();
     }    
-    readEnc();
+    readEnc(ctime);
     if (isDriving) doPID(ctime);    
     
     readUSDist(); 
@@ -180,9 +193,10 @@ void startDrive() {
       drv_dir[i]=2;
       targ_rot_rate[i]=(uint16_t)(-targ_new_rot_rate[i]);
     }
+    if(targ_rot_rate[i]>V_NORM_MAX) targ_rot_rate[i]=V_NORM_MAX;
     
     if(drv_dir[i]) {
-       cur_power[i]=map(targ_rot_rate[i], 0, 30000, 0, 255); // temp
+       cur_power[i]=map(targ_rot_rate[i], 0, V_NORM_MAX, 0, 255); // temp
      } else cur_power[i]=0;
      
     prev_err[i]=0;
@@ -191,9 +205,8 @@ void startDrive() {
     Serial.print(drv_dir[i]); Serial.print(", "); Serial.print(targ_rot_rate[i]); Serial.print(", "); Serial.print(cur_power[i]); Serial.print("\t : ");
   }
   Serial.println();
-  
-  
-  readEnc();
+   
+  readEnc(0);
   Drive(drv_dir[0], cur_power[0], drv_dir[1], cur_power[1]); 
   isDriving=true;
   pid_cnt=0;
@@ -205,10 +218,11 @@ void stopDrive() {
   Drive(0, 0, 0, 0);
   cur_power[0]=cur_power[1]=0;
   isDriving=0;
+  pid_cnt=0;
   Serial.println("Stop drive"); 
 }
 
-void readEnc()
+void readEnc(uint16_t ctime)
 {
   int16_t s[2];
   for(int i=0; i<2; i++) {
@@ -216,6 +230,18 @@ void readEnc()
     v_enc_cnt[i] = 0;
     if(drv_dir[i]==2) s[i]=-enc_cnt[i];
     else s[i]=enc_cnt[i];
+    if(ctime>0) {
+      act_rot_rate[i]=CHGST_TO_RPS_NORM(enc_cnt[i], ctime); 
+#ifdef _SIMULATION_
+      act_rot_rate[i] = (uint32_t)targ_rot_rate[i]*cur_power[i]/196;
+      act_rot_rate[i] += random(1000)/2;
+      int16_t cnt=(uint32_t)act_rot_rate[i]*ctime*WHEEL_CHGSTATES/1000/V_NORM;
+      if(drv_dir[i]==2) s[i]=-enc_cnt[i];
+      else s[i]=enc_cnt[i];    
+//      #error "NOT SUPPORTED"  
+#endif
+    }
+    else act_rot_rate[i]=0;
     act_adv_accu_mm[i]+=(int16_t)(CHGST_TO_MM(s[i]));
   }
 }
@@ -230,7 +256,7 @@ void doPID(uint16_t ctime)
     for(i=0; i<2; i++) {      
       int16_t p_err=0, d_err;
       Serial.print(i==0 ? " L: " : " R: ");
-      act_rot_rate[i]=CHGST_TO_RPS_NORM(enc_cnt[i], ctime); 
+      //act_rot_rate[i]=CHGST_TO_RPS_NORM(enc_cnt[i], ctime); 
       Serial.print(act_rot_rate[i]);
       if(pid_cnt>=M_WUP_PID_CNT) { // do not correct for the first cycles - ca 100-200ms(warmup)
         p_err = (targ_rot_rate[i]-act_rot_rate[i])/M_PID_NORM;
@@ -277,26 +303,25 @@ void Drive_s(uint8_t dir, uint8_t pow, int16_t p_en, uint8_t p1, uint8_t p2)
 
 
 void readUSDist() {
-  int ports[M_USS_N]={US_1_OUT, US_2_OUT, US_3_OUT};
+  int ports[M_SENS_N]={US_1_OUT, US_2_OUT, US_3_OUT};
   int out_port=ports[current_sens];
-  //int16_t tmp = us_dist;
   digitalWrite(out_port, LOW);
   delayMicroseconds(2);
   digitalWrite(out_port, HIGH);
   delayMicroseconds(10);
   digitalWrite(out_port, LOW);
-  int16_t d =(int16_t)(pulseIn(US_IN, HIGH, 25000)/58);  
-  /*
-  if(!us_dist) {
-    us_dist = tmp;
-    return;
+  int16_t tmp =(int16_t)(pulseIn(US_IN, HIGH, 25000)/58);  
+  
+  if(tmp) {
+    // do LPM filter here
+    sens[current_sens] = tmp;
+    //Serial.print("U."); Serial.print(current_sens); Serial.print("=");Serial.println(sens);
+  } else {
+#ifdef _SIMULATION_
+    sens[current_sens] = current_sens*100+random(50);
+#endif
   }
-*/
-  //Serial.print("U."); Serial.print(current_sens); Serial.print("=");Serial.println(d);
-  
-  // do LPM filter here
-  
-  current_sens=(current_sens+1)%M_USS_N;
+  current_sens=(current_sens+1)%M_SENS_N;
 }
 
 void encodeInterrupt_1() { baseInterrupt(0); }
@@ -315,11 +340,9 @@ void baseInterrupt(uint8_t i) {
 
 void receiveEvent(int howMany)
 {
-
   if(Wire.available()==0) return;
   eventRegister=Wire.read();
-  if(Wire.available()==0) return;
-  
+  if(Wire.available()==0) return; 
   switch(eventRegister) {
     case REG_TARG_ROT_RATE:
       readInt16(targ_new_rot_rate);
@@ -340,6 +363,19 @@ void requestEvent()
     case REG_TARG_ROT_RATE:
       writeInt16_2(targ_new_rot_rate);
       break;
+    case REG_ACT_ROT_RATE:
+      writeInt16_2(act_rot_rate);
+      break;      
+    case REG_ACT_ADV_ACC:
+      writeInt16_2(act_adv_accu_mm);
+      act_adv_accu_mm[0]=act_adv_accu_mm[1]=0;
+      break;            
+    case REG_SENSORS_CNT:  
+      Wire.write((uint8_t)M_SENS_N);
+      break;
+    case REG_SENSORS_ALL:  
+      writeInt16_N_M(M_SENS_N, 8, sens);
+      break;  
     default:;
   }
   getEvent=1;
@@ -366,3 +402,17 @@ void writeInt16_2(int16_t *reg) {
   buffer[3] = (uint8_t)((reg[1])&0xFF);  
   Wire.write(buffer, 4);
 }
+
+void writeInt16_N_M(uint16_t act, uint16_t tot, int16_t *reg) {
+  for(uint16_t i=0, j=0; i<tot; i++) {
+    if(i<act) {
+      buffer[j++] = (uint8_t)((reg[i])>>8);
+      buffer[j++] = (uint8_t)((reg[i])&0xFF);
+    } else {
+      buffer[j++]=0;
+      buffer[j++]=0;
+    }      
+  }
+  Wire.write(buffer, tot*2);
+}
+

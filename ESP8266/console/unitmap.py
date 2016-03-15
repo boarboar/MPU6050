@@ -32,9 +32,19 @@ class UnitMap:
         self.InitPos()
         self.particles=[]
         self.boundRect=[sys.maxint, sys.maxint, -sys.maxint, -sys.maxint] #bounding rect
-        c45=math.cos(math.pi/4)
-        self.scan_angles=[-45*math.pi/180.0, 0, 45*math.pi/180.0]
-        self.scan_rays=[(-c45, c45), (0, 1.0), (c45, c45)]
+        #c45=math.cos(math.pi/4)
+        #self.scan_angles=[-45*math.pi/180.0, 0, 45*math.pi/180.0]
+        #self.scan_rays=[(-c45, c45), (0, 1.0), (c45, c45)]
+        scan_a0=-45
+        scan_n=3
+        scan_d=(-scan_a0*2)/(scan_n-1)
+        self.scan_angles=[]
+        self.scan_rays=[]
+        for i in range(scan_n) :
+            a=(scan_a0+i*scan_d)*math.pi/180.0
+            self.scan_angles.append(a)
+            self.scan_rays.append((math.sin(a),math.cos(a)))
+
         self.scan_max_dist=400
         self.sense_noise=20
         self.fwd_noise=5
@@ -198,18 +208,7 @@ class UnitMap:
         p0=(p.x, p.y)
         for a in self.scan_angles :
             p1=(p.x+math.sin(p.a+a)*self.scan_max_dist, p.y+math.cos(p.a+a)*self.scan_max_dist)
-            dist2=0
-            intrs=None
-            for area in self.map["AREAS"] :
-                for wall in area["WALLS"] :
-                    p2=([wall["C"][0], wall["C"][1]])
-                    p3=([wall["C"][2], wall["C"][3]])
-                    isect=self.find_intersection(p0, p1, p2, p3)
-                    if isect!=None :
-                        d2 = (isect[0]-p0[0])*(isect[0]-p0[0])+(isect[1]-p0[1])*(isect[1]-p0[1])
-                        if intrs==None or d2<dist2 :
-                            intrs=isect
-                            dist2=d2
+            intrs = self.getIntersectionMap(p0, p1)
             intersects.append(intrs)
         return intersects
 
@@ -221,20 +220,10 @@ class UnitMap:
         for i in range(len(self.scan_angles)) :
             a=self.scan_angles[i]
             p1=(p.x+math.sin(p.a+a)*self.scan_max_dist, p.y+math.cos(p.a+a)*self.scan_max_dist)
-            dist2=0
-            intrs=None
-            for area in self.map["AREAS"] :
-                for wall in area["WALLS"] :
-                    p2=([wall["C"][0], wall["C"][1]])
-                    p3=([wall["C"][2], wall["C"][3]])
-                    isect=self.find_intersection(p0, p1, p2, p3)
-                    if isect!=None :
-                        d2 = (isect[0]-p0[0])*(isect[0]-p0[0])+(isect[1]-p0[1])*(isect[1]-p0[1])
-                        if intrs==None or d2<dist2 :
-                            intrs=isect
-                            dist2=d2
+            intrs = self.getIntersectionMap(p0, p1)
             if intrs==None : dist2 = -1
-            else : dist2=math.sqrt(dist2)
+            else :
+                dist2=math.sqrt((intrs[0]-p0[0])*(intrs[0]-p0[0])+(intrs[1]-p0[1])*(intrs[1]-p0[1]))
             scan_dist.append(dist2)
             prob*=self.Gaussian(dist2, self.sense_noise, meas[i])
         p.w=prob
@@ -244,24 +233,46 @@ class UnitMap:
         # ray is (0.0)->(x,y) line
         # assume that we are inside
         # get a closest one to starting pt
-        #intrs = []
-        intrs = None
-        dist2=0
         p0=self.UnitToMap(x0, y0)
         p1=self.UnitToMap(x1, y1)
+        return self.getIntersectionMap(p0, p1)
 
+    def getIntersectionMap(self, p0, p1):
+        # line p0->p1 in absolute map coords (world)
+        intrs = None
+        dist2=0
         for area in self.map["AREAS"] :
             for wall in area["WALLS"] :
+                isect=None
+                opened=0
                 p2=([wall["C"][0], wall["C"][1]])
                 p3=([wall["C"][2], wall["C"][3]])
-                isect=self.find_intersection(p0, p1, p2, p3)
+                try:
+                    opened=wall["S"]
+                except KeyError : pass
+                if opened==0 or (opened==2 and random.random()>0.5):
+                    isect=self.find_intersection(p0, p1, p2, p3)
                 if isect!=None :
                     d2 = (isect[0]-p0[0])*(isect[0]-p0[0])+(isect[1]-p0[1])*(isect[1]-p0[1])
                     if intrs==None or d2<dist2 :
                         intrs=isect
                         dist2=d2
-        #print (intrs)
+            try:
+                for obj in area["OBJECTS"] :
+                    if len(obj["CS"])<2 : continue
+                    op0=obj["CS"][-1]["C"]
+                    for c in obj["CS"] :
+                        op=c["C"]
+                        isect=self.find_intersection(p0, p1, (op0[0], op0[1]), (op[0], op[1]))
+                        if isect!=None :
+                            d2 = (isect[0]-p0[0])*(isect[0]-p0[0])+(isect[1]-p0[1])*(isect[1]-p0[1])
+                            if intrs==None or d2<dist2 :
+                                intrs=isect
+                                dist2=d2
+                        op0=op
+            except KeyError : pass
         return intrs
+
 
     def intersectHor(self, y, line):
         x0, y0, x1, y1 = line

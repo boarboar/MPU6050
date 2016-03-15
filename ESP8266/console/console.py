@@ -78,6 +78,7 @@ class MyForm(wx.Frame):
         self.config=config.Config(self, self.model)
         self.controller=controller.Controller(self, self.model)
         self.LogString("Local address is %s" % socket.gethostbyname(socket.gethostname()))
+        self.map.Reset() # init particles filter
 
     def layout(self, panel):
         # Add widgets to a sizer

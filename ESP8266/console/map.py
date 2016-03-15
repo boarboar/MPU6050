@@ -20,15 +20,13 @@ class MapPanel(wx.Window, UnitMap):
         self.__map=[]
         self.__x0, self.__y0 = (0, 0) # canvas center
         self.__scale=1
-        #self.__inside=False
-        #self.__scans=[-1,-1,-1]
         self.__shape=[wx.Point(-self.UNIT_WIDTH/2, -self.UNIT_HEIGHT/2),
                     wx.Point(-self.UNIT_WIDTH/2, self.UNIT_HEIGHT/2),
                     wx.Point(0, self.UNIT_HEIGHT*3/5),
                     wx.Point(self.UNIT_WIDTH/2, self.UNIT_HEIGHT/2),
                     wx.Point(self.UNIT_WIDTH/2, -self.UNIT_HEIGHT/2),
                     ]
-        self.InitParticles()
+        #self.InitParticles()
         self.OnSize(None)
 
     def OnSize(self,event):
@@ -49,51 +47,84 @@ class MapPanel(wx.Window, UnitMap):
 
     def Draw(self, dc):
         dc.Clear()
-        wall_pen=wx.Pen(wx.BLACK, 4)
-        door_pen=wx.Pen("GRAY", 4)
-        dc.SetBackgroundMode(wx.TRANSPARENT)
-        dc.SetBrush(wx.TRANSPARENT_BRUSH)
+        self.DrawAreas(dc)
+        self.DrawParticles(dc)
+        self.DrawRobot(dc)
+
+
+    def DrawAreas(self, dc):
         dc.SetTextForeground(wx.BLACK)
         dc.SetTextBackground(wx.WHITE)
-        ray_pen=wx.Pen(wx.BLACK, 1, wx.PENSTYLE_LONG_DASH)
-        p_ray_pen=wx.Pen("GRAY", 1, wx.PENSTYLE_SHORT_DASH)
+        dc.SetBackgroundMode(wx.SOLID)
+        dc.SetBrush(wx.Brush("GRAY"))
 
-        #draw map
+        wall_pen=wx.Pen(wx.BLACK, 4)
+        obj_pen=wx.Pen(wx.BLACK, 2)
+        door_pen_open=wx.Pen("GREEN", 4)
+        door_pen_closed=wx.Pen("RED", 4)
+        door_pen_undef=wx.Pen("YELLOW", 4)
 
         try:
             for area in self.map["AREAS"] :
+                #dc.SetBackgroundMode(wx.TRANSPARENT)
+                #dc.SetBrush(wx.TRANSPARENT_BRUSH)
                 for wall in area["WALLS"] :
-                    if wall["T"]=="W" :
-                        dc.SetPen(wall_pen)
-                    else :
-                        dc.SetPen(door_pen)
+                    pen=wall_pen
+                    if wall["T"]=="D" : # DOOR
+                        status=0 #closed
+                        try:
+                            status=wall["S"]
+                        except KeyError : pass
+                        if status==0 : pen=door_pen_closed
+                        elif status==1 : pen=door_pen_open
+                        else : pen=door_pen_undef
+                    dc.SetPen(pen)
                     dc.DrawLinePoint(self.tc(wall["C"][0],wall["C"][1]),self.tc(wall["C"][2],wall["C"][3]))
-            zero = self.tc(self.xu0, self.yu0)
-            dc.SetPen(wx.Pen(wx.BLACK, 1))
-            dc.DrawLine(zero.x-10, zero.y, zero.x+10, zero.y)
-            dc.DrawLine(zero.x, zero.y-10, zero.x, zero.y+10)
-            zero = self.tc(0, 0)
-            dc.DrawTextPoint("(0,0)", zero)
+                # optional - objects
+                try :
+                    for obj in area["OBJECTS"] :
+                        dc.SetPen(obj_pen)
+                        #p0=None
+                        pts=[]
+                        for c in obj["CS"] :
+                            p = c["C"]
+                            pts.append(self.tc(p[0],p[1]))
+                        #    if p0!=None :
+                        #        dc.DrawLinePoint(self.tc(p0[0],p0[1]),self.tc(p[0],p[1]))
+                        #    p0=p
+
+                        dc.DrawPolygon(pts)
+
+                except KeyError : pass
+                except IndexError : pass
         except KeyError : pass
         except IndexError : pass
 
-        #draw particles
+        dc.SetBackgroundMode(wx.TRANSPARENT)
+        dc.SetBrush(wx.TRANSPARENT_BRUSH)
 
-        c_pen=wx.Pen(wx.RED, 1)
-        c_pen_0=wx.Pen("GRAY", 1)
-        a_pen=wx.Pen(wx.BLACK, 2)
+        zero = self.tc(self.xu0, self.yu0)
+        dc.SetPen(wx.Pen(wx.BLACK, 1))
+        dc.DrawLine(zero.x-10, zero.y, zero.x+10, zero.y)
+        dc.DrawLine(zero.x, zero.y-10, zero.x, zero.y+10)
+        zero = self.tc(0, 0)
+        dc.DrawTextPoint("(0,0)", zero)
+
+    def DrawParticles(self, dc):
         dc.SetBackgroundMode(wx.SOLID)
         dc.SetBrush(wx.RED_BRUSH)
 
+        c_pen=wx.Pen(wx.RED, 1)
+        c_pen_0=wx.Pen("GRAY", 1)
+        p_ray_pen=wx.Pen("GRAY", 1, wx.PENSTYLE_SHORT_DASH)
+
         for p in self.particles :
             rad=1+math.log10(1+p.w*10)*8
-            #rad=5
             c=self.tc(p.x,p.y)
             if rad>1 : dc.SetPen(c_pen)
             else : dc.SetPen(c_pen_0)
             dc.DrawCirclePoint(c, rad)
             ca=wx.Point(c.x+10*math.sin(p.a), c.y-10*math.cos(p.a))
-            #dc.SetPen(a_pen)
             dc.DrawLinePoint(c, ca)
             continue
             # this staff below is for test purposes, skip it
@@ -109,17 +140,19 @@ class MapPanel(wx.Window, UnitMap):
                     c=self.tc(i[0], i[1])
                     dc.DrawCirclePoint(c, 5)
 
-
+        # draw estimation and variance
         dc.SetBackgroundMode(wx.TRANSPARENT)
         dc.SetBrush(wx.TRANSPARENT_BRUSH)
-
-        # draw estimation and robot
-
+        #ray_pen=wx.Pen(wx.BLACK, 1, wx.PENSTYLE_LONG_DASH)
         mx, my, var = self.getMeanDistribution()
         c=self.tc(mx,my)
-        dc.SetPen(wx.Pen(wx.BLACK, 1))
+        dc.SetPen(wx.Pen(wx.BLACK, 2))
         dc.DrawCirclePoint(c, var*self.__scale)
 
+    def DrawRobot(self, dc):
+        dc.SetBackgroundMode(wx.TRANSPARENT)
+        dc.SetBrush(wx.TRANSPARENT_BRUSH)
+        ray_pen=wx.Pen(wx.BLACK, 1, wx.PENSTYLE_LONG_DASH)
         if self.isInside :
             dc.SetPen(wx.Pen(wx.BLUE, 2))
         else :
@@ -139,6 +172,7 @@ class MapPanel(wx.Window, UnitMap):
                     dc.SetPen(inters_pen)
                     intrs = self.tpu(wx.Point(ray[0]*idist, ray[1]*idist))
                     dc.DrawCirclePoint(intrs, 10)
+
 
     def UpdateDrawing(self) :
         dc = wx.MemoryDC()
