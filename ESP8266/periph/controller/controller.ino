@@ -233,11 +233,13 @@ void readEnc(uint16_t ctime)
     if(ctime>0) {
       act_rot_rate[i]=CHGST_TO_RPS_NORM(enc_cnt[i], ctime); 
 #ifdef _SIMULATION_
-      act_rot_rate[i] = (uint32_t)targ_rot_rate[i]*cur_power[i]/196;
-      act_rot_rate[i] += random(1000)/2;
-      int16_t cnt=(uint32_t)act_rot_rate[i]*ctime*WHEEL_CHGSTATES/1000/V_NORM;
-      if(drv_dir[i]==2) s[i]=-enc_cnt[i];
-      else s[i]=enc_cnt[i];    
+      //act_rot_rate[i] = (uint32_t)targ_rot_rate[i]*cur_power[i]/196;
+      //act_rot_rate[i] += random(1000)/2;
+      //int16_t cnt=(uint32_t)act_rot_rate[i]*ctime*WHEEL_CHGSTATES/1000/V_NORM;
+      //if(drv_dir[i]==2) s[i]=-enc_cnt[i];
+      //else s[i]=enc_cnt[i];
+      act_rot_rate[i]=(2*i-1)*100;
+      act_adv_accu_mm[i]=(2*i-1)*10;
 //      #error "NOT SUPPORTED"  
 #endif
     }
