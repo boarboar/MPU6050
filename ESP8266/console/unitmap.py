@@ -32,9 +32,6 @@ class UnitMap:
         self.InitPos()
         self.particles=[]
         self.boundRect=[sys.maxint, sys.maxint, -sys.maxint, -sys.maxint] #bounding rect
-        #c45=math.cos(math.pi/4)
-        #self.scan_angles=[-45*math.pi/180.0, 0, 45*math.pi/180.0]
-        #self.scan_rays=[(-c45, c45), (0, 1.0), (c45, c45)]
         scan_a0=-45
         scan_n=3
         scan_d=(-scan_a0*2)/(scan_n-1)
@@ -54,9 +51,10 @@ class UnitMap:
                 self.map = json.load(data_file)
             #pprint(__map)
             for area in self.map["AREAS"] :
+                parea0=area["AT"]
                 for wall in area["WALLS"] :
-                    self.adjustBound(wall["C"][0], wall["C"][1])
-                    self.adjustBound(wall["C"][2], wall["C"][3])
+                    self.adjustBound(parea0[0]+wall["C"][0], parea0[1]+wall["C"][1])
+                    self.adjustBound(parea0[0]+wall["C"][2], parea0[1]+wall["C"][3])
             self.xu0, self.yu0=self.map["START"]
             print("Map loaded")
             print(self.boundRect)
@@ -95,8 +93,6 @@ class UnitMap:
             self.__r_move=(0.0, 0.0)
             self.__a_rot=0.0
             move_dist=0
-            # TODO - distribute
-            # particles here
         else :
             self.__r_move=(x-self.__r_x, y-self.__r_y)
             self.__a_rot=angle-self.__angle
@@ -130,11 +126,12 @@ class UnitMap:
         if y>self.boundRect[3] : self.boundRect[3]=y
 
     def isInsideTest(self, x, y):
-        #x, y=(x+self.xu0, y+self.yu0)
         for area in self.map["AREAS"] :
             left, right = (0, 0)
             for wall in area["WALLS"] :
-                isect=self.intersectHor(y, wall["C"])
+                parea0=area["AT"]
+                isect=self.intersectHor(y, parea0[0]+wall["C"][0], parea0[1]+wall["C"][1],
+                                        parea0[0]+wall["C"][2], parea0[1]+wall["C"][3])
                 if isect!=None :
                     if isect<x : left=left+1
                     else : right=right+1
@@ -216,7 +213,6 @@ class UnitMap:
         scan_dist=[]
         prob = 1.0;
         p0=(p.x, p.y)
-        #for a in self.scan_angles :
         for i in range(len(self.scan_angles)) :
             a=self.scan_angles[i]
             p1=(p.x+math.sin(p.a+a)*self.scan_max_dist, p.y+math.cos(p.a+a)*self.scan_max_dist)
@@ -242,11 +238,12 @@ class UnitMap:
         intrs = None
         dist2=0
         for area in self.map["AREAS"] :
+            parea0=area["AT"]
             for wall in area["WALLS"] :
                 isect=None
                 opened=0
-                p2=([wall["C"][0], wall["C"][1]])
-                p3=([wall["C"][2], wall["C"][3]])
+                p2=(parea0[0]+wall["C"][0], parea0[1]+wall["C"][1])
+                p3=(parea0[0]+wall["C"][2], parea0[1]+wall["C"][3])
                 try:
                     opened=wall["S"]
                 except KeyError : pass
@@ -260,10 +257,11 @@ class UnitMap:
             try:
                 for obj in area["OBJECTS"] :
                     if len(obj["CS"])<2 : continue
+                    pobj0=(parea0[0]+obj["AT"][0], parea0[1]+obj["AT"][1])
                     op0=obj["CS"][-1]["C"]
                     for c in obj["CS"] :
                         op=c["C"]
-                        isect=self.find_intersection(p0, p1, (op0[0], op0[1]), (op[0], op[1]))
+                        isect=self.find_intersection(p0, p1, (pobj0[0]+op0[0], pobj0[1]+op0[1]), (pobj0[0]+op[0], pobj0[1]+op[1]))
                         if isect!=None :
                             d2 = (isect[0]-p0[0])*(isect[0]-p0[0])+(isect[1]-p0[1])*(isect[1]-p0[1])
                             if intrs==None or d2<dist2 :
@@ -274,8 +272,7 @@ class UnitMap:
         return intrs
 
 
-    def intersectHor(self, y, line):
-        x0, y0, x1, y1 = line
+    def intersectHor(self, y, x0, y0, x1, y1):
         if y0==y1 : #with hor line
             if y!=y0 : return None # no intersect
             else : return None # SPECIAL CASE :: OM LINE (TODO)

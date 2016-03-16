@@ -1,6 +1,8 @@
 #include <Wire.h>
 
-#define _SIMULATION_
+#define _SIMULATION_ 1
+
+#define M_OWN_ID 0x53
 
 // MOTOR OUT
 
@@ -52,12 +54,11 @@
 
 #define M_SENS_N       3 // number of sensors 
 
-//#define REG_TARG_ROT_RATE_1  0x01  // signed int (2 bytes)
-//#define REG_TARG_ROT_RATE_2  0x02  // signed int (2 bytes)
+#define REG_WHO_AM_I         0xFF  // 1 unsigned byte
 #define REG_TARG_ROT_RATE    0x03  // 2 signed ints (4 bytes)
 #define REG_ACT_ROT_RATE     0x06  // 2 signed ints (4 bytes)
 #define REG_ACT_ADV_ACC      0x09  // 2 signed ints (4 bytes)
-#define REG_SENSORS_CNT      0x20  // 8 unsigned ints
+#define REG_SENSORS_CNT      0x20  // 1 unsigned byte
 #define REG_SENSORS_ALL      0x28  // 8 unsigned ints
 
 #define CHGST_TO_MM(CNT)  ((int32_t)(CNT)*V_NORM_PI2*WHEEL_RAD_MM/WHEEL_CHGSTATES/V_NORM)
@@ -233,14 +234,20 @@ void readEnc(uint16_t ctime)
     if(ctime>0) {
       act_rot_rate[i]=CHGST_TO_RPS_NORM(enc_cnt[i], ctime); 
 #ifdef _SIMULATION_
-      //act_rot_rate[i] = (uint32_t)targ_rot_rate[i]*cur_power[i]/196;
-      //act_rot_rate[i] += random(1000)/2;
-      //int16_t cnt=(uint32_t)act_rot_rate[i]*ctime*WHEEL_CHGSTATES/1000/V_NORM;
-      //if(drv_dir[i]==2) s[i]=-enc_cnt[i];
-      //else s[i]=enc_cnt[i];
+#if _SIMULATION_ == 0
+      // test interface
       act_rot_rate[i]=(2*i-1)*100;
       act_adv_accu_mm[i]=(2*i-1)*10;
-//      #error "NOT SUPPORTED"  
+#else      
+      //#error "NOT SUPPORTED"  
+      act_rot_rate[i] = (uint32_t)targ_rot_rate[i]*cur_power[i]/196;
+      act_rot_rate[i] += random(1000)/2;
+      if(act_rot_rate[i]<0) act_rot_rate[i]=0;
+      int16_t cnt=(uint32_t)act_rot_rate[i]*ctime*WHEEL_CHGSTATES/1000/V_NORM;
+      if(drv_dir[i]==2) s[i]=-cnt;
+      else s[i]=cnt;
+      Serial.print("SIM_");Serial.print(i);Serial.print(" \t");Serial.print(act_rot_rate[i]); Serial.println(" \t");Serial.print(s[i]);     
+#endif      
 #endif
     }
     else act_rot_rate[i]=0;
@@ -312,12 +319,17 @@ void readUSDist() {
   digitalWrite(out_port, HIGH);
   delayMicroseconds(10);
   digitalWrite(out_port, LOW);
+  
   int16_t tmp =(int16_t)(pulseIn(US_IN, HIGH, 25000)/58);  
   
   if(tmp) {
-    // do LPM filter here
-    sens[current_sens] = tmp;
-    //Serial.print("U."); Serial.print(current_sens); Serial.print("=");Serial.println(sens);
+    
+    if(sens[current_sens]==0) sens[current_sens] = tmp;
+    else {
+      // do LPM filter here ?
+       sens[current_sens] = (sens[current_sens]*2 - (sens[current_sens] - tmp))/2;
+    }
+    //Serial.print("U."); Serial.print(current_sens); Serial.print("=");Serial.print(sens[current_sens]);Serial.print(" \tRAW="); Serial.println(tmp);
   } else {
 #ifdef _SIMULATION_
     sens[current_sens] = current_sens*100+random(50);
@@ -362,6 +374,9 @@ void requestEvent()
   if(!eventRegister) return;
   
   switch(eventRegister) {
+    case REG_WHO_AM_I:  
+      Wire.write((uint8_t)M_OWN_ID);
+      break;
     case REG_TARG_ROT_RATE:
       writeInt16_2(targ_new_rot_rate);
       break;

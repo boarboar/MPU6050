@@ -56,8 +56,10 @@ class MapPanel(wx.Window, UnitMap):
         dc.SetTextForeground(wx.BLACK)
         dc.SetTextBackground(wx.WHITE)
         dc.SetBackgroundMode(wx.SOLID)
-        dc.SetBrush(wx.Brush("GRAY"))
+        #dc.SetBrush(wx.Brush("GREY"))
 
+        obj_brush_hi_dens=wx.Brush("GREY")
+        obj_brush_lo_dens=wx.Brush("LIGHT GREY")
         wall_pen=wx.Pen(wx.BLACK, 4)
         obj_pen=wx.Pen(wx.BLACK, 2)
         door_pen_open=wx.Pen("GREEN", 4)
@@ -66,8 +68,7 @@ class MapPanel(wx.Window, UnitMap):
 
         try:
             for area in self.map["AREAS"] :
-                #dc.SetBackgroundMode(wx.TRANSPARENT)
-                #dc.SetBrush(wx.TRANSPARENT_BRUSH)
+                parea0=area["AT"]
                 for wall in area["WALLS"] :
                     pen=wall_pen
                     if wall["T"]=="D" : # DOOR
@@ -79,20 +80,22 @@ class MapPanel(wx.Window, UnitMap):
                         elif status==1 : pen=door_pen_open
                         else : pen=door_pen_undef
                     dc.SetPen(pen)
-                    dc.DrawLinePoint(self.tc(wall["C"][0],wall["C"][1]),self.tc(wall["C"][2],wall["C"][3]))
+                    dc.DrawLinePoint(self.tc(parea0[0]+wall["C"][0],parea0[1]+wall["C"][1]),
+                                     self.tc(parea0[0]+wall["C"][2],parea0[1]+wall["C"][3]))
                 # optional - objects
                 try :
                     for obj in area["OBJECTS"] :
+                        brush=obj_brush_hi_dens
+                        if obj["DENSITY"] <= 0.5 : brush=obj_brush_lo_dens
+                        dc.SetBrush(brush)
                         dc.SetPen(obj_pen)
-                        #p0=None
+                        pobj0=(parea0[0]+obj["AT"][0],
+                               parea0[1]+obj["AT"][1])
                         pts=[]
                         for c in obj["CS"] :
                             p = c["C"]
-                            pts.append(self.tc(p[0],p[1]))
-                        #    if p0!=None :
-                        #        dc.DrawLinePoint(self.tc(p0[0],p0[1]),self.tc(p[0],p[1]))
-                        #    p0=p
-
+                            pts.append(self.tc(pobj0[0]+p[0],
+                                               pobj0[1]+p[1]))
                         dc.DrawPolygon(pts)
 
                 except KeyError : pass
