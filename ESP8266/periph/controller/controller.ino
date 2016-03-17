@@ -1,6 +1,7 @@
 #include <Wire.h>
 
 #define _SIMULATION_ 1
+#define _PID_DEBUG_ 
 
 #define M_OWN_ID 0x53
 
@@ -53,6 +54,7 @@
 #define M_WUP_PID_CNT 3
 
 #define M_SENS_N       3 // number of sensors 
+#define M_SENS_CYCLE   3 // number of sensors to read at cycle
 
 #define REG_WHO_AM_I         0xFF  // 1 unsigned byte
 #define REG_TARG_ROT_RATE    0x03  // 2 signed ints (4 bytes)
@@ -65,16 +67,15 @@
 #define CHGST_TO_ANG_NORM(CNT)  ((int32_t)(CNT)*V_NORM_PI2/WHEEL_CHGSTATES)
 #define CHGST_TO_RPS_NORM(CNT, MSEC)  ((int32_t)(CNT)*V_NORM*1000/WHEEL_CHGSTATES/(MSEC))
 
-// volatile encoder section
-volatile uint8_t v_enc_cnt[2]={0,0}; 
-volatile uint8_t v_es[2]={0,0};
+uint32_t lastEvTime, lastPidTime;
+int16_t sens[M_SENS_N];
 
-uint8_t  drv_dir[2]={0,0}; // (0,1,2) - NO, FWD, REV
 uint16_t targ_rot_rate[2]={0,0}; // RPS, 10000 = 1 RPS  (use DRV_RPS_NORM)
 int16_t targ_new_rot_rate[2]={0, 0}; // RPS, 10000 = 1 RPS  (use DRV_RPS_NORM), +/-
 int16_t act_rot_rate[2]={0,0}; // OUT - actual rate, 10000 = 1 RPS  (use DRV_RPS_NORM)
 int16_t act_adv_accu_mm[2]={0,0};  // OUT - in mm, after last request. Should be zeored after get request
 
+uint8_t  drv_dir[2]={0,0}; // (0,1,2) - NO, FWD, REV
 uint8_t enc_cnt[2]={0,0}; 
 
 // PID section
@@ -84,15 +85,16 @@ int16_t  prev_err[2]={0,0};
 uint8_t cur_power[2]={0,0};
 
 // 
-uint32_t lastEvTime, lastPidTime;
 uint8_t setEvent = 0, getEvent = 0, eventRegister = 0;
 uint8_t isDriving=0;
 
 uint8_t current_sens=0;
 
-int16_t sens[M_SENS_N];
-
 uint8_t buffer[16];
+
+// volatile encoder section
+volatile uint8_t v_enc_cnt[2]={0,0}; 
+volatile uint8_t v_es[2]={0,0};
 
 void setup()
 {
@@ -152,10 +154,8 @@ void loop()
       if(isDriving) stopDrive();
     }    
     readEnc(ctime);
-    if (isDriving) doPID(ctime);    
-    
+    if (isDriving) doPID(ctime);       
     readUSDist(); 
-    
     lastPidTime=cycleTime;
   } // PID cycle 
           
@@ -167,7 +167,10 @@ void loop()
       Serial.print(targ_new_rot_rate[0]);
       Serial.print(", ");
       Serial.println(targ_new_rot_rate[1]);
-      startDrive();    
+      if(targ_new_rot_rate[0] || targ_new_rot_rate[1])
+        startDrive();    
+      else   
+        stopDrive();    
     }
     Serial.println();
     setEvent=0;
@@ -258,34 +261,37 @@ void readEnc(uint16_t ctime)
 void doPID(uint16_t ctime)
 {
   if(ctime>0) {
-    int i;
-    
+    int i;  
     Serial.print(pid_cnt); Serial.print(" "); Serial.print(ctime);
-    
     for(i=0; i<2; i++) {      
       int16_t p_err=0, d_err;
+#ifdef _PID_DEBUG_
       Serial.print(i==0 ? " L: " : " R: ");
       //act_rot_rate[i]=CHGST_TO_RPS_NORM(enc_cnt[i], ctime); 
       Serial.print(act_rot_rate[i]);
+#endif      
       if(pid_cnt>=M_WUP_PID_CNT) { // do not correct for the first cycles - ca 100-200ms(warmup)
         p_err = (targ_rot_rate[i]-act_rot_rate[i])/M_PID_NORM;
         d_err = p_err-prev_err[i];
         int_err[i]=int_err[i]+p_err;
-        Serial.print(" , "); Serial.print(p_err);
-        Serial.print(" , "); Serial.print(d_err);
-        Serial.print(" , "); Serial.print(int_err[i]);
         int16_t pow=cur_power[i]+((int16_t)p_err*M_PID_KP+(int16_t)int_err[i]*M_PID_KI+(int16_t)d_err*M_PID_KD)/M_PID_DIV;
         if(pow<0) pow=0;
         if(pow>M_POW_MAX) pow=M_POW_MAX;
         if(cur_power[i]!=pow) analogWrite(i==0 ? M1_EN : M2_EN , pow); 
         cur_power[i]=pow;
-        
+#ifdef _PID_DEBUG_        
+        Serial.print(" , "); Serial.print(p_err);
+        Serial.print(" , "); Serial.print(d_err);
+        Serial.print(" , "); Serial.print(int_err[i]);        
         Serial.print(" > "); Serial.print(pow);
+#endif        
       }
       prev_err[i]=p_err;
     } 
     pid_cnt++;
+#ifdef _PID_DEBUG_            
     Serial.println();
+#endif    
   }
 }
 
@@ -312,6 +318,8 @@ void Drive_s(uint8_t dir, uint8_t pow, int16_t p_en, uint8_t p1, uint8_t p2)
 
 
 void readUSDist() {
+  for(uint8_t i=0; i<M_SENS_CYCLE; i++) {
+    
   int ports[M_SENS_N]={US_1_OUT, US_2_OUT, US_3_OUT};
   int out_port=ports[current_sens];
   digitalWrite(out_port, LOW);
@@ -326,8 +334,9 @@ void readUSDist() {
     
     if(sens[current_sens]==0) sens[current_sens] = tmp;
     else {
-      // do LPM filter here ?
-       sens[current_sens] = (sens[current_sens]*2 - (sens[current_sens] - tmp))/2;
+       // do LPM filter here ?
+       //sens[current_sens] = (sens[current_sens]*2 - (sens[current_sens] - tmp))/2;
+       sens[current_sens] = tmp;
     }
     //Serial.print("U."); Serial.print(current_sens); Serial.print("=");Serial.print(sens[current_sens]);Serial.print(" \tRAW="); Serial.println(tmp);
   } else {
@@ -336,6 +345,8 @@ void readUSDist() {
 #endif
   }
   current_sens=(current_sens+1)%M_SENS_N;
+  
+  }
 }
 
 void encodeInterrupt_1() { baseInterrupt(0); }

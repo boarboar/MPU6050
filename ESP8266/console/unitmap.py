@@ -147,11 +147,8 @@ class UnitMap:
             if self.isInsideTest(p.x, p.y) :
                 self.updateParticleProbabilities(p, scans)
             else : p.w=0.0
-
         #print self.particles
-
         mw=max(p.w for p in self.particles)
-
 #        if self.__move < 5 or self.__move%5==0 :
         if True :
             #resmple
@@ -189,7 +186,7 @@ class UnitMap:
             ey=p.y-y
             var += (ex*ex+ey*ey)*p.w
         var= math.sqrt(var)
-        print("Variance %s" % str(round(var,2)))
+        #print("Variance %s" % str(round(var,2)))
         return (x, y, var)
 
     def getParticleRays(self, p): #just for visual debugging
@@ -258,6 +255,21 @@ class UnitMap:
                 for obj in area["OBJECTS"] :
                     if len(obj["CS"])<2 : continue
                     pobj0=(parea0[0]+obj["AT"][0], parea0[1]+obj["AT"][1])
+                    #test insideness, and skip object if inside!
+                    left, right = (0, 0)
+                    op0=obj["CS"][-1]["C"]
+                    for c in obj["CS"] :
+                        op=c["C"]
+                        isect=self.intersectHor(p0[1], parea0[0]+wall["C"][0], parea0[1]+wall["C"][1],
+                                        parea0[0]+wall["C"][2], parea0[1]+wall["C"][3])
+                        if isect!=None :
+                            if isect<p0[0] : left=left+1
+                            else : right=right+1
+                    if left%2==1 and right%2==1 :
+                        #if inside - skip intersecting
+                        print ("Hmm...somehow got inside the object...")
+                        continue
+
                     op0=obj["CS"][-1]["C"]
                     for c in obj["CS"] :
                         op=c["C"]
@@ -302,6 +314,11 @@ class UnitMap:
         # collision detected
         t = t_numer / denom
         intersection_point = ( int(p0[0] + (t * s10_x)), int(p0[1] + (t * s10_y)) )
+        #note: sin(angle) = denom/(|s10|*|s32|)
+        #where angle is a falling angle, 90 is perpendicular
+        #or we can use (sin(angle))^2 = denom^2/(|s10|^2*|s32|^2) to avoid sqrt
+        #we basically need to compare denom^2 and (|s10|^2*|s32|^2)
+        # this can be used for reflection modelling, after field tests
         return intersection_point
 
     def Gaussian(self, mu, sigma, x):

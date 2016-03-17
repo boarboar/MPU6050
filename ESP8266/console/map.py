@@ -16,10 +16,17 @@ class MapPanel(wx.Window, UnitMap):
         UnitMap.__init__(self, mapfile)
         self.Bind(wx.EVT_PAINT, self.OnPaint)
         self.Bind(wx.EVT_SIZE, self.OnSize)
+        self.Bind(wx.EVT_MOUSEWHEEL, self.OnMouseWheel)
+        self.Bind(wx.EVT_LEFT_UP, self.OnMouseLeftUp)
+        self.Bind(wx.EVT_LEFT_DOWN, self.OnMouseLeftDown)
+        self.Bind(wx.EVT_MOTION, self.OnMouseMotion)
         self.__model=model
         self.__map=[]
         self.__x0, self.__y0 = (0, 0) # canvas center
         self.__scale=1
+        self.__drag=False
+        self.__drag_prev=(0,0)
+        self.__drag_delta=(0, 0)
         self.__shape=[wx.Point(-self.UNIT_WIDTH/2, -self.UNIT_HEIGHT/2),
                     wx.Point(-self.UNIT_WIDTH/2, self.UNIT_HEIGHT/2),
                     wx.Point(0, self.UNIT_HEIGHT*3/5),
@@ -31,6 +38,59 @@ class MapPanel(wx.Window, UnitMap):
 
     def OnSize(self,event):
         Size  = self.ClientSize
+        self._Buffer = wx.EmptyBitmap(*Size)
+        self.InitPosition()
+        #self.__initsz = True
+        self.UpdateDrawing()
+
+    def OnPaint(self, event):
+        dc = wx.BufferedPaintDC(self, self._Buffer)
+
+    def OnMouseWheel(self,event):
+        scale_factor = 1.1
+        if event.GetWheelRotation() < 0 : scale_factor=1/1.1
+        self.Scale(scale_factor)
+
+    def OnMouseLeftDown(self,event):
+        self.__drag=True
+        self.__drag_prev=self.ScreenToClient(wx.GetMousePosition())
+        #X, Y= self.ScreenToClient(wx.GetMousePosition())
+        #print(X,Y)
+        #self.__drag_delta=(self.__x0-X, self.__x0-Y)
+        event.Skip()
+
+    def OnMouseLeftUp(self,event):
+        self.__drag=False
+        event.Skip()
+
+    def OnMouseMotion(self,event):
+        if self.__drag :
+            X, Y = self.ScreenToClient(wx.GetMousePosition())
+            #self.__x0 = self.__drag_delta[0]+X
+            #self.__y0 = self.__drag_delta[1]+Y
+            self.__x0 += X-self.__drag_prev[0]
+            self.__y0 += Y-self.__drag_prev[1]
+            self.__drag_prev = (X,Y)
+            self.UpdateDrawing()
+
+    def onFit(self,event):
+        self.InitPosition()
+        self.UpdateDrawing()
+
+    def onZoom(self,event,dir):
+        scale={"in":1.2,"out":1.0/1.2}
+        self.Scale(scale[dir])
+
+    def onButtonMove(self,event,dir):
+        move={"left":(40, 0),"right":(-40, 0),"up":(0, 40), "dn":(0, -40)}
+        offs=move[dir]
+        self.__x0+=offs[0]
+        self.__y0+=offs[1]
+        print("(%s, %s) @ %s" % (self.__x0, self.__y0, self.__scale))
+        self.UpdateDrawing()
+
+    def InitPosition(self):
+        Size  = self.ClientSize
         self.__x0=Size.width/2
         self.__y0=Size.height/2
         w = (self.boundRect[2]-self.boundRect[0])*1.1
@@ -39,18 +99,20 @@ class MapPanel(wx.Window, UnitMap):
             self.__scale=Size.width/w
         if h>0 and Size.height/h<self.__scale:
             self.__scale=Size.height/h
-        self._Buffer = wx.EmptyBitmap(*Size)
-        self.UpdateDrawing()
 
-    def OnPaint(self, event):
-        dc = wx.BufferedPaintDC(self, self._Buffer)
+    def Scale(self, scale_factor):
+        self.__scale *=scale_factor
+        Size  = self.ClientSize
+        self.__x0 = Size.width/2+(self.__x0-Size.width/2)*scale_factor
+        self.__y0 = Size.height/2+(self.__y0-Size.height/2)*scale_factor
+        print("(%s, %s) @ %s" % (self.__x0, self.__y0, self.__scale))
+        self.UpdateDrawing()
 
     def Draw(self, dc):
         dc.Clear()
         self.DrawAreas(dc)
         self.DrawParticles(dc)
         self.DrawRobot(dc)
-
 
     def DrawAreas(self, dc):
         dc.SetTextForeground(wx.BLACK)
@@ -192,6 +254,13 @@ class MapPanel(wx.Window, UnitMap):
             self.MoveUnit(x, y, yaw, self.__model["S"])
         except KeyError : pass
         except IndexError : pass
+
+        Size  = self.ClientSize
+        pos=self.tpu(wx.Point(0, 0))
+        if pos.x < 0 : self.__x0+=-pos.x+20
+        if pos.y < 0 : self.__y0+=-pos.y+20
+        if pos.x > Size.width : self.__x0+=(Size.width-pos.x-20)
+        if pos.y > Size.height : self.__y0+=(Size.height-pos.y-20)
         self.UpdateDrawing()
 
     def tc(self, x, y):
@@ -204,8 +273,6 @@ class MapPanel(wx.Window, UnitMap):
 
     def tpu(self, p):
         x, y = p.Get()
-        #x1=x*self.__r_cos+y*self.__r_sin+self.__r_x+self.xu0
-        #y1=-x*self.__r_sin+y*self.__r_cos+self.__r_y+self.yu0
         x1, y1 = self.UnitToMap(x, y)
         return self.tc(x1,y1)
 

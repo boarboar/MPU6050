@@ -50,6 +50,10 @@ void loop() {
   Serial.println("===");
   int16_t d[2];
 
+  if(x==10000) {
+    Serial.println("Stopping...");
+    ctrl.stopDrive();
+  }
   Serial.println("Getting actual rate...");
   ctrl.getActRotRate(d);
   Serial.print(d[0]); Serial.print("\t "); Serial.println(d[1]);

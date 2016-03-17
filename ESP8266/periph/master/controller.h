@@ -22,9 +22,11 @@ public:
   bool getActRotRate(int16_t *d);
   bool getActAdvance(int16_t *d);
   bool getSensors(int16_t *sens);
+  bool stopDrive();
 protected:  
   Controller();
-  bool writeInt16_2(uint16_t reg, int16_t *d);
+  bool writeInt16_2(uint16_t reg, int16_t left, int16_t right);
+  bool readInt16_2(uint16_t reg, int16_t *left, int16_t *right);  
   bool readInt16_2(uint16_t reg, int16_t *d);
   bool readInt16_N(uint16_t reg, uint16_t n, int16_t *d);
 private:

@@ -22,22 +22,30 @@ uint8_t Controller::getNumSensors() {
 }
 
 bool Controller::getTargRotRate(int16_t *d) {
-  bool res = readInt16_2(REG_TARG_ROT_RATE, d); 
+  //bool res = readInt16_2(REG_TARG_ROT_RATE, d); 
+  bool res = readInt16_2(REG_TARG_ROT_RATE, d, d+1); 
   return res;
 }
 
 bool Controller::setTargRotRate(int16_t *d) {
-  bool res = writeInt16_2(REG_TARG_ROT_RATE, d); 
+  bool res = writeInt16_2(REG_TARG_ROT_RATE, d[0], d[1]); 
+  return res;
+}
+
+bool Controller::stopDrive() {
+  bool res = writeInt16_2(REG_TARG_ROT_RATE, 0, 0); 
   return res;
 }
 
 bool Controller::getActRotRate(int16_t *d) {
-  bool res = readInt16_2(REG_ACT_ROT_RATE, d); 
+  //bool res = readInt16_2(REG_ACT_ROT_RATE, d); 
+  bool res = readInt16_2(REG_ACT_ROT_RATE, d, d+1); 
   return res;
 }
 
 bool Controller::getActAdvance(int16_t *d) {
-  bool res = readInt16_2(REG_ACT_ADV_ACC, d); 
+  //bool res = readInt16_2(REG_ACT_ADV_ACC, d); 
+  bool res = readInt16_2(REG_ACT_ADV_ACC, d, d+1); 
   return res;
 }
 
@@ -46,6 +54,31 @@ bool Controller::getSensors(int16_t *sens) {
   return res;
 }
 
+bool Controller::writeInt16_2(uint16_t reg, int16_t left, int16_t right) {
+    //int16_t left=d[0];
+    //int16_t right=d[1];
+    buf[0] = (uint8_t)(left>>8);
+    buf[1] = (uint8_t)(left&0xFF);   
+    buf[2] = (uint8_t)(right>>8);
+    buf[3] = (uint8_t)(right&0xFF);   
+    bool res = I2Cdev::writeBytes(DEV_ID, reg, 4, buf);
+    //Serial.print(res); Serial.print(" "); Serial.print(dt); Serial.println("ms");
+    return res;
+}
+
+bool Controller::readInt16_2(uint16_t reg, int16_t *left, int16_t *right) {
+    //Serial.print("Requesting...\t ");
+    //t=millis();  
+    bool res = I2Cdev::readBytes(DEV_ID, reg, 4, buf);
+    //dt=millis()-t;
+    //Serial.print(res); Serial.print(" "); Serial.print(dt); Serial.print("ms\t ");
+    *left = (((int16_t)buf[0]) << 8) | buf[1];
+    *right = (((int16_t)buf[2]) << 8) | buf[3];
+    //Serial.print(d[0]); Serial.print("\t "); Serial.println(d[1]);
+    return res;
+}
+
+/*
 bool Controller::writeInt16_2(uint16_t reg, int16_t *d) {
     int16_t left=d[0];
     int16_t right=d[1];
@@ -58,6 +91,7 @@ bool Controller::writeInt16_2(uint16_t reg, int16_t *d) {
     return res;
 }
 
+
 bool Controller::readInt16_2(uint16_t reg, int16_t *d) {
     //Serial.print("Requesting...\t ");
     //t=millis();  
@@ -69,7 +103,7 @@ bool Controller::readInt16_2(uint16_t reg, int16_t *d) {
     //Serial.print(d[0]); Serial.print("\t "); Serial.println(d[1]);
     return res;
 }
-
+*/
 
 bool Controller::readInt16_N(uint16_t reg, uint16_t n, int16_t *d) {
     //Serial.print("Requesting...\t ");
