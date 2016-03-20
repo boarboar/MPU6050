@@ -47,13 +47,15 @@ void loop() {
   delay(500);
 //  digitalWrite(RED_LED, HIGH);
 
-  Serial.println("===");
+  //Serial.println("===");
   int16_t d[2];
 
-  if(x==10000) {
+  if(x==3000) {
     Serial.println("Stopping...");
     ctrl.stopDrive();
   }
+  if(x<6000) {
+     
   Serial.println("Getting actual rate...");
   ctrl.getActRotRate(d);
   Serial.print(d[0]); Serial.print("\t "); Serial.println(d[1]);
@@ -66,7 +68,7 @@ void loop() {
     Serial.print(" "); Serial.print(sens[i]);
   }
   Serial.println();
-  
+  }
   delay(500);
 //  digitalWrite(RED_LED, LOW);
   x+=1000;

@@ -41,7 +41,8 @@
 #define M_POW_MAX  240
 #define M_POW_STEP 2
 
-#define M_PID_NORM 1000
+//#define M_PID_NORM 1000
+#define M_PID_NORM 500
 #define M_PID_KP_0   25
 #define M_PID_KD_0  140
 #define M_PID_KI_0    2
@@ -54,7 +55,7 @@
 #define M_WUP_PID_CNT 3
 
 #define M_SENS_N       3 // number of sensors 
-#define M_SENS_CYCLE   3 // number of sensors to read at cycle
+#define M_SENS_CYCLE   2 // number of sensors to read at cycle
 
 #define REG_WHO_AM_I         0xFF  // 1 unsigned byte
 #define REG_TARG_ROT_RATE    0x03  // 2 signed ints (4 bytes)
@@ -69,8 +70,7 @@
 
 uint32_t lastEvTime, lastPidTime;
 int16_t sens[M_SENS_N];
-
-uint16_t targ_rot_rate[2]={0,0}; // RPS, 10000 = 1 RPS  (use DRV_RPS_NORM)
+int16_t targ_rot_rate[2]={0,0}; // RPS, 10000 = 1 RPS  (use DRV_RPS_NORM)
 int16_t targ_new_rot_rate[2]={0, 0}; // RPS, 10000 = 1 RPS  (use DRV_RPS_NORM), +/-
 int16_t act_rot_rate[2]={0,0}; // OUT - actual rate, 10000 = 1 RPS  (use DRV_RPS_NORM)
 int16_t act_adv_accu_mm[2]={0,0};  // OUT - in mm, after last request. Should be zeored after get request
@@ -249,7 +249,7 @@ void readEnc(uint16_t ctime)
       int16_t cnt=(uint32_t)act_rot_rate[i]*ctime*WHEEL_CHGSTATES/1000/V_NORM;
       if(drv_dir[i]==2) s[i]=-cnt;
       else s[i]=cnt;
-      Serial.print("SIM_");Serial.print(i);Serial.print(" \t");Serial.print(act_rot_rate[i]); Serial.println(" \t");Serial.print(s[i]);     
+      //Serial.print("SIM_");Serial.print(i);Serial.print(" \t");Serial.print(act_rot_rate[i]); Serial.println(" \t");Serial.print(s[i]);     
 #endif      
 #endif
     }
@@ -271,7 +271,7 @@ void doPID(uint16_t ctime)
       Serial.print(act_rot_rate[i]);
 #endif      
       if(pid_cnt>=M_WUP_PID_CNT) { // do not correct for the first cycles - ca 100-200ms(warmup)
-        p_err = (targ_rot_rate[i]-act_rot_rate[i])/M_PID_NORM;
+        p_err = (int32_t)(targ_rot_rate[i]-act_rot_rate[i])/M_PID_NORM;
         d_err = p_err-prev_err[i];
         int_err[i]=int_err[i]+p_err;
         int16_t pow=cur_power[i]+((int16_t)p_err*M_PID_KP+(int16_t)int_err[i]*M_PID_KI+(int16_t)d_err*M_PID_KD)/M_PID_DIV;
@@ -328,7 +328,7 @@ void readUSDist() {
   delayMicroseconds(10);
   digitalWrite(out_port, LOW);
   
-  int16_t tmp =(int16_t)(pulseIn(US_IN, HIGH, 25000)/58);  
+  int16_t tmp =(int16_t)(pulseIn(US_IN, HIGH, 18000)/58);  
   
   if(tmp) {
     
