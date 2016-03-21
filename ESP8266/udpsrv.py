@@ -104,11 +104,12 @@ while 1:
             intrsects = []
                 
             for a in map.scan_angles :
-                intrs=map.getIntersection(0, 0, math.sin(a)*map.scan_max_dist, rvy+math.cos(a)*map.scan_max_dist)  
+                intrs, ref=map.getIntersection(0, 0, math.sin(a)*map.scan_max_dist, rvy+math.cos(a)*map.scan_max_dist)  
                 if intrs!=None :
                     intrs=(intrs[0]-mapx, intrs[1]-mapy)                                        
                     dist=math.sqrt(intrs[0]*intrs[0]+intrs[1]*intrs[1])
-                    err=gauss_lim(0, dist/6, 50) 
+                    #err=gauss_lim(0, dist/6, 50) 
+                    err=gauss_lim(0, dist/10, 150) 
                     print ("DIST %s ERR %s" % (str(dist), str(err)))
                     dist=dist+err
                     if dist<0 : dist=0
@@ -125,8 +126,7 @@ while 1:
                 value=10
                 if intrsects[sm]<20 : value=90
                 elif intrsects[sm]<40 : value=45    
-                elif intrsects[sm]<60 : value=30    
-                
+                elif intrsects[sm]<60 : value=30                   
                 if intrsects[0]<intrsects[sr] : corr=value
                 else : corr=-value
                 print ("Correct with %s" % corr)

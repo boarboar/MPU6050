@@ -218,6 +218,7 @@ class MapPanel(wx.Window, UnitMap):
         dc.SetBackgroundMode(wx.TRANSPARENT)
         dc.SetBrush(wx.TRANSPARENT_BRUSH)
         ray_pen=wx.Pen(wx.BLACK, 1, wx.PENSTYLE_LONG_DASH)
+        ray_pen_ref=wx.Pen('GREY', 1, wx.DOT)
         if self.isInside :
             dc.SetPen(wx.Pen(wx.BLUE, 2))
         else :
@@ -228,15 +229,25 @@ class MapPanel(wx.Window, UnitMap):
         if self.isInside :
             i=0
             inters_pen=wx.Pen(wx.GREEN, 2)
+            inters_pen_c=wx.Pen(wx.BLUE, 1)
             for ray in self.scan_rays:
                 dc.SetPen(ray_pen)
-                dc.DrawLinePoint(self.tpu(wx.Point(0, 0)), self.tpu(wx.Point(ray[0]*500, ray[1]*500)))
+                dc.DrawLinePoint(self.tpu(wx.Point(0, 0)), self.tpu(wx.Point(ray[0]*self.scan_max_dist, ray[1]*self.scan_max_dist)))
+                # draw measured intersection
                 idist=self.scans[i]
                 i=i+1
                 if idist>0 :
                     dc.SetPen(inters_pen)
                     intrs = self.tpu(wx.Point(ray[0]*idist, ray[1]*idist))
                     dc.DrawCirclePoint(intrs, 10)
+                # draw calculate intersections
+                intrs, ref=self.getIntersection(0, 0, ray[0]*self.scan_max_dist, ray[1]*self.scan_max_dist)
+                if intrs != None :
+                    dc.SetPen(inters_pen_c)
+                    dc.DrawCirclePoint(self.tc(intrs[0], intrs[1]), 5)
+                if intrs != None :
+                    dc.SetPen(ray_pen_ref)
+                    dc.DrawLinePoint(self.tc(intrs[0], intrs[1]), self.tc(ref[0], ref[1]))
 
 
     def UpdateDrawing(self) :

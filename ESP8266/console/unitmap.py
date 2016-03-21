@@ -202,7 +202,7 @@ class UnitMap:
         p0=(p.x, p.y)
         for a in self.scan_angles :
             p1=(p.x+math.sin(p.a+a)*self.scan_max_dist, p.y+math.cos(p.a+a)*self.scan_max_dist)
-            intrs = self.getIntersectionMap(p0, p1)
+            intrs, ref = self.getIntersectionMap(p0, p1)
             intersects.append(intrs)
         return intersects
 
@@ -213,7 +213,7 @@ class UnitMap:
         for i in range(len(self.scan_angles)) :
             a=self.scan_angles[i]
             p1=(p.x+math.sin(p.a+a)*self.scan_max_dist, p.y+math.cos(p.a+a)*self.scan_max_dist)
-            intrs = self.getIntersectionMap(p0, p1)
+            intrs, ref = self.getIntersectionMap(p0, p1)
             if intrs==None : dist2 = -1
             else :
                 dist2=math.sqrt((intrs[0]-p0[0])*(intrs[0]-p0[0])+(intrs[1]-p0[1])*(intrs[1]-p0[1]))
@@ -233,7 +233,9 @@ class UnitMap:
     def getIntersectionMap(self, p0, p1):
         # line p0->p1 in absolute map coords (world)
         intrs = None
+        ref=None
         dist2=0
+
         for area in self.map["AREAS"] :
             parea0=area["AT"]
             for wall in area["WALLS"] :
@@ -251,6 +253,7 @@ class UnitMap:
                     if intrs==None or d2<dist2 :
                         intrs=isect
                         dist2=d2
+                        wsect=(p2, p3)
             try:
                 for obj in area["OBJECTS"] :
                     if len(obj["CS"])<2 : continue
@@ -279,9 +282,17 @@ class UnitMap:
                             if intrs==None or d2<dist2 :
                                 intrs=isect
                                 dist2=d2
+                                wsect=((pobj0[0]+op0[0], pobj0[1]+op0[1]), (pobj0[0]+op[0], pobj0[1]+op[1]))
                         op0=op
             except KeyError : pass
-        return intrs
+
+        if intrs!=None :
+            # find reflection vector
+            rl=self.scan_max_dist-math.sqrt(dist2)
+            if rl>0 :
+                ref=self.getReflection(p0, intrs, wsect[0], wsect[1], rl)
+
+        return intrs, ref
 
 
     def intersectHor(self, y, x0, y0, x1, y1):
@@ -295,6 +306,17 @@ class UnitMap:
         x = x0+(y-y0)/(y1-y0)*(x1-x0)
         return x
 
+    def getReflection(self, p0, p1, p2, p3, rl):
+        # find reflection of ray p0-p1 from wall p2-3
+        t=(p3[0]-p2[0], p3[1]-p2[1]) #tang
+        n=(t[1], -t[0]) #tang
+        nn=n[0]*n[0]+n[1]*n[1]
+        d=(p1[0]-p0[0], p1[1]-p0[1])
+        dn=2.0*(d[0]*n[0]+d[1]*n[1])/nn
+        ref=(d[0]-dn*n[0], d[1]-dn*n[1])
+        refl=math.hypot(ref[0], ref[1]) 
+        #ref = (p1[0]+d[0]-dn*n[0], p1[1]+d[1]-dn*n[1])
+        return (p1[0]+rl*ref[0]/refl, p1[1]+rl*ref[1]/refl)
 
     def find_intersection(self,  p0, p1, p2, p3 ) :
         s10_x = p1[0] - p0[0]
@@ -315,7 +337,7 @@ class UnitMap:
         t = t_numer / denom
         intersection_point = ( int(p0[0] + (t * s10_x)), int(p0[1] + (t * s10_y)) )
         #note: sin(angle) = denom/(|s10|*|s32|)
-        #where angle is a falling angle, 90 is perpendicular
+        #where angle is a falling angle, 90 is ortho
         #or we can use (sin(angle))^2 = denom^2/(|s10|^2*|s32|^2) to avoid sqrt
         #we basically need to compare denom^2 and (|s10|^2*|s32|^2)
         # this can be used for reflection modelling, after field tests
