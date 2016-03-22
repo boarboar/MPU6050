@@ -25,7 +25,7 @@ void setup() {
   Wire.begin(MPU_SDA, MPU_SDL);
     //Wire.begin();
   Serial.print("Testing connection..."); 
-  stat=ctrl.testConnection();
+  stat=ctrl.init();
   if(stat) Serial.println("OK");
   else Serial.println("FAIL");
   

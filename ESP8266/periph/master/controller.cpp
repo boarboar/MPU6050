@@ -6,16 +6,16 @@ const int DEV_ID=4;
 
 Controller Controller::ControllerProc ; // singleton
 
-Controller::Controller() : ready(false), act_rot_rate{0},act_advance{0},sensors{0}
+Controller::Controller() : pready(false), act_rot_rate{0},act_advance{0},sensors{0}
    {
   }
 
 bool Controller::init() {
-  ready=testConnection();
-  return ready;
+  pready=testConnection();
+  return pready;
 }
 
-bool Controller::testConnection() {
+uint8_t Controller::testConnection() {
   bool res = I2Cdev::readByte(DEV_ID, REG_WHO_AM_I, buf); 
   if(!res) return 0;
   return buf[0]==M_OWN_ID;
@@ -59,7 +59,7 @@ bool Controller::getSensors(int16_t *sens) {
 }
 
 bool Controller::process() {
-  if(!ready) return false;
+  if(!pready) return false;
   int16_t tmp[2];
   getActRotRate(tmp);
   getActAdvance(act_advance);
@@ -91,7 +91,7 @@ bool Controller::readInt16_2(uint16_t reg, int16_t *left, int16_t *right) {
     //Serial.print(res); Serial.print(" "); Serial.print(dt); Serial.print("ms\t ");
     *left = (((int16_t)buf[0]) << 8) | buf[1];
     *right = (((int16_t)buf[2]) << 8) | buf[3];
-    //Serial.print(d[0]); Serial.print("\t "); Serial.println(d[1]);
+    //Serial.print(*left); Serial.print("\t "); Serial.println(*right);
     return res;
 }
 

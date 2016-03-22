@@ -16,7 +16,7 @@ class Controller {
 public:
   static Controller ControllerProc; // singleton  
   bool init();
-  bool testConnection();
+  uint8_t testConnection();
   uint8_t getNumSensors();
   bool getTargRotRate(int16_t *d);
   bool setTargRotRate(int16_t *d);
@@ -40,7 +40,7 @@ private:
   float act_rot_rate[2];
   int16_t act_advance[2];
   int16_t sensors[8];
-  uint8_t ready;
+  uint8_t pready;
 };
 
 #endif //_UMP_CONTROLLER_H_
