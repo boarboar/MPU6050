@@ -55,19 +55,15 @@ void loop() {
     ctrl.stopDrive();
   }
   if(x<6000) {
-     
-  Serial.println("Getting actual rate...");
-  ctrl.getActRotRate(d);
-  Serial.print(d[0]); Serial.print("\t "); Serial.println(d[1]);
-  Serial.println("Getting actual advance...");
-  ctrl.getActAdvance(d);
-  Serial.print(d[0]); Serial.print("\t "); Serial.println(d[1]);
-  Serial.println("Getting sensors...");
-  ctrl.getSensors(sens);
-  for(int i=0; i<8; i++) {
-    Serial.print(" "); Serial.print(sens[i]);
-  }
-  Serial.println();
+    Serial.println("Processing...");
+    ctrl.process();     
+    Serial.print("RR:"); Serial.print(ctrl.getStoredRotRate()[0]); Serial.print("\t "); Serial.println(ctrl.getStoredRotRate()[1]);
+    Serial.print("AD:"); Serial.print(ctrl.getStoredAdvance()[0]); Serial.print("\t "); Serial.println(ctrl.getStoredAdvance()[1]);
+    Serial.print("SS:");
+    for(int i=0; i<8; i++) {
+      Serial.print(" "); Serial.print(ctrl.getStoredSensors()[i]);
+    }
+    Serial.println();
   }
   delay(500);
 //  digitalWrite(RED_LED, LOW);

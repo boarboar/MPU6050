@@ -328,7 +328,7 @@ void readUSDist() {
   delayMicroseconds(10);
   digitalWrite(out_port, LOW);
   
-  int16_t tmp =(int16_t)(pulseIn(US_IN, HIGH, 18000)/58);  
+  int16_t tmp =(int16_t)(pulseIn(US_IN, HIGH, 18000)/58);  //58.138
   
   if(tmp) {
     
