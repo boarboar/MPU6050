@@ -7,6 +7,7 @@
 #include "cfg.h"
 #include "cmd.h"
 #include "mpu.h"
+#include "controller.h"
 
 void doCycle();
 
@@ -26,7 +27,7 @@ uint32_t last_cycle;
 uint32_t last_slow_cycle;
 
 CmdProc& cmd = CmdProc::Cmd; 
-
+//Controller& ctrl = Controller::ControllerProc; 
 
 void test_periph_unit();
 
@@ -75,6 +76,12 @@ void setup() {
     //delay(1000);
     //ESP.reset();
   }  
+
+  if(Controller::ControllerProc.init()) { 
+    Serial.println(F("Ctrl Ready!"));
+  } else {
+    Serial.println(F("Failed to init Ctrl!"));
+  } 
   
   last_cycle=last_slow_cycle=millis();
 }
@@ -109,33 +116,17 @@ void doCycle() {
   if(dt < CYCLE_SLOW_TO) return;
   last_slow_cycle = t;
   
-  // Do slow cycle
+  // Do medium cycle // (100ms - later on). Now in slow cycle
+  Controller::ControllerProc.process(); 
+  
+  // couple controller & mpu data here
+  
   if(MpuDrv::Mpu.isNeedReset()) {
     cmd.sendAlarm(CmdProc::ALR_MPU_RESET);
     MpuDrv::Mpu.init();
   }
   if(CfgDrv::Cfg.needToStore()) CfgDrv::Cfg.store(cfg_file);
-  if(cmd.isSysLog()) cmd.sendSysLogStatus();
-  
-  test_periph_unit();
+  if(cmd.isSysLog()) cmd.sendSysLogStatus();  
 }
 
-void test_periph_unit() {
-  uint8_t buf[2];
-//  Serial.println("Requesting...");
-  uint32_t t=millis();  
-  //bool res = I2Cdev::writeByte(PERIPH_UNIT_ID, 0xAB, x);
-  bool res = I2Cdev::readBytes(PERIPH_UNIT_ID, 0xAB, 2, buf);
-  uint32_t dt=millis()-t;  
-  
-  Serial.print("PUnit:\t");
-  Serial.print(res);
-  Serial.print("\tV:\t");
-  Serial.print(buf[0], HEX);
-  Serial.print(",");
-  Serial.print(buf[1], HEX);
-  Serial.print("\tT:\t");
-  Serial.print(dt);
-  Serial.println("ms");
-}
 

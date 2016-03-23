@@ -5,6 +5,7 @@
 #include "stat.h"
 #include "cfg.h"
 #include "mpu.h"
+#include "controller.h"
 
 #include "cmd.h"
 
@@ -215,14 +216,15 @@ int16_t c_getpos(JsonObject& root, JsonObject& rootOut) {
   JsonArray& ya = rootOut.createNestedArray("YPR");
   float ypr[3], af[3], vf[3]/*, rf[3]*/;
   uint8_t i;
-  MpuDrv::Mpu.getAll(ypr, af, vf/*, rf*/); 
+  MpuDrv::Mpu.getAll(ypr, af, vf); 
   for(i=0; i<3; i++) ya.add(ypr[i] * 180/M_PI);
   //JsonArray& aa = rootOut.createNestedArray("A");
   //for(i=0; i<3; i++) aa.add(af[i]);  
   JsonArray& v = rootOut.createNestedArray("V");
   for(i=0; i<3; i++) v.add(vf[i]);
-//  JsonArray& r = rootOut.createNestedArray("P");
-//  for(i=0; i<3; i++) r.add(rf[i]);
+  JsonArray& r = rootOut.createNestedArray("CRD");
+  for(i=0; i<3; i++) r.add(0.0f);
+  
   return 0;
 }
 

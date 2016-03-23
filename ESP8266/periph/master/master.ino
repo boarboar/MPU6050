@@ -59,6 +59,7 @@ void loop() {
     ctrl.process();     
     Serial.print("RR:"); Serial.print(ctrl.getStoredRotRate()[0]); Serial.print("\t "); Serial.println(ctrl.getStoredRotRate()[1]);
     Serial.print("AD:"); Serial.print(ctrl.getStoredAdvance()[0]); Serial.print("\t "); Serial.println(ctrl.getStoredAdvance()[1]);
+    Serial.print("MR:"); Serial.print(ctrl.getMovement()); Serial.print("\t "); Serial.println(ctrl.getRotation());
     Serial.print("SS:");
     for(int i=0; i<8; i++) {
       Serial.print(" "); Serial.print(ctrl.getStoredSensors()[i]);

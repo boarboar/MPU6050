@@ -6,12 +6,12 @@ const int DEV_ID=4;
 
 Controller Controller::ControllerProc ; // singleton
 
-Controller::Controller() : pready(false), act_rot_rate{0},act_advance{0},sensors{0}
-   {
+Controller::Controller() : pready(false), nsens(0), act_rot_rate{0},act_advance{0},sensors{0} {
   }
 
 bool Controller::init() {
   pready=testConnection();
+  if(pready) nsens=_getNumSensors();    
   return pready;
 }
 
@@ -21,7 +21,7 @@ uint8_t Controller::testConnection() {
   return buf[0]==M_OWN_ID;
 }
 
-uint8_t Controller::getNumSensors() {
+uint8_t Controller::_getNumSensors() {
   bool res = I2Cdev::readByte(DEV_ID, REG_SENSORS_CNT, buf); 
   if(!res) return 0;
   if(buf[0]>8) buf[0]=8;   
@@ -66,12 +66,17 @@ bool Controller::process() {
   getSensors(sensors);
   act_rot_rate[0]=(float)tmp[0]/V_NORM;
   act_rot_rate[1]=(float)tmp[1]/V_NORM;
+  mov=((float)act_advance[0]+(float)act_advance[1])/0.5f;
+  rot=(float)(act_advance[0]-(float)act_advance[1])/(float)WHEEL_BASE_MM_10;
   return true;
 }
 
+uint8_t Controller::getNumSensors() { return nsens;}
 float *Controller::getStoredRotRate() { return act_rot_rate;}
 int16_t *Controller::getStoredAdvance() { return act_advance;}
 int16_t *Controller::getStoredSensors() { return sensors;}
+float Controller::getMovement() { return mov;}
+float Controller::getRotation() { return rot;}
 
 bool Controller::writeInt16_2(uint16_t reg, int16_t left, int16_t right) {
     buf[0] = (uint8_t)(left>>8);
