@@ -225,6 +225,10 @@ int16_t c_getpos(JsonObject& root, JsonObject& rootOut) {
   JsonArray& r = rootOut.createNestedArray("CRD");
   for(i=0; i<3; i++) r.add(0.0f);
   
+  uint8_t ns=Controller::ControllerProc.getNumSensors();
+  JsonArray& s = rootOut.createNestedArray("S");
+  for(i=0; i<3; i++) s.add(Controller::ControllerProc.getStoredSensors()[i]);
+  
   return 0;
 }
 
