@@ -1,6 +1,6 @@
 #include <Wire.h>
 
-#define _SIMULATION_ 1
+//#define _SIMULATION_ 1
 #define _PID_DEBUG_ 
 
 #define M_OWN_ID 0x53
@@ -338,7 +338,7 @@ void readUSDist() {
        //sens[current_sens] = (sens[current_sens]*2 - (sens[current_sens] - tmp))/2;
        sens[current_sens] = tmp;
     }
-    //Serial.print("U."); Serial.print(current_sens); Serial.print("=");Serial.print(sens[current_sens]);Serial.print(" \tRAW="); Serial.println(tmp);
+    Serial.print("U."); Serial.print(current_sens); Serial.print("=");Serial.print(sens[current_sens]);Serial.print(" \tRAW="); Serial.println(tmp);
   } else {
 #ifdef _SIMULATION_
     sens[current_sens] = current_sens*100+random(50);
