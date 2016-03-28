@@ -256,7 +256,7 @@ class UnitMap:
                         wsect=(p2, p3)
             try:
                 for obj in area["OBJECTS"] :
-                    if len(obj["CS"])<2 : continue
+                    if len(obj["CS"])<2 or obj["DENSITY"] < 0.1 : continue
                     pobj0=(parea0[0]+obj["AT"][0], parea0[1]+obj["AT"][1])
                     #test insideness, and skip object if inside!
                     left, right = (0, 0)
@@ -314,7 +314,7 @@ class UnitMap:
         d=(p1[0]-p0[0], p1[1]-p0[1])
         dn=2.0*(d[0]*n[0]+d[1]*n[1])/nn
         ref=(d[0]-dn*n[0], d[1]-dn*n[1])
-        refl=math.hypot(ref[0], ref[1]) 
+        refl=math.hypot(ref[0], ref[1])
         #ref = (p1[0]+d[0]-dn*n[0], p1[1]+d[1]-dn*n[1])
         return (p1[0]+rl*ref[0]/refl, p1[1]+rl*ref[1]/refl)
 

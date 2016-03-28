@@ -25,8 +25,10 @@ class MapPanel(wx.Window, UnitMap):
         self.__x0, self.__y0 = (0, 0) # canvas center
         self.__scale=1
         self.__drag=False
+        self.__dragged=False
         self.__drag_prev=(0,0)
         self.__drag_delta=(0, 0)
+        self.__pos_set_on=False
         self.__shape=[wx.Point(-self.UNIT_WIDTH/2, -self.UNIT_HEIGHT/2),
                     wx.Point(-self.UNIT_WIDTH/2, self.UNIT_HEIGHT/2),
                     wx.Point(0, self.UNIT_HEIGHT*3/5),
@@ -61,6 +63,12 @@ class MapPanel(wx.Window, UnitMap):
 
     def OnMouseLeftUp(self,event):
         self.__drag=False
+        if not self.__dragged and self.__pos_set_on:
+            print "Click"
+            X, Y = self.ScreenToClient(wx.GetMousePosition())
+            self.xu0, self.yu0 = self.tm(X, Y)
+            self.UpdateDrawing()
+        self.__dragged=False
         event.Skip()
 
     def OnMouseMotion(self,event):
@@ -71,6 +79,7 @@ class MapPanel(wx.Window, UnitMap):
             self.__x0 += X-self.__drag_prev[0]
             self.__y0 += Y-self.__drag_prev[1]
             self.__drag_prev = (X,Y)
+            self.__dragged=True
             self.UpdateDrawing()
 
     def onFit(self,event):
@@ -88,6 +97,9 @@ class MapPanel(wx.Window, UnitMap):
         self.__y0+=offs[1]
         print("(%s, %s) @ %s" % (self.__x0, self.__y0, self.__scale))
         self.UpdateDrawing()
+
+    def onPosToggle(self,event,state):
+        self.__pos_set_on=state
 
     def InitPosition(self):
         Size  = self.ClientSize
@@ -124,6 +136,7 @@ class MapPanel(wx.Window, UnitMap):
         obj_brush_lo_dens=wx.Brush("LIGHT GREY")
         wall_pen=wx.Pen(wx.BLACK, 4)
         obj_pen=wx.Pen(wx.BLACK, 2)
+        obj_pen_hidden=wx.Pen(wx.BLACK, 2, wx.PENSTYLE_SHORT_DASH)
         door_pen_open=wx.Pen("GREEN", 4)
         door_pen_closed=wx.Pen("RED", 4)
         door_pen_undef=wx.Pen("YELLOW", 4)
@@ -148,9 +161,11 @@ class MapPanel(wx.Window, UnitMap):
                 try :
                     for obj in area["OBJECTS"] :
                         brush=obj_brush_hi_dens
+                        pen = obj_pen
                         if obj["DENSITY"] <= 0.5 : brush=obj_brush_lo_dens
+                        if obj["DENSITY"] < 0.1 : pen=obj_pen_hidden
                         dc.SetBrush(brush)
-                        dc.SetPen(obj_pen)
+                        dc.SetPen(pen)
                         pobj0=(parea0[0]+obj["AT"][0],
                                parea0[1]+obj["AT"][1])
                         pts=[]
@@ -275,6 +290,7 @@ class MapPanel(wx.Window, UnitMap):
         self.UpdateDrawing()
 
     def tc(self, x, y):
+        # Map to screen
         x1=(x-(self.boundRect[2]+self.boundRect[0])/2)*self.__scale
         y1=(y-(self.boundRect[3]+self.boundRect[1])/2)*self.__scale
         return wx.Point(x1+self.__x0,-y1+self.__y0)
@@ -283,7 +299,15 @@ class MapPanel(wx.Window, UnitMap):
         return [self.tpu(p) for p in pts]
 
     def tpu(self, p):
+        # Unit to screen
         x, y = p.Get()
         x1, y1 = self.UnitToMap(x, y)
         return self.tc(x1,y1)
 
+    def tm(self, x, y):
+        # Screen to Map
+        x=x-self.__x0
+        y=-y+self.__y0
+        x=x/self.__scale+(self.boundRect[2]+self.boundRect[0])/2
+        y=y/self.__scale+(self.boundRect[3]+self.boundRect[1])/2
+        return (x,y)

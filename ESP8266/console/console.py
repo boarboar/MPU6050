@@ -55,6 +55,7 @@ class MyForm(wx.Frame):
         self.btn_map_up = wx.Button(panel, wx.ID_ANY, u"\u25B2", size=( bsz,  bsz))
         self.btn_map_dn = wx.Button(panel, wx.ID_ANY, u"\u25BC", size=( bsz,  bsz))
         self.btn_map_fit = wx.Button(panel, wx.ID_ANY, u"\u25AD", size=( bsz,  bsz))
+        self.btn_map_pos = wx.ToggleButton(panel, wx.ID_ANY, u"\u25C9", size=( bsz,  bsz))
 
         self.unitPan = draw.UnitPanel(panel)
         self.chart = draw.ChartPanel(panel)
@@ -89,6 +90,7 @@ class MyForm(wx.Frame):
         self.Bind(wx.EVT_BUTTON, lambda evt, move='up': self.map.onButtonMove(evt, move), self.btn_map_up)
         self.Bind(wx.EVT_BUTTON, lambda evt, move='dn': self.map.onButtonMove(evt, move), self.btn_map_dn)
         self.Bind(wx.EVT_BUTTON, self.map.onFit, self.btn_map_fit)
+        self.Bind(wx.EVT_TOGGLEBUTTON, lambda evt : self.map.onPosToggle(evt, self.btn_map_pos.GetValue() ), self.btn_map_pos)
 
         self.config=config.Config(self, self.model)
         self.controller=controller.Controller(self, self.model)
@@ -126,6 +128,7 @@ class MyForm(wx.Frame):
         sizer_map_ctrls.Add(self.btn_map_up, 0, wx.LEFT|wx.BOTTOM, 0)
         sizer_map_ctrls.Add(self.btn_map_dn, 0, wx.LEFT|wx.BOTTOM, 0)
         sizer_map_ctrls.Add(self.btn_map_fit, 0, wx.LEFT|wx.BOTTOM, 0)
+        sizer_map_ctrls.Add(self.btn_map_pos, 0, wx.LEFT|wx.BOTTOM, 0)
 
         sizer_pan.Add(sizer_ctrls, 0, wx.ALL|wx.RIGHT, 5)
         sizer_ctrls.Add(self.btn_st, 0, wx.ALL|wx.CENTER, 5)
