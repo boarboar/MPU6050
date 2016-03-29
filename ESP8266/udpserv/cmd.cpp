@@ -76,29 +76,22 @@ int16_t CmdProc::doCmd() {
   return 0;
 }
 
-boolean CmdProc::isSysLog() { return CfgDrv::Cfg.log_on;}
+int16_t CmdProc::getSysLogLevel() { return CfgDrv::Cfg.log_on;}
 
 
 boolean CmdProc::sendSysLog(const char *buf) {
-  if(!CfgDrv::Cfg.log_on) return false;
+  if(CfgDrv::Cfg.log_on<SL_LEVEL_MESSAGE) return false;
   StaticJsonBuffer<200> jsonBufferOut;
   JsonObject& rootOut = jsonBufferOut.createObject();
-  //char bufout[BUF_SZ];
   rootOut["C"] = "I";
   rootOut["T"] = millis();
   rootOut["M"] = buf;
   _sendToSysLog(rootOut);
-  /*
-  rootOut.printTo(bufout, BUF_SZ-1);
-  udp_snd.beginPacket(CfgDrv::Cfg.log_addr, CfgDrv::Cfg.log_port);
-  udp_snd.write(bufout, strlen(bufout));
-  udp_snd.endPacket();  
-  */
 }
 
 boolean CmdProc::sendSysLogStatus() {
   //{"C": "L", "T":12345, "R":0, "YPR": [59, 12, 13], "A": [0.01, 0.02, -0.03], "V": [0.1, 0.2, -0.3]}
-  if(!CfgDrv::Cfg.log_on) return false;
+  if(CfgDrv::Cfg.log_on<SL_LEVEL_MESSAGE) return false;
   StaticJsonBuffer<400> jsonBufferOut;
   JsonObject& rootOut = jsonBufferOut.createObject();
   //char bufout[BUF_SZ];
@@ -106,30 +99,18 @@ boolean CmdProc::sendSysLogStatus() {
   rootOut["T"] = millis();
   rootOut["R"] = c_getpos(rootOut, rootOut); 
   _sendToSysLog(rootOut);
-  /*
-  rootOut.printTo(bufout, BUF_SZ-1);
-  udp_snd.beginPacket(CfgDrv::Cfg.log_addr, CfgDrv::Cfg.log_port);
-  udp_snd.write(bufout, strlen(bufout));
-  udp_snd.endPacket();  
-  */
 }
 
-boolean CmdProc::sendAlarm(uint8_t alr) {
-  //{"C": "A", "T":12345, "R":1123} 
-  if(!CfgDrv::Cfg.log_on) return false;
+boolean CmdProc::sendAlarm(uint8_t alr, uint8_t param) {
+  //{"C": "A", "T":12345, "R":1123, "P":1123} 
+  if(CfgDrv::Cfg.log_on<SL_LEVEL_ALARM) return false;
   StaticJsonBuffer<200> jsonBufferOut;
   JsonObject& rootOut = jsonBufferOut.createObject();
-  //char bufout[BUF_SZ];
   rootOut["C"] = "A";
   rootOut["T"] = millis();
   rootOut["R"] = alr;
+  rootOut["P"] = param;
   _sendToSysLog(rootOut);
-  /*
-  rootOut.printTo(bufout, BUF_SZ-1);
-  udp_snd.beginPacket(CfgDrv::Cfg.log_addr, CfgDrv::Cfg.log_port);
-  udp_snd.write(bufout, strlen(bufout));
-  udp_snd.endPacket();  
-  */
 }
 
 void CmdProc::_sendToSysLog(JsonObject& rootOut) {
@@ -196,8 +177,9 @@ int16_t c_resetMPU(JsonObject& root, JsonObject& rootOut) {
   const char *action=root["A"];
   if(!action || !*action) return -3;
   if(!strcmp(action, "MPU")) {
-    Serial.println(F("Resetting MPU...")); 
-    MpuDrv::Mpu.init();
+    Serial.println(F("Req to RST MPU...")); 
+    //MpuDrv::Mpu.init();
+    MpuDrv::Mpu.needReset();
   } else if(!strcmp(action, "MPU_INT")) {
     Serial.println(F("Resetting MPU integrator...")); 
     MpuDrv::Mpu.resetIntegrator();

@@ -254,7 +254,7 @@ class SettingsDialog(wx.Dialog):
         super(SettingsDialog, self).__init__(*args, **kw)
         self.model = model
         self.InitUI()
-        self.SetSize((250, 200))
+        self.SetSize((250, 300))
         self.SetTitle("Settings")
 
     def InitUI(self):
@@ -263,13 +263,15 @@ class SettingsDialog(wx.Dialog):
         self.addr = wx.TextCtrl(pnl)
         self.port = wx.TextCtrl(pnl)
         self.listenport = wx.TextCtrl(pnl)
-        self.syslogenable = wx.CheckBox(pnl)
-
+        #self.syslogenable = wx.CheckBox(pnl)
+        self.syslogenable = wx.ListBox(pnl, style=wx.LB_SINGLE)
+        self.syslogenable.InsertItems(["None", "Alarm", "Message"], 0)
         try:
             self.addr.SetValue(str(self.model["DEVADDR"]))
             self.port.SetValue(str(self.model["DEVPORT"]))
             self.listenport.SetValue(str(self.model["LISTENPORT"]))
-            self.syslogenable.SetValue(int(self.model["SYSLOGENABLE"]))
+            #self.syslogenable.SetValue(int(self.model["SYSLOGENABLE"]))
+            self.syslogenable.Select(int(self.model["SYSLOGENABLE"]))
         except KeyError : pass
 
         vbox = wx.BoxSizer(wx.VERTICAL)
@@ -342,8 +344,10 @@ class SettingsDialog(wx.Dialog):
         self.model["DEVADDR"] = addr
         self.model["DEVPORT"] = port
         self.model["LISTENPORT"] = listenport
-        if self.syslogenable.GetValue() : self.model["SYSLOGENABLE"] = 1
-        else : self.model["SYSLOGENABLE"] = 0
+        #if self.syslogenable.GetValue() : self.model["SYSLOGENABLE"] = 1
+        #else : self.model["SYSLOGENABLE"] = 0
+
+        self.model["SYSLOGENABLE"] = self.syslogenable.GetSelection()
 
         self.SetReturnCode(True)
         self.Destroy()

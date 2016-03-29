@@ -308,6 +308,7 @@ class UnitMap:
 
     def getReflection(self, p0, p1, p2, p3, rl):
         # find reflection of ray p0-p1 from wall p2-3
+        # http://math.stackexchange.com/questions/13261/how-to-get-a-reflection-vector
         t=(p3[0]-p2[0], p3[1]-p2[1]) #tang
         n=(t[1], -t[0]) #tang
         nn=n[0]*n[0]+n[1]*n[1]
@@ -316,7 +317,9 @@ class UnitMap:
         ref=(d[0]-dn*n[0], d[1]-dn*n[1])
         refl=math.hypot(ref[0], ref[1])
         #ref = (p1[0]+d[0]-dn*n[0], p1[1]+d[1]-dn*n[1])
-        return (p1[0]+rl*ref[0]/refl, p1[1]+rl*ref[1]/refl)
+        if refl<0.000001 or nn<0.000001 : return None
+        cosa=abs((n[0]*ref[0]+n[1]*ref[1])/(math.sqrt(nn)*refl))
+        return ((p1[0]+rl*ref[0]/refl, p1[1]+rl*ref[1]/refl), cosa)
 
     def find_intersection(self,  p0, p1, p2, p3 ) :
         s10_x = p1[0] - p0[0]

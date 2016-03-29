@@ -3,9 +3,14 @@
 
 const int BUF_SZ = 255;
 
+#define SL_LEVEL_NONE   0
+#define SL_LEVEL_ALARM  1
+#define SL_LEVEL_MESSAGE  2
+
 class CmdProc {
 public:  
-  static const int8_t ALR_MPU_RESET=10;
+  //static const int8_t ALR_MPU_RESET=10;
+  enum Alarms {ALR_RESET=1, ALR_MPU_RESET=10, ALR_MPU_FAILURE=11}; 
 public:  
   static CmdProc Cmd; // singleton  
   int16_t init(uint16_t port);
@@ -13,10 +18,10 @@ public:
   boolean connected();
   boolean read();
   void  respond();
-  boolean isSysLog();
+  int16_t getSysLogLevel();
   boolean sendSysLog(const char *buf);
   boolean sendSysLogStatus();
-  boolean sendAlarm(uint8_t alr);
+  boolean sendAlarm(uint8_t alr, uint8_t param);
 protected:
   CmdProc() : isConnected(false) {;}
   void _sendToSysLog(JsonObject& rootOut);

@@ -54,7 +54,7 @@ int16_t CfgDrv::load(const char* fname) {
         const char* cmd = json["C"];
         if(!strcmp(cmd, "SYSL")) setSysLog(json);
         else {
-          Serial.println(F("Bad param or TODO"));
+          //Serial.println(F("Bad param or TODO"));
         }
       }
     } // new line
@@ -89,7 +89,7 @@ int16_t CfgDrv::store(const char* fname) {
         json["ADDR"]=addr;
         break;
       }
-      case CFG_TODO: json["ON"]=3; break;  
+      //case CFG_TODO: json["ON"]=3; break;  
       default:;    
     }
     json.printTo(f);
@@ -106,10 +106,12 @@ bool CfgDrv::needToStore() {
 }
 
 bool CfgDrv::setSysLog(JsonObject& root) {
-  uint8_t on = root["ON"] ? 1 : 0;
+  //uint8_t on = root["ON"] ? 1 : 0;
+  uint8_t on = root["ON"];
   long port = root["PORT"];
   const char* addr = root["ADDR"];
   IPAddress newaddr;
+  /*
   if(!on) { 
     if(!log_on) return true;
     Serial.println(F("SET_SYSL OFF")); 
@@ -117,15 +119,19 @@ bool CfgDrv::setSysLog(JsonObject& root) {
     dirty=true; 
     last_chg=millis();
     return true;
-  }  
-  if(!port || !addr || !*addr || !WiFi.hostByName(addr, newaddr)) return false;    
-  if(log_addr==newaddr && log_port==port && log_on) return true; // nothing to change
+  } 
+  */ 
+  if(on && !(port && addr && *addr && WiFi.hostByName(addr, newaddr))) return false;    
+  if(log_addr==newaddr && log_port==port && log_on==on) return true; // nothing to change
   log_addr=newaddr;
   log_port=port;
-  log_on=1;
+  log_on=on;
   dirty=true;
   last_chg=millis();
-  Serial.print(F("SET_SYSL ON:")); Serial.print(log_addr); Serial.print(":"); Serial.println(Cfg.log_port);     
+  if(log_on) {
+    Serial.print(F("SET_SYSL ")); Serial.print(log_on); Serial.print(":"); Serial.print(log_addr); Serial.print(":"); Serial.println(Cfg.log_port);     
+  }
+  else Serial.println(F("SET_SYSL OFF")); 
   return true;
 }
 

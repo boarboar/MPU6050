@@ -260,9 +260,11 @@ class MapPanel(wx.Window, UnitMap):
                 if intrs != None :
                     dc.SetPen(inters_pen_c)
                     dc.DrawCirclePoint(self.tc(intrs[0], intrs[1]), 5)
-                if intrs != None :
+                if ref != None :
                     dc.SetPen(ray_pen_ref)
-                    dc.DrawLinePoint(self.tc(intrs[0], intrs[1]), self.tc(ref[0], ref[1]))
+                    pr, cosa = ref
+                    dc.DrawLinePoint(self.tc(intrs[0], intrs[1]), self.tc(pr[0], pr[1]))
+                    dc.DrawTextPoint(str(round(cosa,2)), self.tc(intrs[0], intrs[1]))
 
 
     def UpdateDrawing(self) :

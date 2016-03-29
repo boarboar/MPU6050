@@ -17,9 +17,11 @@ MpuDrv::MpuDrv() : dmpStatus(ST_0) {}
 int8_t MpuDrv::getStatus() { return dmpStatus; }
 uint8_t MpuDrv::isDataReady() { return dmpStatus==ST_READY && data_ready; }
 uint8_t MpuDrv::isNeedReset() { return need_reset; }
+void    MpuDrv::needReset() {  need_reset=true; }
+uint8_t MpuDrv::getFailReason() { return fail_reason; }
+void  MpuDrv::clearFailReason() { fail_reason=MPU_FAIL_NONE; }
 
-int16_t MpuDrv::init(/*uint16_t sda, uint16_t sdl,*/ uint16_t intrp) {
-  //Wire.begin(sda, sdl);
+int16_t MpuDrv::init(uint16_t intrp) {
   return init();
 }
 
@@ -30,6 +32,7 @@ int16_t MpuDrv::init() {
   count=0;
   conv_count=0;
   need_reset=0;
+  fail_reason=0;
   resetIntegrator();
   //r.x=r.y=r.z=0.0f;
   Serial.println(F("Init I2C dev..."));
@@ -67,15 +70,16 @@ int16_t MpuDrv::init() {
     // enter warmup/convergence stage 
     dmpStatus=ST_WUP;
     start=millis();
-    Serial.print(F("DMP ok! Wait for int...FIFO sz is ")); Serial.println(packetSize);
-    
+    fail_reason=MPU_FAIL_INIT_OK;
+    Serial.print(F("DMP ok! Wait for int...FIFO sz is ")); Serial.println(packetSize);    
   } else {
     // ERROR!
     // 1 = initial memory load failed
     // 2 = DMP configuration updates failed
     // (if it's going to break, usually the code will be 1)
-    Serial.print(F("DMP Init fail, code ")); Serial.println(devStatus);
+    //Serial.print(F("DMP Init fail, code ")); Serial.println(devStatus);
     dmpStatus = ST_FAIL;
+    fail_reason=MPU_FAIL_INIT;
     need_reset=1;
   }
   return dmpStatus;
@@ -88,11 +92,12 @@ int16_t MpuDrv::cycle(uint16_t dt) {
 
   if(data_ready && (micros()-start)/1000000L>1) {
     // no data from MPU after 1sec
-    Serial.println(F("MPU - no data in 1s!!!"));
+    //Serial.println(F("MPU - no data in 1s!!!"));
     Stat::StatStore.mpu_ndt_cnt++;
     //init(); // RESET MPU
     need_reset=1;
     data_ready=0;
+    fail_reason=MPU_FAIL_NODATA;
     return -10;
   }
 /*
@@ -108,7 +113,8 @@ int16_t MpuDrv::cycle(uint16_t dt) {
     mpu.resetFIFO();
     fifoCount=0;
     Stat::StatStore.mpu_owfl_cnt++;
-    Serial.println(F("FIFO overflow!!!"));
+    fail_reason=MPU_FAIL_FIFOOVFL;
+    //Serial.println(F("FIFO overflow!!!"));
     return -2;
   } 
   // otherwise, check for DMP data ready interrupt (this should happen frequently)
@@ -119,8 +125,9 @@ int16_t MpuDrv::cycle(uint16_t dt) {
   //if(fifoCount < packetSize) return 0; // ???
   while (fifoCount < packetSize && i++<5) { fifoCount = mpu.getFIFOCount(); yield(); } 
   if(fifoCount < packetSize) {
-    Serial.println(F("FIFO wait - giveup!!!"));
+    //Serial.println(F("FIFO wait - giveup!!!"));
     Stat::StatStore.mpu_gup_cnt++;
+    fail_reason=MPU_FAIL_FIFOTMO;
     return 0; // giveup
   }
   // read a packet from FIFO
@@ -128,8 +135,12 @@ int16_t MpuDrv::cycle(uint16_t dt) {
   //mpu.resetFIFO(); fifoCount=0; // this is in case of overflows... 
   fifoCount -= packetSize;
   if(fifoCount >0) { 
-    Serial.print(F("FIFO excess : ")); Serial.println(fifoCount);
+    //Serial.print(F("FIFO excess : ")); Serial.println(fifoCount);
     Stat::StatStore.mpu_exc_cnt++;
+    mpu.resetFIFO();
+    fifoCount=0;
+    fail_reason=MPU_FAIL_FIFOEXCESS;
+    return -3;
   }   
     
   mpu.dmpGetQuaternion(q16, fifoBuffer);
@@ -158,6 +169,7 @@ int16_t MpuDrv::cycle(uint16_t dt) {
    if((millis()-start)/1000 > INIT_PERIOD_MAX) {
       Serial.println(F("===MPU Failed to converge, however switching to settled status...")); // TODO -?
       settled=true;
+      fail_reason=MPU_FAIL_CONVTMO;
     }
 
    for(i=0; i<4; i++) q16_0[i]=q16[i];

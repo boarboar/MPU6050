@@ -29,8 +29,6 @@ uint32_t last_slow_cycle;
 CmdProc& cmd = CmdProc::Cmd; 
 //Controller& ctrl = Controller::ControllerProc; 
 
-void test_periph_unit();
-
 void setup() {
   delay(2000);
   Serial.begin(115200);
@@ -53,6 +51,8 @@ void setup() {
   }
   
   delay(1000);
+
+  cmd.sendAlarm(CmdProc::ALR_RESET, 0);
   
   if(cmd.init(udp_port)) {
     Serial.print(F("Ready! Listening on "));
@@ -78,7 +78,8 @@ void setup() {
   }  
 
   if(Controller::ControllerProc.init()) { 
-    Serial.println(F("Ctrl Ready!"));
+    Serial.print(F("Ctrl Ready! Sensors: "));
+    Serial.println(Controller::ControllerProc.getNumSensors());    
   } else {
     Serial.println(F("Failed to init Ctrl!"));
   } 
@@ -120,13 +121,17 @@ void doCycle() {
   Controller::ControllerProc.process(); 
   
   // couple controller & mpu data here
-  
+  if(MpuDrv::Mpu.getFailReason()) {
+    Serial.print(F("MPU FAILURE ")); Serial.println(MpuDrv::Mpu.getFailReason());
+    cmd.sendAlarm(CmdProc::ALR_MPU_FAILURE, MpuDrv::Mpu.getFailReason());
+    MpuDrv::Mpu.clearFailReason();
+  }
   if(MpuDrv::Mpu.isNeedReset()) {
-    cmd.sendAlarm(CmdProc::ALR_MPU_RESET);
+    cmd.sendAlarm(CmdProc::ALR_MPU_RESET, 0);
     MpuDrv::Mpu.init();
   }
   if(CfgDrv::Cfg.needToStore()) CfgDrv::Cfg.store(cfg_file);
-  if(cmd.isSysLog()) cmd.sendSysLogStatus();  
+  cmd.sendSysLogStatus();  
 }
 
 
