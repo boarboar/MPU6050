@@ -88,7 +88,9 @@ class MapPanel(wx.Window, UnitMap):
 
     def onZoom(self,event,dir):
         scale={"in":1.2,"out":1.0/1.2}
+        print('inzoom1')
         self.Scale(scale[dir])
+        print('inzoom2')
 
     def onButtonMove(self,event,dir):
         move={"left":(40, 0),"right":(-40, 0),"up":(0, 40), "dn":(0, -40)}
@@ -148,9 +150,7 @@ class MapPanel(wx.Window, UnitMap):
                     pen=wall_pen
                     if wall["T"]=="D" : # DOOR
                         status=0 #closed
-                        try:
-                            status=wall["S"]
-                        except KeyError : pass
+                        if 'S' in wall : status=wall["S"]
                         if status==0 : pen=door_pen_closed
                         elif status==1 : pen=door_pen_open
                         else : pen=door_pen_undef
@@ -244,7 +244,8 @@ class MapPanel(wx.Window, UnitMap):
         if self.isInside :
             i=0
             inters_pen=wx.Pen(wx.GREEN, 2)
-            inters_pen_c=wx.Pen(wx.BLUE, 1)
+            inters_pen_c=wx.Pen(wx.BLUE, 2)
+            inters_pen_cr=wx.Pen('GRAY', 2)
             for ray in self.scan_rays:
                 dc.SetPen(ray_pen)
                 dc.DrawLinePoint(self.tpu(wx.Point(0, 0)), self.tpu(wx.Point(ray[0]*self.scan_max_dist, ray[1]*self.scan_max_dist)))
@@ -256,15 +257,22 @@ class MapPanel(wx.Window, UnitMap):
                     intrs = self.tpu(wx.Point(ray[0]*idist, ray[1]*idist))
                     dc.DrawCirclePoint(intrs, 10)
                 # draw calculate intersections
-                intrs, ref=self.getIntersection(0, 0, ray[0]*self.scan_max_dist, ray[1]*self.scan_max_dist)
-                if intrs != None :
+
+
+                #intrs0, pr, intrs1, refstate, intrs=self.getIntersectionMapRefl(self.UnitToMap(0, 0),
+                #                                   self.UnitToMap(ray[0]*self.scan_max_dist, ray[1]*self.scan_max_dist))
+
+                intrs0, pr, intrs1, refstate, intrs=self.getIntersectionUnit(0,0,ray[0]*self.scan_max_dist, ray[1]*self.scan_max_dist)
+                if intrs0 != None :
+                    if pr != None :
+                        dc.SetPen(ray_pen_ref)
+                        dc.DrawLinePoint(self.tc(intrs0[0], intrs0[1]), self.tc(pr[0], pr[1]))
+                    if refstate :
+                        dc.SetPen(inters_pen_cr)
+                        dc.DrawCirclePoint(self.tc(intrs0[0], intrs0[1]), 5)
+                if intrs!=None :
                     dc.SetPen(inters_pen_c)
                     dc.DrawCirclePoint(self.tc(intrs[0], intrs[1]), 5)
-                if ref != None :
-                    dc.SetPen(ray_pen_ref)
-                    pr, cosa = ref
-                    dc.DrawLinePoint(self.tc(intrs[0], intrs[1]), self.tc(pr[0], pr[1]))
-                    dc.DrawTextPoint(str(round(cosa,2)), self.tc(intrs[0], intrs[1]))
 
 
     def UpdateDrawing(self) :

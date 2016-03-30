@@ -130,8 +130,9 @@ class UnitMap:
             left, right = (0, 0)
             for wall in area["WALLS"] :
                 parea0=area["AT"]
-                isect=self.intersectHor(y, parea0[0]+wall["C"][0], parea0[1]+wall["C"][1],
-                                        parea0[0]+wall["C"][2], parea0[1]+wall["C"][3])
+                wall_crd=wall["C"]
+                isect=self.intersectHor(y, parea0[0]+wall_crd[0], parea0[1]+wall_crd[1],
+                                        parea0[0]+wall_crd[2], parea0[1]+wall_crd[3])
                 if isect!=None :
                     if isect<x : left=left+1
                     else : right=right+1
@@ -153,7 +154,7 @@ class UnitMap:
         if True :
             #resmple
             # use algorithm from udacity
-            print("Resample")
+            #print("Resample")
             N=len(self.particles)
             p3 = []
             index = int(random.random() * N)
@@ -213,7 +214,7 @@ class UnitMap:
         for i in range(len(self.scan_angles)) :
             a=self.scan_angles[i]
             p1=(p.x+math.sin(p.a+a)*self.scan_max_dist, p.y+math.cos(p.a+a)*self.scan_max_dist)
-            intrs, ref = self.getIntersectionMap(p0, p1)
+            intrs0, pr, intrs1, refstate, intrs = self.getIntersectionMapRefl(p0, p1)
             if intrs==None : dist2 = -1
             else :
                 dist2=math.sqrt((intrs[0]-p0[0])*(intrs[0]-p0[0])+(intrs[1]-p0[1])*(intrs[1]-p0[1]))
@@ -222,45 +223,79 @@ class UnitMap:
         p.w=prob
         #print(scan_dist)
 
-    def getIntersection(self, x0, y0, x1, y1):
+    def getIntersection(self, x0, y0, x1, y1, findRefl=False):
         # ray is (0.0)->(x,y) line
         # assume that we are inside
         # get a closest one to starting pt
         p0=self.UnitToMap(x0, y0)
         p1=self.UnitToMap(x1, y1)
-        return self.getIntersectionMap(p0, p1)
+        return self.getIntersectionMap(p0, p1, findRefl)
 
-    def getIntersectionMap(self, p0, p1):
+    def getIntersectionUnit(self, x0, y0, x1, y1, findRefl=False):
+        # helper to input Unit coords
+        # ray is (0.0)->(x,y) line
+        # assume that we are inside
+        # get a closest one to starting pt
+        p0=self.UnitToMap(x0, y0)
+        p1=self.UnitToMap(x1, y1)
+        return self.getIntersectionMapRefl(p0, p1)
+
+    def getIntersectionMapRefl(self, p0, p1):
+        intrs0, ref=self.getIntersectionMap(p0, p1, True)
+        refState = False
+        pr = None
+        intrs1 = None
+        intrs = None
+        if intrs0 != None :
+            refState = False
+            intrs=intrs0
+            if ref != None :
+                pr, cosa, refState = ref
+            if refState :
+                # secondary intersect if any
+                intrs1, ref=self.getIntersectionMap(intrs0, pr, False)
+                intrs=intrs1
+        return (intrs0, pr, intrs1, refState, intrs)
+
+    def getIntersectionMap(self, p0, p1, findRefl=False):
         # line p0->p1 in absolute map coords (world)
         intrs = None
         ref=None
         dist2=0
+        reff=0
 
         for area in self.map["AREAS"] :
             parea0=area["AT"]
             for wall in area["WALLS"] :
                 isect=None
                 opened=0
-                p2=(parea0[0]+wall["C"][0], parea0[1]+wall["C"][1])
-                p3=(parea0[0]+wall["C"][2], parea0[1]+wall["C"][3])
-                try:
-                    opened=wall["S"]
-                except KeyError : pass
+                wall_crd=wall["C"]
+                p2=(parea0[0]+wall_crd[0], parea0[1]+wall_crd[1])
+                p3=(parea0[0]+wall_crd[2], parea0[1]+wall_crd[3])
+                if 'S' in wall : opened=wall["S"]
                 if opened==0 or (opened==2 and random.random()>0.5):
                     isect=self.find_intersection(p0, p1, p2, p3)
+                    #isect=None
                 if isect!=None :
                     d2 = (isect[0]-p0[0])*(isect[0]-p0[0])+(isect[1]-p0[1])*(isect[1]-p0[1])
                     if intrs==None or d2<dist2 :
                         intrs=isect
                         dist2=d2
                         wsect=(p2, p3)
+                        reff=area["WALLSREFL"]
+
+            #continue
+
             try:
                 for obj in area["OBJECTS"] :
                     if len(obj["CS"])<2 or obj["DENSITY"] < 0.1 : continue
                     pobj0=(parea0[0]+obj["AT"][0], parea0[1]+obj["AT"][1])
+
+                    """
                     #test insideness, and skip object if inside!
                     left, right = (0, 0)
                     op0=obj["CS"][-1]["C"]
+
                     for c in obj["CS"] :
                         op=c["C"]
                         isect=self.intersectHor(p0[1], parea0[0]+wall["C"][0], parea0[1]+wall["C"][1],
@@ -272,28 +307,36 @@ class UnitMap:
                         #if inside - skip intersecting
                         print ("Hmm...somehow got inside the object...")
                         continue
+                    """
 
                     op0=obj["CS"][-1]["C"]
                     for c in obj["CS"] :
                         op=c["C"]
                         isect=self.find_intersection(p0, p1, (pobj0[0]+op0[0], pobj0[1]+op0[1]), (pobj0[0]+op[0], pobj0[1]+op[1]))
+                        #isect=None
                         if isect!=None :
                             d2 = (isect[0]-p0[0])*(isect[0]-p0[0])+(isect[1]-p0[1])*(isect[1]-p0[1])
                             if intrs==None or d2<dist2 :
                                 intrs=isect
                                 dist2=d2
                                 wsect=((pobj0[0]+op0[0], pobj0[1]+op0[1]), (pobj0[0]+op[0], pobj0[1]+op[1]))
+                                reff=0
                         op0=op
-            except KeyError : pass
+            except KeyError :
+                print('Some obj attr missing')
+                pass
 
-        if intrs!=None :
+
+        #return intrs, ref
+
+        if intrs!=None and findRefl :
             # find reflection vector
             rl=self.scan_max_dist-math.sqrt(dist2)
-            if rl>0 :
-                ref=self.getReflection(p0, intrs, wsect[0], wsect[1], rl)
+            #if rl>0 :
+            if rl<=0 : rl=10
+            ref=self.getReflection(p0, intrs, wsect[0], wsect[1], rl, reff)
 
         return intrs, ref
-
 
     def intersectHor(self, y, x0, y0, x1, y1):
         if y0==y1 : #with hor line
@@ -306,7 +349,7 @@ class UnitMap:
         x = x0+(y-y0)/(y1-y0)*(x1-x0)
         return x
 
-    def getReflection(self, p0, p1, p2, p3, rl):
+    def getReflection(self, p0, p1, p2, p3, rl, reff):
         # find reflection of ray p0-p1 from wall p2-3
         # http://math.stackexchange.com/questions/13261/how-to-get-a-reflection-vector
         t=(p3[0]-p2[0], p3[1]-p2[1]) #tang
@@ -319,7 +362,8 @@ class UnitMap:
         #ref = (p1[0]+d[0]-dn*n[0], p1[1]+d[1]-dn*n[1])
         if refl<0.000001 or nn<0.000001 : return None
         cosa=abs((n[0]*ref[0]+n[1]*ref[1])/(math.sqrt(nn)*refl))
-        return ((p1[0]+rl*ref[0]/refl, p1[1]+rl*ref[1]/refl), cosa)
+        ref_state=cosa<reff  # maybe makes sense to make gaussioan
+        return ((p1[0]+rl*ref[0]/refl, p1[1]+rl*ref[1]/refl), cosa, ref_state)
 
     def find_intersection(self,  p0, p1, p2, p3 ) :
         s10_x = p1[0] - p0[0]

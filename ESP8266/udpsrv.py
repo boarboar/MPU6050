@@ -104,7 +104,8 @@ while 1:
             intrsects = []
                 
             for a in map.scan_angles :
-                intrs, ref=map.getIntersection(0, 0, math.sin(a)*map.scan_max_dist, rvy+math.cos(a)*map.scan_max_dist)  
+                #intrs, ref=map.getIntersection(0, 0, math.sin(a)*map.scan_max_dist, rvy+math.cos(a)*map.scan_max_dist)  
+                intrs0, pr, intrs1, refstate, intrs=map.getIntersectionUnit(0, 0, math.sin(a)*map.scan_max_dist, rvy+math.cos(a)*map.scan_max_dist)  
                 if intrs!=None :
                     intrs=(intrs[0]-mapx, intrs[1]-mapy)                                        
                     dist=math.sqrt(intrs[0]*intrs[0]+intrs[1]*intrs[1])
@@ -148,7 +149,7 @@ while 1:
         js["T"]=t
         #js["I"]=99
         t=t+1000
-        s.sendto(json.dumps(js) , addr)
+        s.sendto(json.dumps(js) , addr)            
     except KeyError: continue   
     except socket.timeout:
 #        print 'Timeout'

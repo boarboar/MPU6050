@@ -159,7 +159,7 @@ class SimulationThread(threading.Thread):
         #self.__controller.reqResetMPU()
 
         while not self.__stop :
-            time.sleep(0.5)
+            time.sleep(1)
             self.__controller.reqPosition()
 
         self.__controller.log().LogString("Simulation thread stopped")
