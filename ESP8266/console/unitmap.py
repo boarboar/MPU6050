@@ -32,7 +32,7 @@ class UnitMap:
         self.InitPos()
         self.particles=[]
         self.boundRect=[sys.maxint, sys.maxint, -sys.maxint, -sys.maxint] #bounding rect
-        scan_a0=-45
+        scan_a0=-90
         scan_n=3
         scan_d=(-scan_a0*2)/(scan_n-1)
         self.scan_angles=[]
@@ -178,17 +178,23 @@ class UnitMap:
 
     def getMeanDistribution(self):
         x,y, var=0,0,0
+        a, vara=0, 0
         for p in self.particles :
             x+=p.x*p.w
             y+=p.y*p.w
+            a+=p.a*p.w
 
         for p in self.particles :
             ex=p.x-x
             ey=p.y-y
             var += (ex*ex+ey*ey)*p.w
+            ea=p.a-a
+            vara+=ea*ea*p.w
+
         var= math.sqrt(var)
+        vara= math.sqrt(vara)
         #print("Variance %s" % str(round(var,2)))
-        return (x, y, var)
+        return (x, y, var, a, vara)
 
     def getParticleRays(self, p): #just for visual debugging
         rays=[]

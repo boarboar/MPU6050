@@ -224,10 +224,14 @@ class MapPanel(wx.Window, UnitMap):
         dc.SetBackgroundMode(wx.TRANSPARENT)
         dc.SetBrush(wx.TRANSPARENT_BRUSH)
         #ray_pen=wx.Pen(wx.BLACK, 1, wx.PENSTYLE_LONG_DASH)
-        mx, my, var = self.getMeanDistribution()
+        mx, my, var, ma, vara = self.getMeanDistribution()
         c=self.tc(mx,my)
         dc.SetPen(wx.Pen(wx.BLACK, 2))
         dc.DrawCirclePoint(c, var*self.__scale)
+        c1a=wx.Point(c.x+30*math.sin(ma-vara), c.y-30*math.cos(ma-vara))
+        c2a=wx.Point(c.x+40*math.sin(ma), c.y-40*math.cos(ma))
+        c3a=wx.Point(c.x+30*math.sin(ma+vara), c.y-30*math.cos(ma+vara))
+        dc.DrawPolygon([c, c1a, c2a, c3a])
 
     def DrawRobot(self, dc):
         dc.SetBackgroundMode(wx.TRANSPARENT)
