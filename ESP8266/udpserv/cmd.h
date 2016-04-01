@@ -10,7 +10,7 @@ const int BUF_SZ = 255;
 class CmdProc {
 public:  
   //static const int8_t ALR_MPU_RESET=10;
-  enum Alarms {ALR_RESET=1, ALR_MPU_RESET=10, ALR_MPU_FAILURE=11}; 
+  enum Alarms {ALR_RESET=1, ALR_MPU_RESET=10, ALR_MPU_FAILURE=11, ALR_CTL_RESET=20, ALR_CTL_FAILURE=21}; 
 public:  
   static CmdProc Cmd; // singleton  
   int16_t init(uint16_t port);

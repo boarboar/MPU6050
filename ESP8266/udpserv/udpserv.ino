@@ -108,6 +108,11 @@ void doCycle() {
   
   // Do fast cycle
   int16_t mpu_res = MpuDrv::Mpu.cycle(dt);
+/*
+  if(mpu_res==1) {
+    //integrate
+  }
+  */
   // collect delay statistics
   int i=0;
   while(i<3 && dt>(CYCLE_TO<<i)) i++;
@@ -117,10 +122,12 @@ void doCycle() {
   if(dt < CYCLE_SLOW_TO) return;
   last_slow_cycle = t;
   
-  // Do medium cycle // (100ms - later on). Now in slow cycle
-  Controller::ControllerProc.process(); 
+  // Do medium cycle // (200ms - later on). Now in slow cycle
+  if(Controller::ControllerProc.process()) {
+    // integrate
+    // couple controller & mpu data here (is it needed ???)
+  }
   
-  // couple controller & mpu data here
   if(MpuDrv::Mpu.getFailReason()) {
     Serial.print(F("MPU FAILURE ")); Serial.println(MpuDrv::Mpu.getFailReason());
     cmd.sendAlarm(CmdProc::ALR_MPU_FAILURE, MpuDrv::Mpu.getFailReason());
@@ -129,6 +136,15 @@ void doCycle() {
   if(MpuDrv::Mpu.isNeedReset()) {
     cmd.sendAlarm(CmdProc::ALR_MPU_RESET, 0);
     MpuDrv::Mpu.init();
+  }
+  if(Controller::ControllerProc.getFailReason()) {
+    Serial.print(F("CTL FAILURE ")); Serial.println(Controller::ControllerProc.getFailReason());
+    cmd.sendAlarm(CmdProc::ALR_CTL_FAILURE, Controller::ControllerProc.getFailReason());
+    Controller::ControllerProc.clearFailReason();
+  }
+  if(Controller::ControllerProc.isNeedReset()) {
+    cmd.sendAlarm(CmdProc::ALR_CTL_RESET, 0);
+    Controller::ControllerProc.init();
   }
   if(CfgDrv::Cfg.needToStore()) CfgDrv::Cfg.store(cfg_file);
   cmd.sendSysLogStatus();  

@@ -82,6 +82,8 @@ while 1:
                 vy=0
                 rvx=0
                 rvy=0
+                vv=0
+                dmov=0
                 init=False
             else :    
                 yaw = yaw + gauss_lim(0, 20, 20) #tends to turn right
@@ -91,11 +93,22 @@ while 1:
                 if yaw>180 : yaw = yaw-360
                 dvy= yaw+gauss_lim(0, 2, 4)
                 vx = math.cos(dvy*math.pi/180.0)*10.0 #in X-UP/Y-LEFT SYSTEM
-                vy =-math.sin(dvy*math.pi/180.0)*10.0                
-                rvx=-vy  #in X-RIGHT/Y-UP SYSTEM
-                rvy=vx
+                vy =-math.sin(dvy*math.pi/180.0)*10.0       
+
+                vv=math.hypot(vx, vy)
+                
+                #in X-RIGHT/Y-UP SYSTEM
+                
+                #rvx=-vy  
+                #rvy=vx
+                
+                rvx=vv*math.sin(dvy*math.pi/180.0)
+                rvy=vv*math.cos(dvy*math.pi/180.0)
+                
                 rx=rx+rvx #CM
                 ry=ry+rvy #CM  
+                
+                dmov+=vv
                 
             map.MoveUnit(rx, ry, yaw*math.pi/180.0, [-1,-1,-1])
             mapx, mapy = map.UnitToMap(0, 0)
@@ -141,6 +154,7 @@ while 1:
                 #"V":[round(vx,2), round(vy,2), 0.0],
                 "V":[round(rvx,2), round(rvy,2), 0.0],
                 "CRD":[round(rx,2), round(ry,2), 0],
+                "D":round(dmov,2),
                 #"CRD":[(random.random()-0.5)*4, (random.random()-0.5)*5, 0],
                 #"S":[(random.random()-0.5)*3, (random.random()-0.5)*3, (random.random()-0.5)*3]
                 "S":intrsects

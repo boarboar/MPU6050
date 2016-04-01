@@ -177,12 +177,14 @@ int16_t c_resetMPU(JsonObject& root, JsonObject& rootOut) {
   const char *action=root["A"];
   if(!action || !*action) return -3;
   if(!strcmp(action, "MPU")) {
-    Serial.println(F("Req to RST MPU...")); 
+    Serial.println(F("Req to RST MPU/CTL...")); 
     //MpuDrv::Mpu.init();
     MpuDrv::Mpu.needReset();
+    Controller::ControllerProc.needReset();
   } else if(!strcmp(action, "MPU_INT")) {
-    Serial.println(F("Resetting MPU integrator...")); 
+    Serial.println(F("Resetting MPU/CTL integrator...")); 
     MpuDrv::Mpu.resetIntegrator();
+    Controller::ControllerProc.resetIntegrator();
   } else return -3;
   return 0;
 }
