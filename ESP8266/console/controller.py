@@ -122,7 +122,8 @@ class Controller():
 
         model_reset = False
 
-        if "I" in resp_json and resp_json["T"] < self.__model["T"] : # command resp has time less saved one...
+        #if "I" in resp_json and resp_json["T"] < self.__model["T"] : # command resp has time less saved one...
+        if "T" in resp_json and resp_json["T"] < self.__model["T"] : # command resp has time less saved one...
             self.__form.LogErrorString("Device time is less than old one, Device is likely to reboot")
             model_reset = True
 
