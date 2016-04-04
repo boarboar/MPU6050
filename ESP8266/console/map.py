@@ -224,7 +224,8 @@ class MapPanel(wx.Window, UnitMap):
         dc.SetBackgroundMode(wx.TRANSPARENT)
         dc.SetBrush(wx.TRANSPARENT_BRUSH)
         #ray_pen=wx.Pen(wx.BLACK, 1, wx.PENSTYLE_LONG_DASH)
-        mx, my, var, ma, vara = self.getMeanDistribution()
+        #mx, my, var, ma, vara = self.getMeanDistribution()
+        mx, my, var, ma, vara = self.x_mean, self.y_mean, self.p_var, self.a_mean, self.a_var
         c=self.tc(mx,my)
         dc.SetPen(wx.Pen(wx.BLACK, 2))
         dc.DrawCirclePoint(c, var*self.__scale)
@@ -291,7 +292,7 @@ class MapPanel(wx.Window, UnitMap):
         try:
             yaw, pitch, roll = [a*math.pi/180.0 for a in self.__model["YPR"]]
             x, y, z = [int(a) for a in self.__model["CRD"]]
-            self.MoveUnit(x, y, yaw, self.__model["S"])
+            self.MoveUnit(x, y, yaw, self.__model["D"], self.__model["S"])
         except KeyError : pass
         except IndexError : pass
 

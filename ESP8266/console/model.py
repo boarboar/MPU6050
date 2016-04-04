@@ -19,6 +19,7 @@ class Model(dict):
         #self["PREV_YPR"]=[0,0,0]
         self["V"]=[0,0,0]
         self["CRD"]=[0,0,0] #coord X, Y, Z
+        self["D"]=[0] # move dist
         #self["PREV_CRD"]=[0,0,0] #prev coord X, Y, Z
         self["S"]=[0,0,0] #sens  Sl, Sc, Sr
         self["T"]=0
@@ -42,6 +43,7 @@ class Model(dict):
     def update(self, resp_json, reset=False):
         "from sresp"
         update_pos=False
+        prev_t=self["T"]
         self.__lock.acquire()
         try:
             if reset==True:
@@ -50,8 +52,10 @@ class Model(dict):
                 self["YPR"]=[0,0,0]
                 self["V"]=[0,0,0]
                 self["CRD"]=[0,0,0]
+                self["D"]=0
                 self["S"]=[0,0,0]
                 update_pos=True
+                prev_t=0
             self["T_ATT"]=0
             self["T"]=resp_json["T"]
             if resp_json["C"]=="INFO" :
@@ -59,15 +63,16 @@ class Model(dict):
                 self["FSS"]=resp_json["FSS"]
             elif resp_json["C"]=="POS" or resp_json["C"]=="L":
                 data=dict.__getitem__(self, "MHIST")
-                if len(data[1])==0  or (int(resp_json["T"]) > int(data[1][-1]["T"])) :
+                #if len(data[1])==0  or (int(resp_json["T"]) > int(data[1][-1]["T"])) :
+                if int(resp_json["T"]) > prev_t :
                     item={"T":resp_json["T"], "YPR":resp_json["YPR"],
                           "V":resp_json["V"] }
                     data[1].append(item)
-                    #self["PREV_YPR"]=self["YPR"]
-                    #self["PREV_CRD"]=self["CRD"]
                     self["YPR"]=resp_json["YPR"]
                     self["V"]=resp_json["V"]
                     self["CRD"]=resp_json["CRD"]
+                    #self["CRD"]=[0,0,0]
+                    self["D"]=resp_json["D"]
                     self["S"]=resp_json["S"]
                     self["T_ATT"]=resp_json["T"]
                     update_pos=True

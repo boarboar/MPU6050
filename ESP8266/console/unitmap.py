@@ -67,9 +67,11 @@ class UnitMap:
         self.__r_cos, self.__r_sin= (1.0, 0.0)    # unit cosine matrix
         self.__r_x, self.__r_y = (0.0, 0.0)    # unit position
         self.__angle=0 #yaw
-        self.__r_move=(0.0, 0.0)
-        self.__a_rot=0.0
-        self.__move=0
+        self.__dist=0
+
+        self.__move_step=0
+        self.__rdist=0
+        self.x_mean, self.y_mean, self.p_var, self.a_mean, self.a_var = (0,0,0,0,0)
 
     def Reset(self):
         self.InitPos()
@@ -88,30 +90,29 @@ class UnitMap:
                 y=(random.random()-0.5)*LOC_VAR+self.yu0
                 self.particles.append(Particle(a=a, x=x, y=y, id=i*N_D+j, w=W))
 
-    def MoveUnit(self, x, y, angle, scans):
-        if self.__move == 0 : # first step
-            self.__r_move=(0.0, 0.0)
-            self.__a_rot=0.0
+    def MoveUnit(self, x, y, angle, dist, scans):
+        if self.__move_step == 0 : # first step
+            move_rot=0
             move_dist=0
         else :
-            self.__r_move=(x-self.__r_x, y-self.__r_y)
-            self.__a_rot=angle-self.__angle
-            if self.__a_rot>math.pi : self.__a_rot=self.__a_rot-math.pi*2
-            elif self.__a_rot<-math.pi : self.__a_rot=math.pi*2+self.__a_rot
-            move_dist=self.__r_move[0]*self.__r_sin+self.__r_move[1]*self.__r_cos
+            move_rot=angle-self.__angle
+            if move_rot>math.pi : move_rot=move_rot-math.pi*2
+            elif move_rot<-math.pi : move_rot=math.pi*2+move_rot
+            move_dist=dist-self.__dist
 
-        print("Unit Mov: %s Rot %s Dist %s" % (str(self.__r_move), str(self.__a_rot*180.0/math.pi), move_dist) )
+        print("Unit Mov: Rot %s Dist %s " % (str(move_rot*180.0/math.pi), move_dist) )
 
         self.__r_cos=math.cos(angle)
         self.__r_sin=math.sin(angle)
         self.__r_x=x
         self.__r_y=y
         self.__angle=angle
+        self.__dist=dist
         self.scans=scans
         self.isInside=self.isInsideTest(x+self.xu0, y+self.yu0)
-        self.__move = self.__move+1
+        self.__move_step = self.__move_step+1
         if len(self.particles)>0 :
-            self.updateParticles(move_dist, self.__a_rot, scans)
+            self.updateParticles(move_dist, move_rot, scans)
 
 
     def UnitToMap(self, x, y):
@@ -144,7 +145,7 @@ class UnitMap:
     def updateParticles(self, mov, rot, scans):
 
         for p in self.particles :
-            p.move_d(mov+random.gauss(0, self.fwd_noise), self.__a_rot+random.gauss(0, self.rot_noise))
+            p.move_d(mov+random.gauss(0, self.fwd_noise), rot+random.gauss(0, self.rot_noise))
             if self.isInsideTest(p.x, p.y) :
                 self.updateParticleProbabilities(p, scans)
             else : p.w=0.0
@@ -175,6 +176,7 @@ class UnitMap:
                 p.w = p.w/wsum
 
         #print self.particles
+        self.x_mean, self.y_mean, self.p_var, self.a_mean, self.a_var = self.getMeanDistribution()
 
     def getMeanDistribution(self):
         x,y, var=0,0,0
