@@ -20,6 +20,7 @@ bool Controller::init() {
   pready=false;
   data_ready=0;
   fail_reason=0;
+  need_reset=false; 
   nsens=0;
   act_rot_rate[0]=act_rot_rate[1]=0;
   act_advance[0]=act_advance[1]=0;

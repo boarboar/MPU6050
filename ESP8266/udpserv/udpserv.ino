@@ -26,8 +26,9 @@ const int PERIPH_UNIT_ID=4;
 uint32_t last_cycle;
 uint32_t last_slow_cycle;
 
-CmdProc& cmd = CmdProc::Cmd; 
-//Controller& ctrl = Controller::ControllerProc; 
+CmdProc& cmd = CmdProc::Cmd;
+ 
+void pcf_test();
 
 void setup() {
   delay(2000);
@@ -147,7 +148,25 @@ void doCycle() {
     Controller::ControllerProc.init();
   }
   if(CfgDrv::Cfg.needToStore()) CfgDrv::Cfg.store(cfg_file);
-  cmd.sendSysLogStatus();  
+  cmd.sendSysLogStatus();
+
+  pcf_test();
+}
+
+int ps=0;
+void pcf_test() { 
+   ps++;
+   uint8_t s=ps%2 ? 255 : 0;
+   Wire.beginTransmission(0x20);
+   Wire.write(s); 
+   int res=Wire.endTransmission();
+   
+ /*
+  Serial.print("PCF test ");
+  Serial.print(s);
+  Serial.print(" \tres=");
+  Serial.println(res);
+  */
 }
 
 
