@@ -12,14 +12,16 @@ class Particle:
         self.a=a
         self.w=w
         self.id=id
-
+    """
     def move(self, dx, dy, da):
         self.a=self.a+da
         self.x=self.x+dx
         self.y=self.y+dy
-
+    """
     def move_d(self, dist, da):
         self.a=self.a+da
+        if self.a>math.pi : self.a=self.a-math.pi*2
+        elif self.a<-math.pi : self.a=math.pi*2+self.a
         self.x=self.x+dist*math.sin(self.a)
         self.y=self.y+dist*math.cos(self.a)
 
@@ -53,25 +55,35 @@ class UnitMap:
             for area in self.map["AREAS"] :
                 parea0=area["AT"]
                 for wall in area["WALLS"] :
-                    self.adjustBound(parea0[0]+wall["C"][0], parea0[1]+wall["C"][1])
-                    self.adjustBound(parea0[0]+wall["C"][2], parea0[1]+wall["C"][3])
-            self.xu0, self.yu0=self.map["START"]
+                    self.AdjustBound(parea0[0]+wall["C"][0], parea0[1]+wall["C"][1])
+                    self.AdjustBound(parea0[0]+wall["C"][2], parea0[1]+wall["C"][3])
+            #self.xu0, self.yu0=self.map["START"]
+            self.SetStartPoint(self.map["START"])
             print("Map loaded")
             print(self.boundRect)
         #except IOError: pass
         except : pass
 
+    def AdjustBound(self, x, y):
+        if x<self.boundRect[0] : self.boundRect[0]=x
+        if y<self.boundRect[1] : self.boundRect[1]=y
+        if x>self.boundRect[2] : self.boundRect[2]=x
+        if y>self.boundRect[3] : self.boundRect[3]=y
+
+    def SetStartPoint(self, pos):
+        self.xu0, self.yu0=pos
+
     def InitPos(self):
         self.isInside=False
         self.scans=[-1,-1,-1]
-        self.__r_cos, self.__r_sin= (1.0, 0.0)    # unit cosine matrix
-        self.__r_x, self.__r_y = (0.0, 0.0)    # unit position
+        self.__r_cos, self.__r_sin= (1.0, 0.0)    # unit cosine matrix, 'real'
+        self.__r_x, self.__r_y = (0.0, 0.0)    # unit position, simulated
         self.__angle=0 #yaw
         self.__dist=0
-
         self.__move_step=0
         self.__rdist=0
-        self.x_mean, self.y_mean, self.p_var, self.a_mean, self.a_var = (0,0,0,0,0)
+        self.x_mean, self.y_mean, self.p_var, self.a_mean, self.a_var = (self.xu0,self.yu0,0,0,0) # unit localization, abs coords
+        self.__l_cos, self.__l_sin= (1.0, 0.0)    # unit cosine matrix, 'localized'
 
     def Reset(self):
         self.InitPos()
@@ -81,7 +93,8 @@ class UnitMap:
         N_D=20
         W=1.0/(N_D*N_D)
         LOC_VAR=150
-        ANG_VAR=math.pi/2
+        #ANG_VAR=math.pi/2
+        ANG_VAR=math.pi
         self.particles = [] #clean
         for i in range(N_D) :
             for j in range(N_D) :
@@ -90,7 +103,7 @@ class UnitMap:
                 y=(random.random()-0.5)*LOC_VAR+self.yu0
                 self.particles.append(Particle(a=a, x=x, y=y, id=i*N_D+j, w=W))
 
-    def MoveUnit(self, x, y, angle, dist, scans):
+    def MoveUnit(self, angle, dist, scans, x, y):
         if self.__move_step == 0 : # first step
             move_rot=0
             move_dist=0
@@ -104,27 +117,27 @@ class UnitMap:
 
         self.__r_cos=math.cos(angle)
         self.__r_sin=math.sin(angle)
-        self.__r_x=x
-        self.__r_y=y
         self.__angle=angle
         self.__dist=dist
         self.scans=scans
-        self.isInside=self.isInsideTest(x+self.xu0, y+self.yu0)
         self.__move_step = self.__move_step+1
         if len(self.particles)>0 :
             self.updateParticles(move_dist, move_rot, scans)
+        self.__l_cos=math.cos(self.a_mean)
+        self.__l_sin=math.sin(self.a_mean)
 
+        self.__r_x, self.__r_y = x, y # simulated crd
+        self.isInside=self.isInsideTest(x+self.xu0, y+self.yu0)
 
-    def UnitToMap(self, x, y):
+    def UnitToMapSim(self, x, y):
         x1=x*self.__r_cos+y*self.__r_sin+self.__r_x+self.xu0
         y1=-x*self.__r_sin+y*self.__r_cos+self.__r_y+self.yu0
         return (x1,y1)
 
-    def adjustBound(self, x, y):
-        if x<self.boundRect[0] : self.boundRect[0]=x
-        if y<self.boundRect[1] : self.boundRect[1]=y
-        if x>self.boundRect[2] : self.boundRect[2]=x
-        if y>self.boundRect[3] : self.boundRect[3]=y
+    def UnitToMapLoc(self, x, y):
+        x1=x*self.__l_cos+y*self.__l_sin+self.x_mean
+        y1=-x*self.__l_sin+y*self.__l_cos+self.y_mean
+        return (x1,y1)
 
     def isInsideTest(self, x, y):
         for area in self.map["AREAS"] :
@@ -198,6 +211,7 @@ class UnitMap:
         #print("Variance %s" % str(round(var,2)))
         return (x, y, var, a, vara)
 
+    """
     def getParticleRays(self, p): #just for visual debugging
         rays=[]
         p0=(p.x, p.y)
@@ -205,7 +219,8 @@ class UnitMap:
             p1=(p.x+math.sin(p.a+a)*self.scan_max_dist, p.y+math.cos(p.a+a)*self.scan_max_dist)
             rays.append((p0, p1))
         return rays
-
+    """
+    """
     def getParticleIntersects(self, p): #just for visual debugging
         intersects=[]
         p0=(p.x, p.y)
@@ -214,6 +229,7 @@ class UnitMap:
             intrs, ref = self.getIntersectionMap(p0, p1)
             intersects.append(intrs)
         return intersects
+    """
 
     def updateParticleProbabilities(self, p, meas):
         scan_dist=[]
@@ -230,23 +246,6 @@ class UnitMap:
             prob*=self.Gaussian(dist2, self.sense_noise, meas[i])
         p.w=prob
         #print(scan_dist)
-
-    def getIntersection(self, x0, y0, x1, y1, findRefl=False):
-        # ray is (0.0)->(x,y) line
-        # assume that we are inside
-        # get a closest one to starting pt
-        p0=self.UnitToMap(x0, y0)
-        p1=self.UnitToMap(x1, y1)
-        return self.getIntersectionMap(p0, p1, findRefl)
-
-    def getIntersectionUnit(self, x0, y0, x1, y1, findRefl=False):
-        # helper to input Unit coords
-        # ray is (0.0)->(x,y) line
-        # assume that we are inside
-        # get a closest one to starting pt
-        p0=self.UnitToMap(x0, y0)
-        p1=self.UnitToMap(x1, y1)
-        return self.getIntersectionMapRefl(p0, p1)
 
     def getIntersectionMapRefl(self, p0, p1):
         intrs0, ref=self.getIntersectionMap(p0, p1, True)

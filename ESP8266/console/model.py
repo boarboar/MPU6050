@@ -65,17 +65,15 @@ class Model(dict):
                 data=dict.__getitem__(self, "MHIST")
                 #if len(data[1])==0  or (int(resp_json["T"]) > int(data[1][-1]["T"])) :
                 if int(resp_json["T"]) > prev_t :
-                    item={"T":resp_json["T"], "YPR":resp_json["YPR"],
-                          "V":resp_json["V"] }
-                    data[1].append(item)
                     self["YPR"]=resp_json["YPR"]
-                    self["V"]=resp_json["V"]
-                    self["CRD"]=resp_json["CRD"]
-                    #self["CRD"]=[0,0,0]
+                    if "V" in resp_json : self["V"]=resp_json["V"]
+                    if "CRD" in resp_json : self["CRD"]=resp_json["CRD"]
                     self["D"]=resp_json["D"]
                     self["S"]=resp_json["S"]
                     self["T_ATT"]=resp_json["T"]
                     update_pos=True
+                    #item={"T":resp_json["T"], "YPR":resp_json["YPR"], "V":resp_json["V"] }
+                    #data[1].append(item)#history
         except KeyError: pass
         finally: self.__lock.release()
         return update_pos

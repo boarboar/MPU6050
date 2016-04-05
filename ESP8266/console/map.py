@@ -66,7 +66,8 @@ class MapPanel(wx.Window, UnitMap):
         if not self.__dragged and self.__pos_set_on:
             print "Click"
             X, Y = self.ScreenToClient(wx.GetMousePosition())
-            self.xu0, self.yu0 = self.tm(X, Y)
+            #self.xu0, self.yu0 = self.tm(X, Y)
+            self.SetStartPoint(self.tm(X, Y))
             self.UpdateDrawing()
         self.__dragged=False
         event.Skip()
@@ -74,8 +75,6 @@ class MapPanel(wx.Window, UnitMap):
     def OnMouseMotion(self,event):
         if self.__drag :
             X, Y = self.ScreenToClient(wx.GetMousePosition())
-            #self.__x0 = self.__drag_delta[0]+X
-            #self.__y0 = self.__drag_delta[1]+Y
             self.__x0 += X-self.__drag_prev[0]
             self.__y0 += Y-self.__drag_prev[1]
             self.__drag_prev = (X,Y)
@@ -88,9 +87,7 @@ class MapPanel(wx.Window, UnitMap):
 
     def onZoom(self,event,dir):
         scale={"in":1.2,"out":1.0/1.2}
-        print('inzoom1')
         self.Scale(scale[dir])
-        print('inzoom2')
 
     def onButtonMove(self,event,dir):
         move={"left":(40, 0),"right":(-40, 0),"up":(0, 40), "dn":(0, -40)}
@@ -239,12 +236,17 @@ class MapPanel(wx.Window, UnitMap):
         dc.SetBrush(wx.TRANSPARENT_BRUSH)
         ray_pen=wx.Pen(wx.BLACK, 1, wx.PENSTYLE_LONG_DASH)
         ray_pen_ref=wx.Pen('GREY', 1, wx.DOT)
+
+        dc.SetPen(wx.Pen('GRAY', 2))
+        dc.DrawPolygon(self.tssu(self.__shape)) #simulated
+
         if self.isInside :
             dc.SetPen(wx.Pen(wx.BLUE, 2))
         else :
             dc.SetPen(wx.Pen(wx.RED, 2))
 
-        dc.DrawPolygon(self.tsu(self.__shape))
+        dc.DrawPolygon(self.tsu(self.__shape)) #localized
+
         # draw sensor rays
         if self.isInside :
             i=0
@@ -263,11 +265,9 @@ class MapPanel(wx.Window, UnitMap):
                     dc.DrawCirclePoint(intrs, 10)
                 # draw calculate intersections
 
-
-                #intrs0, pr, intrs1, refstate, intrs=self.getIntersectionMapRefl(self.UnitToMap(0, 0),
-                #                                   self.UnitToMap(ray[0]*self.scan_max_dist, ray[1]*self.scan_max_dist))
-
-                intrs0, pr, intrs1, refstate, intrs=self.getIntersectionUnit(0,0,ray[0]*self.scan_max_dist, ray[1]*self.scan_max_dist)
+                intrs0, pr, intrs1, refstate, intrs=self.getIntersectionMapRefl(
+                    self.UnitToMapLoc(0,0),
+                    self.UnitToMapLoc(ray[0]*self.scan_max_dist, ray[1]*self.scan_max_dist))
                 if intrs0 != None :
                     if pr != None :
                         dc.SetPen(ray_pen_ref)
@@ -291,8 +291,8 @@ class MapPanel(wx.Window, UnitMap):
     def UpdateData(self):
         try:
             yaw, pitch, roll = [a*math.pi/180.0 for a in self.__model["YPR"]]
-            x, y, z = [int(a) for a in self.__model["CRD"]]
-            self.MoveUnit(x, y, yaw, self.__model["D"], self.__model["S"])
+            x, y, z = [int(a) for a in self.__model["CRD"]] # for simulation
+            self.MoveUnit(yaw, self.__model["D"], self.__model["S"], x, y)
         except KeyError : pass
         except IndexError : pass
 
@@ -316,7 +316,16 @@ class MapPanel(wx.Window, UnitMap):
     def tpu(self, p):
         # Unit to screen
         x, y = p.Get()
-        x1, y1 = self.UnitToMap(x, y)
+        x1, y1 = self.UnitToMapLoc(x, y)
+        return self.tc(x1,y1)
+
+    def tssu(self, pts):
+        return [self.tspu(p) for p in pts]
+
+    def tspu(self, p):
+        # Unit to screen
+        x, y = p.Get()
+        x1, y1 = self.UnitToMapSim(x, y)
         return self.tc(x1,y1)
 
     def tm(self, x, y):

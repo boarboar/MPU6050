@@ -24,7 +24,9 @@ bool Controller::init() {
   nsens=0;
   act_rot_rate[0]=act_rot_rate[1]=0;
   act_advance[0]=act_advance[1]=0;
-  //sensors={0};
+  for(int i=0; i<SENS_SIZE; i++) sensors[i]=0;
+  dist=0;
+  angle=0;
   resetIntegrator();
   pready=testConnection();
   if(pready) {

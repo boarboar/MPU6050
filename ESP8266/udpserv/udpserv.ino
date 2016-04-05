@@ -28,7 +28,7 @@ uint32_t last_slow_cycle;
 
 CmdProc& cmd = CmdProc::Cmd;
  
-void pcf_test();
+//void pcf_test();
 
 void setup() {
   delay(2000);
@@ -150,9 +150,10 @@ void doCycle() {
   if(CfgDrv::Cfg.needToStore()) CfgDrv::Cfg.store(cfg_file);
   cmd.sendSysLogStatus();
 
-  pcf_test();
+  //pcf_test();
 }
 
+/*
 int ps=0;
 void pcf_test() { 
    ps++;
@@ -160,13 +161,7 @@ void pcf_test() {
    Wire.beginTransmission(0x20);
    Wire.write(s); 
    int res=Wire.endTransmission();
-   
- /*
-  Serial.print("PCF test ");
-  Serial.print(s);
-  Serial.print(" \tres=");
-  Serial.println(res);
-  */
+  Serial.print("PCF test ");Serial.print(s);Serial.print(" \tres=");Serial.println(res);
 }
-
+*/
 

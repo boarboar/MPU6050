@@ -213,6 +213,7 @@ int16_t c_getpos(JsonObject& root, JsonObject& rootOut) {
   JsonArray& s = rootOut.createNestedArray("S");
   for(i=0; i<3; i++) s.add(Controller::ControllerProc.getStoredSensors()[i]);
   
+  rootOut["D"]=Controller::ControllerProc.getDistance();
   return 0;
 }
 

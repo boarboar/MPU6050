@@ -10,8 +10,11 @@
 
 #define M_OWN_ID 0x53
 
+#define SENS_SIZE 8
+
 #define V_NORM 10000
 #define WHEEL_BASE_MM 130
+
 
 class Controller {
 public:
@@ -58,7 +61,7 @@ private:
   float act_rot_rate[2];
   float mov, rot;
   int16_t act_advance[2];
-  int16_t sensors[8];
+  int16_t sensors[SENS_SIZE];
   uint8_t pready;
   uint8_t nsens;
 

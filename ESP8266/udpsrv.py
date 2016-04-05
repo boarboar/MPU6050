@@ -110,15 +110,18 @@ while 1:
                 
                 dmov+=vv
                 
-            map.MoveUnit(rx, ry, yaw*math.pi/180.0, [-1,-1,-1])
-            mapx, mapy = map.UnitToMap(0, 0)
+            map.MoveUnit(yaw*math.pi/180.0, dmov, [-1,-1,-1], rx, ry)
+            mapx, mapy = map.UnitToMapSim(0, 0)
             print mapx, mapy
             
             intrsects = []
                 
             for a in map.scan_angles :
-                #intrs, ref=map.getIntersection(0, 0, math.sin(a)*map.scan_max_dist, rvy+math.cos(a)*map.scan_max_dist)  
-                intrs0, pr, intrs1, refstate, intrs=map.getIntersectionUnit(0, 0, math.sin(a)*map.scan_max_dist, rvy+math.cos(a)*map.scan_max_dist)  
+                #intrs0, pr, intrs1, refstate, intrs=map.getIntersectionUnit(0, 0, math.sin(a)*map.scan_max_dist, rvy+math.cos(a)*map.scan_max_dist)  
+                intrs0, pr, intrs1, refstate, intrs=map.getIntersectionMapRefl(
+                    (mapx, mapy), 
+                    map.UnitToMapSim(math.sin(a)*map.scan_max_dist, rvy+math.cos(a)*map.scan_max_dist))  
+                
                 if intrs!=None :
                     intrs=(intrs[0]-mapx, intrs[1]-mapy)                                        
                     dist=math.sqrt(intrs[0]*intrs[0]+intrs[1]*intrs[1])
