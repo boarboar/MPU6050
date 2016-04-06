@@ -72,6 +72,7 @@ uint32_t lastEvTime, lastPidTime;
 int16_t sens[M_SENS_N];
 int16_t targ_rot_rate[2]={0,0}; // RPS, 10000 = 1 RPS  (use DRV_RPS_NORM)
 int16_t targ_new_rot_rate[2]={0, 0}; // RPS, 10000 = 1 RPS  (use DRV_RPS_NORM), +/-
+int16_t targ_old_rot_rate[2]={0, 0}; // prev
 int16_t act_rot_rate[2]={0,0}; // OUT - actual rate, 10000 = 1 RPS  (use DRV_RPS_NORM)
 int16_t act_adv_accu_mm[2]={0,0};  // OUT - in mm, after last request. Should be zeored after get request
 
@@ -184,9 +185,15 @@ void loop()
 
 
 void startDrive() {
+  if(isDriving && targ_old_rot_rate[0]==targ_new_rot_rate[0] && targ_old_rot_rate[1]==targ_new_rot_rate[1]) {
+    Serial.print("Continue drive"); 
+    return;
+  }
+  
   Serial.print("Start drive: "); 
    
   for(int i=0; i<2; i++) {
+    targ_old_rot_rate[i]=targ_new_rot_rate[i];
     if(targ_new_rot_rate[i]==0) {
       drv_dir[i]=0;
       targ_rot_rate[i]=0;

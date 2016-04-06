@@ -45,7 +45,7 @@ class MyForm(wx.Frame):
         self.btn_hist = wx.Button(panel, wx.ID_ANY, 'Measmts')
         self.btn_dump = wx.Button(panel, wx.ID_ANY, 'Dump')
         self.btn_sim = wx.Button(panel, wx.ID_ANY, 'Sim')
-        self.txt_cmd = wx.TextCtrl(panel)
+        self.txt_cmd = wx.TextCtrl(panel, style=wx.TE_PROCESS_ENTER, value='{"C":"INFO"}')
         self.btn_cmd = wx.Button(panel, wx.ID_ANY, 'Send')
         bsz=28
         self.btn_map_zoom_in = wx.Button(panel, wx.ID_ANY, '+', size=( bsz,  bsz))
@@ -91,6 +91,7 @@ class MyForm(wx.Frame):
         self.Bind(wx.EVT_BUTTON, lambda evt, move='dn': self.map.onButtonMove(evt, move), self.btn_map_dn)
         self.Bind(wx.EVT_BUTTON, self.map.onFit, self.btn_map_fit)
         self.Bind(wx.EVT_TOGGLEBUTTON, lambda evt : self.map.onPosToggle(evt, self.btn_map_pos.GetValue() ), self.btn_map_pos)
+        self.txt_cmd.Bind(wx.EVT_KEY_DOWN, self.onEnterCmdText)
 
         self.config=config.Config(self, self.model)
         self.controller=controller.Controller(self, self.model)
@@ -230,6 +231,13 @@ class MyForm(wx.Frame):
 
     def onSendCmd(self, event):
         self.controller.reqCmdRaw(self.txt_cmd.GetValue())
+
+    def onEnterCmdText(self, event):
+        keycode = event.GetKeyCode()
+        if keycode == wx.WXK_RETURN or keycode == wx.WXK_NUMPAD_ENTER:
+            self.onSendCmd(event=None)
+            event.EventObject.Navigate()
+        event.Skip()
 
     def onLogEvent(self, evt):
         self.AddLine(evt.msg, evt.color)

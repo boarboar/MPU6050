@@ -21,14 +21,16 @@ public:
   enum FailReason {CTL_FAIL_NONE=0, CTL_FAIL_INIT=1, CTL_FAIL_WRT=2, CTL_FAIL_RD=3};
   static Controller ControllerProc; // singleton  
   bool init();
+  uint8_t getStatus();
   uint8_t isDataReady();
   uint8_t isNeedReset();
   void needReset();
   uint8_t getFailReason();
   void clearFailReason();
   void resetIntegrator();
-  bool process();  
+  bool process(float yaw);  
 
+  bool setTargRotRate(float l, float r);
   bool setTargRotRate(int16_t *d);
   bool getTargRotRate(int16_t *d);
   bool stopDrive();
@@ -67,6 +69,7 @@ private:
 
   float dist;
   float angle;
+  float r[3];
 };
 
 #endif //_UMP_CONTROLLER_H_

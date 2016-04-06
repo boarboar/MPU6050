@@ -34,7 +34,6 @@ int16_t MpuDrv::init() {
   need_reset=0;
   fail_reason=0;
   resetIntegrator();
-  //r.x=r.y=r.z=0.0f;
   Serial.println(F("Init I2C dev..."));
   mpu.initialize();
   // verify connection
@@ -228,27 +227,41 @@ int16_t MpuDrv::cycle(uint16_t dt) {
 void MpuDrv::resetIntegrator() {
   a.x=a.y=a.z=0.0f;
   v.x=v.y=v.z=0.0f;  
-  //r.x=r.y=r.z=0.0f;
+  ypr[0]=ypr[1]=ypr[2]=1.0f;
 }
 
-void MpuDrv::getAll(float* ypr, float* af, float* vf/*, float *rf*/) {        
+void MpuDrv::process() {
   Quaternion q, q0;
   VectorFloat gravity;    
-  uint8_t i;
   mpu.dmpGetQuaternion(&q, q16);
   mpu.dmpGetQuaternion(&q0, q16_0);
   q0=q0.getConjugate();
   q=q0.getProduct(q); // real quaternion (relative to base)
   mpu.dmpGetGravity(&gravity, &q);
   mpu.dmpGetYawPitchRoll(ypr, &q, &gravity); 
+}
 
+float MpuDrv::getYaw() { return ypr[0]; }
+
+void MpuDrv::getAll(float* ypr, float* af, float* vf) {        
+  /*
+  Quaternion q, q0;
+  VectorFloat gravity;    
+  mpu.dmpGetQuaternion(&q, q16);
+  mpu.dmpGetQuaternion(&q0, q16_0);
+  q0=q0.getConjugate();
+  q=q0.getProduct(q); // real quaternion (relative to base)
+  mpu.dmpGetGravity(&gravity, &q);
+  mpu.dmpGetYawPitchRoll(ypr, &q, &gravity); 
+  */
+  ypr[0]=this->ypr[0]; ypr[1]=this->ypr[1]; ypr[2]=this->ypr[2];
   af[0]=a.x; af[1]=a.y; af[2]=a.z;
   vf[0]=v.x; vf[1]=v.y; vf[2]=v.z;
-//  rf[0]=r.x; rf[1]=r.y; rf[2]=r.z;
-
+/*
   DbgPrintArr3Float("YPR", ypr);
   yield();
   DbgPrintArr3Float("V", vf);
+  */
 }  
 
 void MpuDrv::DbgPrintVectorInt16(const char *s, VectorInt16 *v) {

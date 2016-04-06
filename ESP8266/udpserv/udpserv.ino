@@ -124,10 +124,9 @@ void doCycle() {
   last_slow_cycle = t;
   
   // Do medium cycle // (200ms - later on). Now in slow cycle
-  if(Controller::ControllerProc.process()) {
-    // integrate
-    // couple controller & mpu data here (is it needed ???)
-  }
+  MpuDrv::Mpu.process();  
+  Controller::ControllerProc.process(MpuDrv::Mpu.getYaw()); 
+  yield();
   
   if(MpuDrv::Mpu.getFailReason()) {
     Serial.print(F("MPU FAILURE ")); Serial.println(MpuDrv::Mpu.getFailReason());

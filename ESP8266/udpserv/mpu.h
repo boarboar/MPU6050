@@ -30,8 +30,10 @@ public:
   void needReset();
   uint8_t getFailReason();
   void clearFailReason();
-  void getAll(float* ypr, float* af, float* vf/*, float* rf*/);  
+  void getAll(float* ypr, float* af, float* vf);  
   void resetIntegrator();
+  void process();
+  float getYaw();
   static void DbgPrintVectorInt16(const char *s, VectorInt16 *v);
   static void DbgPrintQInt16(const char *s, int16_t *q);
   static void DbgPrintVectorFloat(const char *s, VectorFloat *v);
@@ -58,7 +60,7 @@ protected:
   VectorFloat a0; // base world accel
   VectorFloat a;
   VectorFloat v;
-  //VectorFloat r; // not needed
+  float ypr[3];
   /*
   volatile uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
   */

@@ -72,6 +72,8 @@ while 1:
         js=json.loads(data.strip())
         # pos: {"C": "I", "T":12345, "R":0, "C": "L", "YPR": [59, 12, 13], "A": [0.01, 0.02, -0.03], "V": [0.1, 0.2, -0.3]}
         if js["C"]=="INFO" : js["FHS"]=99999
+        elif js["C"]=="D" : #drive
+            js["ARPS"]=[round(js["RPS"][0]/2,2), round(js["RPS"][1]/2,2)]
         elif js["C"]=="RSTMPU" : init=True
         elif js["C"]=="POS" : 
             if init : 

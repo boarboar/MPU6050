@@ -9,7 +9,7 @@ Controller Controller::ControllerProc ; // singleton
 Controller::Controller() : pready(false), nsens(0), act_rot_rate{0},act_advance{0},sensors{0} {
   }
 
-//int8_t Controller::getStatus() { return pready; }
+uint8_t Controller::getStatus() { return pready; }
 uint8_t Controller::isDataReady() { return pready && data_ready; }
 uint8_t Controller::isNeedReset() { return need_reset; }
 void    Controller::needReset() {  need_reset=true; }
@@ -39,7 +39,8 @@ bool Controller::init() {
 }
 
 void Controller::resetIntegrator() {
-  dist=angle=0;
+  dist=angle=0.0f;
+  r[0]=r[1]=r[2]=0.0f;
 }
 
 uint8_t Controller::testConnection() {
@@ -48,7 +49,7 @@ uint8_t Controller::testConnection() {
   return buf[0]==M_OWN_ID;
 }
 
-bool Controller::process() {
+bool Controller::process(float yaw) {
   if(!pready) return false;
   int16_t tmp[2];
   getActRotRate(tmp);
@@ -63,6 +64,8 @@ bool Controller::process() {
 
   if(angle>PI) angle-=PI*2.0f;
   else if(angle<-PI) angle+=PI*2.0f;
+
+  // TODO integrate here (mov + yaw) -> r
             
   return true;
 }
@@ -76,6 +79,12 @@ float Controller::getRotation() { return rot;}
 float Controller::getDistance() { return dist;}
 float Controller::getAngle() { return angle;}
 
+bool Controller::setTargRotRate(float l, float r) {
+  int16_t d[2];
+  d[0]=(int16_t)(l*V_NORM);
+  d[1]=(int16_t)(r*V_NORM);
+  return setTargRotRate(d);
+}
 
 uint8_t Controller::_getNumSensors() {
   bool res = I2Cdev::readByte(DEV_ID, REG_SENSORS_CNT, buf); 

@@ -94,6 +94,7 @@ int16_t CfgDrv::store(const char* fname) {
     }
     json.printTo(f);
     f.write('\n');
+    yield();
   }
   f.close();
   uint16_t t=millis()-ms1;

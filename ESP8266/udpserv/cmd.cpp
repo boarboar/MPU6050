@@ -19,16 +19,18 @@ int16_t c_reset(JsonObject&,JsonObject&);
 int16_t c_setsyslog(JsonObject&,JsonObject&);
 int16_t c_getpos(JsonObject&,JsonObject&);
 int16_t c_resetMPU(JsonObject&,JsonObject&);
+int16_t c_drive(JsonObject&,JsonObject&);
 
-VFP cmd_imp[5]={c_info, c_reset, c_setsyslog, c_getpos, c_resetMPU};
+VFP cmd_imp[6]={c_info, c_reset, c_setsyslog, c_getpos, c_resetMPU, c_drive};
 
-const char *CMDS="INFO\0RST\0SYSL\0POS\0RSTMPU\0";
-enum CMDS_ID {CMD_INFO=0, CMD_RESET=1, CMD_SETSYSLOG=2, CMD_POS=3, CMD_RESET_MPU=4, CMD_NOCMD=5};
+const char *CMDS="INFO\0RST\0SYSL\0POS\0RSTMPU\0D\0";
+enum CMDS_ID {CMD_INFO=0, CMD_RESET=1, CMD_SETSYSLOG=2, CMD_POS=3, CMD_RESET_MPU=4, CMD_DRIVE=5, CMD_NOCMD=5};
 // {"I":1,"C":"INFO"}
 // {"I":1,"C":"RST"}
 // {"I":1,"C":"SYSL", "ON":1, "ADDR":"192.168.1.141", "PORT":4444}
 // {"I":1,"C":"POS"}
 // {"I":1,"C":"RSTMPU"}
+// {"I":1,"C":"D","RPS":[0.1, -0.1]}
 
 int16_t CmdProc::init(uint16_t port) {
   if(udp_rcv.begin(port)) {
@@ -217,5 +219,24 @@ int16_t c_getpos(JsonObject& root, JsonObject& rootOut) {
   return 0;
 }
 
-
+int16_t c_drive(JsonObject& root, JsonObject& rootOut) {
+  if(!Controller::ControllerProc.getStatus()) return -5;
+  Serial.print(F("Drv req "));
+  if(root["RPS"].is<JsonArray&>()) {
+    JsonArray& rps=root["RPS"].asArray();
+    float r0=rps[0], r1=rps[1];
+    Serial.print("TR: "); Serial.print(r0); Serial.print(", "); Serial.print(r1);
+    Controller::ControllerProc.setTargRotRate(r0, r1);
+    //Controller::ControllerProc.process();
+  } else {
+    ; // get
+  }
+  JsonArray& r = rootOut.createNestedArray("ARPS");
+  float *arps=Controller::ControllerProc.getStoredRotRate();
+  r.add(arps[0]), r.add(arps[1]);
+  rootOut["AA"]=Controller::ControllerProc.getAngle();
+  Serial.print("\tAR: "); Serial.print(arps[0]); Serial.print(", "); Serial.print(arps[1]); 
+  Serial.print("\tAA: "); Serial.println(Controller::ControllerProc.getAngle());
+  return 0;
+}
 
