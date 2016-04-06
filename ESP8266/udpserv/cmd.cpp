@@ -24,7 +24,7 @@ int16_t c_drive(JsonObject&,JsonObject&);
 VFP cmd_imp[6]={c_info, c_reset, c_setsyslog, c_getpos, c_resetMPU, c_drive};
 
 const char *CMDS="INFO\0RST\0SYSL\0POS\0RSTMPU\0D\0";
-enum CMDS_ID {CMD_INFO=0, CMD_RESET=1, CMD_SETSYSLOG=2, CMD_POS=3, CMD_RESET_MPU=4, CMD_DRIVE=5, CMD_NOCMD=5};
+enum CMDS_ID {CMD_INFO=0, CMD_RESET=1, CMD_SETSYSLOG=2, CMD_POS=3, CMD_RESET_MPU=4, CMD_DRIVE=5, CMD_NOCMD=6};
 // {"I":1,"C":"INFO"}
 // {"I":1,"C":"RST"}
 // {"I":1,"C":"SYSL", "ON":1, "ADDR":"192.168.1.141", "PORT":4444}
