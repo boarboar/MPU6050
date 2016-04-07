@@ -20,8 +20,6 @@ class MyForm(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
         self.model=model.Model("ROBO")
-
-
         menuBar = wx.MenuBar()
         menu = wx.Menu()
         menuBar.Append(menu, "&File")
@@ -97,6 +95,11 @@ class MyForm(wx.Frame):
         self.controller=controller.Controller(self, self.model)
         self.LogString("Local address is %s" % socket.gethostbyname(socket.gethostname()))
         self.map.Reset() # init particles filter
+        self.history = self.model["CMD_HIST"]
+        if len(self.history) > 0 :
+            self.history_ptr=len(self.history)-1
+            self.txt_cmd.SetValue(self.history[self.history_ptr])
+
 
     def layout(self, panel):
         # Add widgets to a sizer
@@ -180,6 +183,9 @@ class MyForm(wx.Frame):
         wx.PostEvent(self, event)
 
     def OnClose(self, event):
+        print(self.history)
+        self.model["CMD_HIST"]=self.history
+        self.config.update()
         self.controller.stop(timeout=10.0)
         self.Destroy()
 
@@ -230,13 +236,28 @@ class MyForm(wx.Frame):
         self.LogString(str(self.model.dump()))
 
     def onSendCmd(self, event):
-        self.controller.reqCmdRaw(self.txt_cmd.GetValue())
+        cmd=self.txt_cmd.GetValue()
+        self.controller.reqCmdRaw(cmd)
+        if len(self.history)==0 or self.history[-1] != cmd :
+            if len(self.history) > 10 : self.history.pop(0)
+            self.history.append(cmd)
+        self.history_ptr=len(self.history)-1
 
     def onEnterCmdText(self, event):
         keycode = event.GetKeyCode()
         if keycode == wx.WXK_RETURN or keycode == wx.WXK_NUMPAD_ENTER:
             self.onSendCmd(event=None)
-            event.EventObject.Navigate()
+            #event.EventObject.Navigate()
+        elif keycode == wx.WXK_UP or keycode == wx.WXK_NUMPAD_UP:
+            #self.txt_cmd.SetValue('UP')
+            if self.history_ptr > 0 :
+                self.history_ptr-=1;
+                self.txt_cmd.SetValue(self.history[self.history_ptr])
+        elif keycode == wx.WXK_DOWN or keycode == wx.WXK_NUMPAD_DOWN:
+            #self.txt_cmd.SetValue('DN')
+            if self.history_ptr < len(self.history)-1 :
+                self.history_ptr+=1;
+                self.txt_cmd.SetValue(self.history[self.history_ptr])
         event.Skip()
 
     def onLogEvent(self, evt):

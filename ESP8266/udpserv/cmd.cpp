@@ -204,12 +204,12 @@ int16_t c_getpos(JsonObject& root, JsonObject& rootOut) {
   uint8_t i;
   MpuDrv::Mpu.getAll(ypr, af, vf); 
   for(i=0; i<3; i++) ya.add(ypr[i] * 180/M_PI);
-  //JsonArray& aa = rootOut.createNestedArray("A");
-  //for(i=0; i<3; i++) aa.add(af[i]);  
   JsonArray& v = rootOut.createNestedArray("V");
   for(i=0; i<3; i++) v.add(vf[i]);
+  float *crd = Controller::ControllerProc.getCoords();
   JsonArray& r = rootOut.createNestedArray("CRD");
-  for(i=0; i<3; i++) r.add(0.0f);
+  for(i=0; i<2; i++) r.add(crd[i]);
+  r.add(0.0); // Z-crd
   
   uint8_t ns=Controller::ControllerProc.getNumSensors();
   JsonArray& s = rootOut.createNestedArray("S");
@@ -226,8 +226,7 @@ int16_t c_drive(JsonObject& root, JsonObject& rootOut) {
     JsonArray& rps=root["RPS"].asArray();
     float r0=rps[0], r1=rps[1];
     Serial.print("TR: "); Serial.print(r0); Serial.print(", "); Serial.print(r1);
-    Controller::ControllerProc.setTargRotRate(r0, r1);
-    //Controller::ControllerProc.process();
+    if(!Controller::ControllerProc.setTargRotRate(r0, r1)) return -5;    
   } else {
     ; // get
   }

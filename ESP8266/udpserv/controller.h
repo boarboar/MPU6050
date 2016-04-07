@@ -42,6 +42,7 @@ public:
   float getRotation();
   float getDistance();
   float getAngle();
+  float *getCoords();
 protected:  
   Controller();
   uint8_t testConnection();
@@ -69,7 +70,7 @@ private:
 
   float dist;
   float angle;
-  float r[3];
+  float r[2];
 };
 
 #endif //_UMP_CONTROLLER_H_

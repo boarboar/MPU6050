@@ -25,8 +25,6 @@ bool Controller::init() {
   act_rot_rate[0]=act_rot_rate[1]=0;
   act_advance[0]=act_advance[1]=0;
   for(int i=0; i<SENS_SIZE; i++) sensors[i]=0;
-  dist=0;
-  angle=0;
   resetIntegrator();
   pready=testConnection();
   if(pready) {
@@ -40,7 +38,7 @@ bool Controller::init() {
 
 void Controller::resetIntegrator() {
   dist=angle=0.0f;
-  r[0]=r[1]=r[2]=0.0f;
+  r[0]=r[1]=0.0f;
 }
 
 uint8_t Controller::testConnection() {
@@ -57,15 +55,17 @@ bool Controller::process(float yaw) {
   getSensors(sensors);
   act_rot_rate[0]=(float)tmp[0]/V_NORM;
   act_rot_rate[1]=(float)tmp[1]/V_NORM;
-  mov=((float)act_advance[0]+(float)act_advance[1])/0.5f;
-  rot=(float)(act_advance[0]-(float)act_advance[1])/(float)WHEEL_BASE_MM;
+  mov=(float)(act_advance[0]+act_advance[1])*0.5f;
+  rot=(float)(act_advance[0]-act_advance[1])/(float)WHEEL_BASE_MM;
   dist+=mov;
   angle+=rot;
 
   if(angle>PI) angle-=PI*2.0f;
   else if(angle<-PI) angle+=PI*2.0f;
 
-  // TODO integrate here (mov + yaw) -> r
+  // integrate
+  r[0]+=mov*sin(yaw);
+  r[1]+=mov*cos(yaw);
             
   return true;
 }
@@ -78,6 +78,7 @@ float Controller::getMovement() { return mov;}
 float Controller::getRotation() { return rot;}
 float Controller::getDistance() { return dist;}
 float Controller::getAngle() { return angle;}
+float *Controller::getCoords() { return r;}
 
 bool Controller::setTargRotRate(float l, float r) {
   int16_t d[2];

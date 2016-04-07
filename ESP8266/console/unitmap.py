@@ -12,12 +12,7 @@ class Particle:
         self.a=a
         self.w=w
         self.id=id
-    """
-    def move(self, dx, dy, da):
-        self.a=self.a+da
-        self.x=self.x+dx
-        self.y=self.y+dy
-    """
+
     def move_d(self, dist, da):
         self.a=self.a+da
         if self.a>math.pi : self.a=self.a-math.pi*2

@@ -29,6 +29,7 @@ class Model(dict):
                         #{"T":1000, "V":[0.1, 0, 0], "YPR":[90.0, 0.0, 0.0]},
                         ]
                        )
+        self["CMD_HIST"] = []
         self.__lock=threading.Lock()
     def __getitem__(self, key):
         self.__lock.acquire()
