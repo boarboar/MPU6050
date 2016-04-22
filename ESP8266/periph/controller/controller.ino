@@ -193,26 +193,37 @@ void startDrive() {
   Serial.print("Start drive: "); 
    
   for(int i=0; i<2; i++) {
-    targ_old_rot_rate[i]=targ_new_rot_rate[i];
+    boolean changeDir=false; 
+    //uint16_t oldRotRate=targ_rot_rate[i];
     if(targ_new_rot_rate[i]==0) {
+      changeDir=true;
       drv_dir[i]=0;
       targ_rot_rate[i]=0;
     } else if(targ_new_rot_rate[i]>0) {
+      changeDir=drv_dir[i]!=1;
       drv_dir[i]=1;
       targ_rot_rate[i]=(uint16_t)(targ_new_rot_rate[i]);
     } else {
+      changeDir=drv_dir[i]!=2;
       drv_dir[i]=2;
       targ_rot_rate[i]=(uint16_t)(-targ_new_rot_rate[i]);
     }
     if(targ_rot_rate[i]>V_NORM_MAX) targ_rot_rate[i]=V_NORM_MAX;
     
     if(drv_dir[i]) {
-       cur_power[i]=map(targ_rot_rate[i], 0, V_NORM_MAX, 0, 255); // temp
+       if(changeDir) {         
+         cur_power[i]=map(targ_rot_rate[i], 0, V_NORM_MAX, 0, 255); // temp
+       }
+       else {
+         // let PID do the job
+         // todo - PID cycle for i-motor here
+       }  
      } else cur_power[i]=0;
-     
+    
+    targ_old_rot_rate[i]=targ_new_rot_rate[i];     
     prev_err[i]=0;
     int_err[i]=0;   
-    
+    Serial.print(changeDir ? "RST" : "PID"); Serial.print(", ");
     Serial.print(drv_dir[i]); Serial.print(", "); Serial.print(targ_rot_rate[i]); Serial.print(", "); Serial.print(cur_power[i]); Serial.print("\t : ");
   }
   Serial.println();
