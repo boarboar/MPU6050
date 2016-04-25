@@ -79,9 +79,9 @@ class Controller():
         # {"I":1,"C":"INFO"}
         self.__req({"C": "INFO"})
 
-    def reqResetMPU(self, action="MPU"):
-        # {"I":1,"C":"RSTMPU"}
-        self.__req({"C": "RSTMPU", "A": action})
+    def reqResetMPU(self, action="MPU", pos=(0,0)):
+        # {"I":1,"C":"RSTMPU", "A": action, "P": [x, y]}
+        self.__req({"C": "RSTMPU", "A": action, "P": pos})
 
     def reqPosition(self):
         # {"I":1,"C":"POS"}

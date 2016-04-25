@@ -223,7 +223,7 @@ class MyForm(wx.Frame):
         self.controller.reqUpload()
 
     def onResetMPUReq(self, event):
-        self.controller.reqResetMPU(action="MPU")
+        self.controller.reqResetMPU(action="MPU", pos=self.map.start)
         self.map.Reset()
         self.map.UpdateDrawing()
 

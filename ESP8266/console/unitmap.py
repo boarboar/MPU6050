@@ -70,10 +70,10 @@ class UnitMap:
         return 0
 
     def SetStartPoint(self, pos):
-        self.start=pos
+        self.start=(round(pos[0],2), round(pos[1],2))
 
     def SetTargetPoint(self, pos):
-        self.target=pos
+        self.target=(round(pos[0],2), round(pos[1],2))
 
     def InitPos(self):
         self.isInside=False
