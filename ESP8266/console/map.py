@@ -3,6 +3,7 @@ import math
 import json
 import sys
 from unitmap import UnitMap
+from planner import Planner
 import model
 
 from pprint import pprint
@@ -20,6 +21,7 @@ class MapPanel(wx.Window, UnitMap):
         self.Bind(wx.EVT_LEFT_UP, self.OnMouseLeftUp)
         self.Bind(wx.EVT_LEFT_DOWN, self.OnMouseLeftDown)
         self.Bind(wx.EVT_MOTION, self.OnMouseMotion)
+        #self.__panel=parent
         self.__model=model
         self.__map=[]
         self.__x0, self.__y0 = (0, 0) # canvas center
@@ -29,13 +31,15 @@ class MapPanel(wx.Window, UnitMap):
         self.__drag_prev=(0,0)
         self.__drag_delta=(0, 0)
         self.__pos_set_on=False
+        self.__pos_set_end=0
+        self.__show_plan=False
         self.__shape=[wx.Point(-self.UNIT_WIDTH/2, -self.UNIT_HEIGHT/2),
                     wx.Point(-self.UNIT_WIDTH/2, self.UNIT_HEIGHT/2),
                     wx.Point(0, self.UNIT_HEIGHT*3/5),
                     wx.Point(self.UNIT_WIDTH/2, self.UNIT_HEIGHT/2),
                     wx.Point(self.UNIT_WIDTH/2, -self.UNIT_HEIGHT/2),
                     ]
-        #self.InitParticles()
+        self.planner=Planner(self)
         self.OnSize(None)
 
     def OnSize(self,event):
@@ -64,11 +68,15 @@ class MapPanel(wx.Window, UnitMap):
     def OnMouseLeftUp(self,event):
         self.__drag=False
         if not self.__dragged and self.__pos_set_on:
-            print "Click"
             X, Y = self.ScreenToClient(wx.GetMousePosition())
-            #self.xu0, self.yu0 = self.tm(X, Y)
-            self.SetStartPoint(self.tm(X, Y))
-            self.UpdateDrawing()
+            if self.__pos_set_end==1 :
+                print("Start")
+                self.SetStartPoint(self.tm(X, Y))
+                self.UpdateDrawing()
+            else :
+                print("Target")
+                self.SetTargetPoint(self.tm(X, Y))
+                self.UpdateDrawing()
         self.__dragged=False
         event.Skip()
 
@@ -97,8 +105,10 @@ class MapPanel(wx.Window, UnitMap):
         print("(%s, %s) @ %s" % (self.__x0, self.__y0, self.__scale))
         self.UpdateDrawing()
 
-    def onPosToggle(self,event,state):
+    def onPosToggle(self,event, p, state):
         self.__pos_set_on=state
+        self.__pos_set_end=p
+        return state
 
     def InitPosition(self):
         Size  = self.ClientSize
@@ -119,11 +129,34 @@ class MapPanel(wx.Window, UnitMap):
         print("(%s, %s) @ %s" % (self.__x0, self.__y0, self.__scale))
         self.UpdateDrawing()
 
+    def Plan(self):
+        if self.__show_plan :
+            self.__show_plan=False
+        else :
+            self.__show_plan=True
+            print("%s -> %s" % (self.start, self.target) )
+            self.planner.Plan()
+        self.UpdateDrawing()
+
     def Draw(self, dc):
         dc.Clear()
         self.DrawAreas(dc)
-        self.DrawParticles(dc)
-        self.DrawRobot(dc)
+
+        if self.__show_plan :
+            self.DrawPlan(dc)
+        else :
+            self.DrawParticles(dc)
+            self.DrawRobot(dc)
+
+    def DrawPlan(self, dc):
+        dc.SetPen(wx.Pen(wx.BLACK, 1))
+        for row in self.planner.grid:
+            for cell in row:
+                print cell
+                x, y =cell[0], cell[1]
+                pts=[self.tc(x,y), self.tc(x+self.planner.GRID_SZ, y),
+                     self.tc(x+self.planner.GRID_SZ, y+self.planner.GRID_SZ), self.tc(x, y+self.planner.GRID_SZ)]
+                dc.DrawPolygon(pts)
 
     def DrawAreas(self, dc):
         dc.SetTextForeground(wx.BLACK)
@@ -180,12 +213,21 @@ class MapPanel(wx.Window, UnitMap):
         dc.SetBackgroundMode(wx.TRANSPARENT)
         dc.SetBrush(wx.TRANSPARENT_BRUSH)
 
-        zero = self.tc(self.xu0, self.yu0)
+        zero = self.tc(self.start[0], self.start[1])
         dc.SetPen(wx.Pen(wx.BLACK, 1))
         dc.DrawLine(zero.x-10, zero.y, zero.x+10, zero.y)
         dc.DrawLine(zero.x, zero.y-10, zero.x, zero.y+10)
+
         zero = self.tc(0, 0)
         dc.DrawTextPoint("(0,0)", zero)
+
+        if self.target :
+            x, y = self.target
+            zero = self.tc(x, y)
+            dc.SetPen(wx.Pen(wx.BLACK, 2))
+            dc.DrawLine(zero.x-10, zero.y, zero.x+10, zero.y)
+            dc.DrawLine(zero.x, zero.y-10, zero.x, zero.y+10)
+            dc.DrawCirclePoint(zero, 8)
 
     def DrawParticles(self, dc):
         dc.SetBackgroundMode(wx.SOLID)

@@ -43,6 +43,7 @@ class MyForm(wx.Frame):
         self.btn_hist = wx.Button(panel, wx.ID_ANY, 'Measmts')
         self.btn_dump = wx.Button(panel, wx.ID_ANY, 'Dump')
         self.btn_sim = wx.Button(panel, wx.ID_ANY, 'Sim')
+        self.btn_plan = wx.Button(panel, wx.ID_ANY, 'Plan')
         self.txt_cmd = wx.TextCtrl(panel, style=wx.TE_PROCESS_ENTER, value='{"C":"INFO"}')
         self.btn_cmd = wx.Button(panel, wx.ID_ANY, 'Send')
         bsz=28
@@ -54,6 +55,7 @@ class MyForm(wx.Frame):
         self.btn_map_dn = wx.Button(panel, wx.ID_ANY, u"\u25BC", size=( bsz,  bsz))
         self.btn_map_fit = wx.Button(panel, wx.ID_ANY, u"\u25AD", size=( bsz,  bsz))
         self.btn_map_pos = wx.ToggleButton(panel, wx.ID_ANY, u"\u25C9", size=( bsz,  bsz))
+        self.btn_map_targ = wx.ToggleButton(panel, wx.ID_ANY, u"\u2605", size=( bsz,  bsz))
 
         self.unitPan = draw.UnitPanel(panel)
         self.chart = draw.ChartPanel(panel)
@@ -81,6 +83,7 @@ class MyForm(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onHistory, self.btn_hist)
         self.Bind(wx.EVT_BUTTON, self.onSendCmd, self.btn_cmd)
         self.Bind(wx.EVT_BUTTON, self.onSimReq, self.btn_sim)
+        self.Bind(wx.EVT_BUTTON, self.onPlanReq, self.btn_plan)
         self.Bind(wx.EVT_BUTTON, lambda evt, zoom='in': self.map.onZoom(evt, zoom), self.btn_map_zoom_in)
         self.Bind(wx.EVT_BUTTON, lambda evt, zoom='out': self.map.onZoom(evt, zoom), self.btn_map_zoom_out)
         self.Bind(wx.EVT_BUTTON, lambda evt, move='left': self.map.onButtonMove(evt, move), self.btn_map_left)
@@ -88,7 +91,12 @@ class MyForm(wx.Frame):
         self.Bind(wx.EVT_BUTTON, lambda evt, move='up': self.map.onButtonMove(evt, move), self.btn_map_up)
         self.Bind(wx.EVT_BUTTON, lambda evt, move='dn': self.map.onButtonMove(evt, move), self.btn_map_dn)
         self.Bind(wx.EVT_BUTTON, self.map.onFit, self.btn_map_fit)
-        self.Bind(wx.EVT_TOGGLEBUTTON, lambda evt : self.map.onPosToggle(evt, self.btn_map_pos.GetValue() ), self.btn_map_pos)
+        self.Bind(wx.EVT_TOGGLEBUTTON,
+                  lambda evt : self.map.onPosToggle(evt, 1, self.btn_map_pos.GetValue()) and self.btn_map_targ.SetValue(False),
+                  self.btn_map_pos)
+        self.Bind(wx.EVT_TOGGLEBUTTON,
+                  lambda evt : self.map.onPosToggle(evt, 2, self.btn_map_targ.GetValue()) and self.btn_map_pos.SetValue(False),
+                  self.btn_map_targ)
         self.txt_cmd.Bind(wx.EVT_KEY_DOWN, self.onEnterCmdText)
 
         self.config=config.Config(self, self.model)
@@ -133,6 +141,7 @@ class MyForm(wx.Frame):
         sizer_map_ctrls.Add(self.btn_map_dn, 0, wx.LEFT|wx.BOTTOM, 0)
         sizer_map_ctrls.Add(self.btn_map_fit, 0, wx.LEFT|wx.BOTTOM, 0)
         sizer_map_ctrls.Add(self.btn_map_pos, 0, wx.LEFT|wx.BOTTOM, 0)
+        sizer_map_ctrls.Add(self.btn_map_targ, 0, wx.LEFT|wx.BOTTOM, 0)
 
         sizer_pan.Add(sizer_ctrls, 0, wx.ALL|wx.RIGHT, 5)
         sizer_ctrls.Add(self.btn_st, 0, wx.ALL|wx.CENTER, 5)
@@ -143,6 +152,7 @@ class MyForm(wx.Frame):
         sizer_ctrls.Add(self.btn_hist, 0, wx.ALL|wx.CENTER, 5)
         sizer_ctrls.Add(self.btn_dump, 0, wx.ALL|wx.CENTER, 5)
         sizer_ctrls.Add(self.btn_sim, 0, wx.ALL|wx.CENTER, 5)
+        sizer_ctrls.Add(self.btn_plan, 0, wx.ALL|wx.CENTER, 5)
 
         sizer_cmd.Add(self.txt_cmd, 10, wx.ALL|wx.CENTER, 5)
         sizer_cmd.Add(self.btn_cmd, 0, wx.ALL|wx.CENTER, 5)
@@ -153,7 +163,7 @@ class MyForm(wx.Frame):
         sizer.Fit(panel)
 
 
-    def AddLine(self, msg, color) :
+    def AddLine(self, msg, color=None) :
         logging.info(msg)
         while self.log.GetNumberOfLines()>self.LOG_LINES:
             self.log.Remove(0, self.log.GetLineLength(0)+1)
@@ -231,6 +241,9 @@ class MyForm(wx.Frame):
             self.controller.stopSimulation()
         else :
             self.controller.startSimulation()
+
+    def onPlanReq(self, event):
+        self.map.Plan()
 
     def onDumpModel(self, event):
         self.LogString(str(self.model.dump()))

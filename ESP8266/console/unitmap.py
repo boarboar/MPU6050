@@ -25,7 +25,8 @@ class Particle:
 
 class UnitMap:
     def __init__(self, mapfile):
-        self.xu0, self.yu0 = (0, 0)    # unit base (start point)
+        self.start=(0, 0)    # unit start point
+        self.target=None  # target point
         self.InitPos()
         self.particles=[]
         self.boundRect=[sys.maxint, sys.maxint, -sys.maxint, -sys.maxint] #bounding rect
@@ -52,7 +53,6 @@ class UnitMap:
                 for wall in area["WALLS"] :
                     self.AdjustBound(parea0[0]+wall["C"][0], parea0[1]+wall["C"][1])
                     self.AdjustBound(parea0[0]+wall["C"][2], parea0[1]+wall["C"][3])
-            #self.xu0, self.yu0=self.map["START"]
             self.SetStartPoint(self.map["START"])
             print("Map loaded")
             print(self.boundRect)
@@ -65,8 +65,15 @@ class UnitMap:
         if x>self.boundRect[2] : self.boundRect[2]=x
         if y>self.boundRect[3] : self.boundRect[3]=y
 
+    def At(self, call):
+        # cell status : 0-space, 1-occupied, 2-variable
+        return 0
+
     def SetStartPoint(self, pos):
-        self.xu0, self.yu0=pos
+        self.start=pos
+
+    def SetTargetPoint(self, pos):
+        self.target=pos
 
     def InitPos(self):
         self.isInside=False
@@ -77,7 +84,7 @@ class UnitMap:
         self.__dist=0
         self.__move_step=0
         self.__rdist=0
-        self.x_mean, self.y_mean, self.p_var, self.a_mean, self.a_var = (self.xu0,self.yu0,0,0,0) # unit localization, abs coords
+        self.x_mean, self.y_mean, self.p_var, self.a_mean, self.a_var = (self.start[0], self.start[1],0,0,0) # unit localization, abs coords
         self.__l_cos, self.__l_sin= (1.0, 0.0)    # unit cosine matrix, 'localized'
 
     def Reset(self):
@@ -94,8 +101,8 @@ class UnitMap:
         for i in range(N_D) :
             for j in range(N_D) :
                 a=(random.random()-0.5)*ANG_VAR*2
-                x=(random.random()-0.5)*LOC_VAR+self.xu0
-                y=(random.random()-0.5)*LOC_VAR+self.yu0
+                x=(random.random()-0.5)*LOC_VAR+self.start[0]
+                y=(random.random()-0.5)*LOC_VAR+self.start[1]
                 self.particles.append(Particle(a=a, x=x, y=y, id=i*N_D+j, w=W))
 
     def MoveUnit(self, angle, dist, scans, x, y):
@@ -116,17 +123,16 @@ class UnitMap:
         self.__dist=dist
         self.scans=scans
         self.__move_step = self.__move_step+1
-        if len(self.particles)>0 :
-            self.updateParticles(move_dist, move_rot, scans)
+        self.updateParticles(move_dist, move_rot, scans)
         self.__l_cos=math.cos(self.a_mean)
         self.__l_sin=math.sin(self.a_mean)
 
         self.__r_x, self.__r_y = x, y # simulated crd
-        self.isInside=self.isInsideTest(x+self.xu0, y+self.yu0)
+        self.isInside=self.isInsideTest(x+self.start[0], y+self.start[1])
 
     def UnitToMapSim(self, x, y):
-        x1=x*self.__r_cos+y*self.__r_sin+self.__r_x+self.xu0
-        y1=-x*self.__r_sin+y*self.__r_cos+self.__r_y+self.yu0
+        x1=x*self.__r_cos+y*self.__r_sin+self.__r_x+self.start[0]
+        y1=-x*self.__r_sin+y*self.__r_cos+self.__r_y+self.start[1]
         return (x1,y1)
 
     def UnitToMapLoc(self, x, y):
@@ -151,7 +157,7 @@ class UnitMap:
         return False
 
     def updateParticles(self, mov, rot, scans):
-
+        if len(self.particles)==0 : return
         for p in self.particles :
             p.move_d(mov+random.gauss(0, self.fwd_noise), rot+random.gauss(0, self.rot_noise))
             if self.isInsideTest(p.x, p.y) :
@@ -161,9 +167,7 @@ class UnitMap:
         mw=max(p.w for p in self.particles)
 #        if self.__move < 5 or self.__move%5==0 :
         if True :
-            #resmple
-            # use algorithm from udacity
-            #print("Resample")
+            #resmple, use algorithm from udacity
             N=len(self.particles)
             p3 = []
             index = int(random.random() * N)
