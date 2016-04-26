@@ -4,6 +4,8 @@ import json
 import sys
 from unitmap import UnitMap
 from planner import Planner
+from pfilter import PFilter
+from unit import Unit
 import model
 
 from pprint import pprint
@@ -39,14 +41,18 @@ class MapPanel(wx.Window, UnitMap):
                     wx.Point(self.UNIT_WIDTH/2, self.UNIT_HEIGHT/2),
                     wx.Point(self.UNIT_WIDTH/2, -self.UNIT_HEIGHT/2),
                     ]
+        self.start=self.init_start    # unit start point
+        self.target=None  # target point
         self.planner=Planner(self)
+        self.pfilter=PFilter(self)
+        self.unit=Unit(self, self.pfilter)
+        self.Reset()
         self.OnSize(None)
 
     def OnSize(self,event):
         Size  = self.ClientSize
         self._Buffer = wx.EmptyBitmap(*Size)
         self.InitPosition()
-        #self.__initsz = True
         self.UpdateDrawing()
 
     def OnPaint(self, event):
@@ -121,6 +127,11 @@ class MapPanel(wx.Window, UnitMap):
         if h>0 and Size.height/h<self.__scale:
             self.__scale=Size.height/h
 
+    def Reset(self):
+        #self.InitUnitPos()
+        self.unit.InitUnitPos(self.start)
+        self.pfilter.InitParticles()
+
     def Scale(self, scale_factor):
         self.__scale *=scale_factor
         Size  = self.ClientSize
@@ -128,6 +139,12 @@ class MapPanel(wx.Window, UnitMap):
         self.__y0 = Size.height/2+(self.__y0-Size.height/2)*scale_factor
         print("(%s, %s) @ %s" % (self.__x0, self.__y0, self.__scale))
         self.UpdateDrawing()
+
+    def SetStartPoint(self, pos):
+        self.start=(round(pos[0],2), round(pos[1],2))
+
+    def SetTargetPoint(self, pos):
+        self.target=(round(pos[0],2), round(pos[1],2))
 
     def Plan(self):
         if self.__show_plan :
@@ -152,11 +169,14 @@ class MapPanel(wx.Window, UnitMap):
         dc.SetPen(wx.Pen(wx.BLACK, 1))
         for row in self.planner.grid:
             for cell in row:
-                print cell
+                #print cell
                 x, y =cell[0], cell[1]
                 pts=[self.tc(x,y), self.tc(x+self.planner.GRID_SZ, y),
                      self.tc(x+self.planner.GRID_SZ, y+self.planner.GRID_SZ), self.tc(x, y+self.planner.GRID_SZ)]
                 dc.DrawPolygon(pts)
+                if cell[2] != 0 :
+                    dc.DrawLinePoint(pts[0], pts[2])
+                    dc.DrawLinePoint(pts[1], pts[3])
 
     def DrawAreas(self, dc):
         dc.SetTextForeground(wx.BLACK)
@@ -237,7 +257,7 @@ class MapPanel(wx.Window, UnitMap):
         c_pen_0=wx.Pen("GRAY", 1)
         p_ray_pen=wx.Pen("GRAY", 1, wx.PENSTYLE_SHORT_DASH)
 
-        for p in self.particles :
+        for p in self.pfilter.particles :
             rad=1+math.log10(1+p.w*10)*8
             c=self.tc(p.x,p.y)
             if rad>1 : dc.SetPen(c_pen)
@@ -245,8 +265,9 @@ class MapPanel(wx.Window, UnitMap):
             dc.DrawCirclePoint(c, rad)
             ca=wx.Point(c.x+10*math.sin(p.a), c.y-10*math.cos(p.a))
             dc.DrawLinePoint(c, ca)
-            continue
+            """
             # this staff below is for test purposes, skip it
+            continue
             dc.SetPen(p_ray_pen)
             rays=self.getParticleRays(p)
             for r in rays:
@@ -258,13 +279,12 @@ class MapPanel(wx.Window, UnitMap):
                 if i != None :
                     c=self.tc(i[0], i[1])
                     dc.DrawCirclePoint(c, 5)
-
+            """
         # draw estimation and variance
         dc.SetBackgroundMode(wx.TRANSPARENT)
         dc.SetBrush(wx.TRANSPARENT_BRUSH)
-        #ray_pen=wx.Pen(wx.BLACK, 1, wx.PENSTYLE_LONG_DASH)
-        #mx, my, var, ma, vara = self.getMeanDistribution()
-        mx, my, var, ma, vara = self.x_mean, self.y_mean, self.p_var, self.a_mean, self.a_var
+        #mx, my, var, ma, vara = self.x_mean, self.y_mean, self.p_var, self.a_mean, self.a_var
+        mx, my, var, ma, vara = self.unit.x_mean, self.unit.y_mean, self.unit.p_var, self.unit.a_mean, self.unit.a_var
         c=self.tc(mx,my)
         dc.SetPen(wx.Pen(wx.BLACK, 2))
         dc.DrawCirclePoint(c, var*self.__scale)
@@ -282,7 +302,7 @@ class MapPanel(wx.Window, UnitMap):
         dc.SetPen(wx.Pen('GRAY', 2))
         dc.DrawPolygon(self.tssu(self.__shape)) #simulated
 
-        if self.isInside :
+        if self.unit.isInside :
             dc.SetPen(wx.Pen(wx.BLUE, 2))
         else :
             dc.SetPen(wx.Pen(wx.RED, 2))
@@ -290,16 +310,16 @@ class MapPanel(wx.Window, UnitMap):
         dc.DrawPolygon(self.tsu(self.__shape)) #localized
 
         # draw sensor rays
-        if self.isInside :
+        if self.unit.isInside :
             i=0
             inters_pen=wx.Pen(wx.GREEN, 2)
             inters_pen_c=wx.Pen(wx.BLUE, 2)
             inters_pen_cr=wx.Pen('GRAY', 2)
-            for ray in self.scan_rays:
+            for ray in self.unit.scan_rays:
                 dc.SetPen(ray_pen)
-                dc.DrawLinePoint(self.tpu(wx.Point(0, 0)), self.tpu(wx.Point(ray[0]*self.scan_max_dist, ray[1]*self.scan_max_dist)))
+                dc.DrawLinePoint(self.tpu(wx.Point(0, 0)), self.tpu(wx.Point(ray[0]*self.unit.scan_max_dist, ray[1]*self.unit.scan_max_dist)))
                 # draw measured intersection
-                idist=self.scans[i]
+                idist=self.unit.scans[i]
                 i=i+1
                 if idist>0 :
                     dc.SetPen(inters_pen)
@@ -308,8 +328,10 @@ class MapPanel(wx.Window, UnitMap):
                 # draw calculate intersections
 
                 intrs0, pr, intrs1, refstate, intrs=self.getIntersectionMapRefl(
-                    self.UnitToMapLoc(0,0),
-                    self.UnitToMapLoc(ray[0]*self.scan_max_dist, ray[1]*self.scan_max_dist))
+                    self.unit.UnitToMapLoc(0,0),
+                    self.unit.UnitToMapLoc(ray[0]*self.unit.scan_max_dist, ray[1]*self.unit.scan_max_dist),
+                    self.unit.scan_max_dist
+                )
                 if intrs0 != None :
                     if pr != None :
                         dc.SetPen(ray_pen_ref)
@@ -334,7 +356,7 @@ class MapPanel(wx.Window, UnitMap):
         try:
             yaw, pitch, roll = [a*math.pi/180.0 for a in self.__model["YPR"]]
             x, y, z = [int(a) for a in self.__model["CRD"]] # for simulation
-            self.MoveUnit(yaw, self.__model["D"], self.__model["S"], x, y)
+            self.unit.MoveUnit(yaw, self.__model["D"], self.__model["S"], x, y)
         except KeyError : pass
         except IndexError : pass
 
@@ -358,7 +380,7 @@ class MapPanel(wx.Window, UnitMap):
     def tpu(self, p):
         # Unit to screen
         x, y = p.Get()
-        x1, y1 = self.UnitToMapLoc(x, y)
+        x1, y1 = self.unit.UnitToMapLoc(x, y)
         return self.tc(x1,y1)
 
     def tssu(self, pts):
@@ -367,7 +389,7 @@ class MapPanel(wx.Window, UnitMap):
     def tspu(self, p):
         # Unit to screen
         x, y = p.Get()
-        x1, y1 = self.UnitToMapSim(x, y)
+        x1, y1 = self.unit.UnitToMapSim(x, y)
         return self.tc(x1,y1)
 
     def tm(self, x, y):

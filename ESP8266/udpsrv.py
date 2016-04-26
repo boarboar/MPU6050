@@ -10,6 +10,13 @@ import json
 
 sys.path.insert(0, './console')
 import unitmap
+import unit
+
+__r_cos=1
+__r_sin=0
+__r_x=0
+__r_y = 0 # simulated crd
+isInside=False
 
 def gauss_lim(m, d, l) :
     v=random.gauss(m, d)
@@ -17,6 +24,28 @@ def gauss_lim(m, d, l) :
     if v>l: v=l
     return v
 
+def MoveUnit(angle, dist, scans, x, y):
+    global __r_cos
+    global __r_sin
+    global __r_x
+    global __r_y
+    global isInside
+    __r_cos=math.cos(angle)
+    __r_sin=math.sin(angle)
+    __r_x, __r_y = x, y # simulated crd
+    isInside=map.isInsideTest(x+map.init_start[0], y+map.init_start[1])
+
+def UnitToMapSim(x, y):
+    global __r_cos
+    global __r_sin
+    global __r_x
+    global __r_y
+    global isInside
+    x1=x*__r_cos+y*__r_sin+__r_x+map.init_start[0]
+    y1=-x*__r_sin+y*__r_cos+__r_y+map.init_start[1]
+    return (x1,y1)
+
+    
 #json.encoder.FLOAT_REPR = lambda o: format(o, '.2f')
    
 host = ''   # Symbolic name meaning all available interfaces
@@ -50,7 +79,8 @@ except socket.error as msg:
 print 'Socket bind complete to '+str(s.getsockname())
  
 map =  unitmap.UnitMap('./console/map.json')
-
+unit =  unit.Unit(map, None)
+#unit.InitUnitPos(map.start)
 
 #now keep talking with the client
 t=1000
@@ -61,6 +91,7 @@ corr=0
 init =True
 WHEEL_RAD=3.5
 WHEEL_BASE=13
+
 while 1:
     try:
         # receive data from client (data, addr)
@@ -84,7 +115,8 @@ while 1:
         elif js["C"]=="RSTMPU" : 
             start=js["P"]
             print start
-            map.SetStartPoint(start)
+            #map.SetStartPoint(start)
+            map.init_start=start
             init=True
         elif js["C"]=="POS" : 
             if init : 
@@ -132,18 +164,19 @@ while 1:
                 
                 dmov+=cmov
                 
-            map.MoveUnit(yaw*math.pi/180.0, dmov, [-1,-1,-1], rx, ry)
-            mapx, mapy = map.UnitToMapSim(0, 0)
+            MoveUnit(yaw*math.pi/180.0, dmov, [-1,-1,-1], rx, ry)
+            mapx, mapy = UnitToMapSim(0, 0)
             print mapx, mapy
             
             intrsects = []
             intrsects0 = []
                 
-            for a in map.scan_angles :
+            for a in unit.scan_angles :
                 #intrs0, pr, intrs1, refstate, intrs=map.getIntersectionUnit(0, 0, math.sin(a)*map.scan_max_dist, rvy+math.cos(a)*map.scan_max_dist)  
                 intrs0, pr, intrs1, refstate, intrs=map.getIntersectionMapRefl(
                     (mapx, mapy), 
-                    map.UnitToMapSim(math.sin(a)*map.scan_max_dist, rvy+math.cos(a)*map.scan_max_dist))  
+                    UnitToMapSim(math.sin(a)*unit.scan_max_dist, rvy+math.cos(a)*unit.scan_max_dist),
+                    unit.scan_max_dist)  
                 
                 if intrs!=None :
                     intrs=(intrs[0]-mapx, intrs[1]-mapy)                                        
@@ -167,7 +200,7 @@ while 1:
             print(intrsects)
             sr=len(intrsects)-1
             sm=(len(intrsects)-1)/2
-            if not map.isInside : corr=180
+            if not isInside : corr=180
             elif intrsects0[sm]>=0 and intrsects0[sm]<90:
                 #value=10
                 #if intrsects[sm]<20 : value=90

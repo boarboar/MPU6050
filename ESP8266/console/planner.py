@@ -1,8 +1,9 @@
-from unitmap import UnitMap
+#from unitmap import UnitMap
 
 class Planner:
     " Path planner"
-    GRID_SZ=50 #cm
+    GRID_SZ=20 #cm
+    GRID_DELTA=5 #cm
     def __init__(self, map):
         self.grid=None
         self.map=map
@@ -18,12 +19,14 @@ class Planner:
 
             print('init grid NR=%s NC=%s...' % (ny, nx))
 
-            self.grid = [[(x0+col*self.GRID_SZ,y0+row*self.GRID_SZ,0) for col in range(nx)] for row in range(ny)]
+            self.grid = [[[x0+col*self.GRID_SZ,y0+row*self.GRID_SZ,0] for col in range(nx)] for row in range(ny)]
             for row in self.grid:
                 for cell in row:
                     x, y =cell[0], cell[1]
-                    area=[(x,y), (x+self.GRID_SZ, y), (x+self.GRID_SZ, y+self.GRID_SZ), (x, y+self.GRID_SZ)]
-                    cell[3]=self.map.At(area)
-
+                    area=[(x-self.GRID_DELTA,y-self.GRID_DELTA),
+                          (x+self.GRID_SZ+self.GRID_DELTA, y-self.GRID_DELTA),
+                          (x+self.GRID_SZ+self.GRID_DELTA, y+self.GRID_SZ+self.GRID_DELTA),
+                          (x-self.GRID_DELTA, y+self.GRID_SZ+self.GRID_DELTA)]
+                    cell[2]=self.map.At(area)
 
 

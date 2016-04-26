@@ -2,48 +2,13 @@ import json
 import sys
 import math
 import random
-import copy
 
 from pprint import pprint
 
-class Particle:
-    def __init__(self, x=150, y=200, a=0.0, w=1.0, id=0):
-        self.x, self.y = (x, y)
-        self.a=a
-        self.w=w
-        self.id=id
-
-    def move_d(self, dist, da):
-        self.a=self.a+da
-        if self.a>math.pi : self.a=self.a-math.pi*2
-        elif self.a<-math.pi : self.a=math.pi*2+self.a
-        self.x=self.x+dist*math.sin(self.a)
-        self.y=self.y+dist*math.cos(self.a)
-
-    def __repr__(self):
-        return 'P_%s <(%s,%s) A %s W %s >' % (str(self.id), str(self.x), str(self.y), str(self.a*180.0/math.pi), str(self.w))
-
 class UnitMap:
     def __init__(self, mapfile):
-        self.start=(0, 0)    # unit start point
-        self.target=None  # target point
-        self.InitPos()
-        self.particles=[]
         self.boundRect=[sys.maxint, sys.maxint, -sys.maxint, -sys.maxint] #bounding rect
-        scan_a0=-90
-        scan_n=3
-        scan_d=(-scan_a0*2)/(scan_n-1)
-        self.scan_angles=[]
-        self.scan_rays=[]
-        for i in range(scan_n) :
-            a=(scan_a0+i*scan_d)*math.pi/180.0
-            self.scan_angles.append(a)
-            self.scan_rays.append((math.sin(a),math.cos(a)))
 
-        self.scan_max_dist=400
-        self.sense_noise=20
-        self.fwd_noise=5
-        self.rot_noise=0.5
         try:
             with open(mapfile) as data_file:
                 self.map = json.load(data_file)
@@ -53,7 +18,7 @@ class UnitMap:
                 for wall in area["WALLS"] :
                     self.AdjustBound(parea0[0]+wall["C"][0], parea0[1]+wall["C"][1])
                     self.AdjustBound(parea0[0]+wall["C"][2], parea0[1]+wall["C"][3])
-            self.SetStartPoint(self.map["START"])
+            self.init_start=self.map["START"]
             print("Map loaded")
             print(self.boundRect)
         #except IOError: pass
@@ -65,80 +30,38 @@ class UnitMap:
         if x>self.boundRect[2] : self.boundRect[2]=x
         if y>self.boundRect[3] : self.boundRect[3]=y
 
-    def At(self, call):
+    def At(self, cell):
         # cell status : 0-space, 1-occupied, 2-variable
-        return 0
+        status=0
 
-    def SetStartPoint(self, pos):
-        self.start=(round(pos[0],2), round(pos[1],2))
+        for v in cell :
+            if not self.isInsideTest(v[0], v[1]) :
+                status=1
+                break
+        if status != 0 : return status
 
-    def SetTargetPoint(self, pos):
-        self.target=(round(pos[0],2), round(pos[1],2))
+        # bug - it's possible that all thre points are inside, but internal wall is inside the cell...
+        # just for now - test a center point
+        if not self.isInsideTest((cell[0][0]+cell[-2][0])/2, (cell[0][1]+cell[2][1])/2) : return 1
 
-    def InitPos(self):
-        self.isInside=False
-        self.scans=[-1,-1,-1]
-        self.__r_cos, self.__r_sin= (1.0, 0.0)    # unit cosine matrix, 'real'
-        self.__r_x, self.__r_y = (0.0, 0.0)    # unit position, simulated
-        self.__angle=0 #yaw
-        self.__dist=0
-        self.__move_step=0
-        self.__rdist=0
-        self.x_mean, self.y_mean, self.p_var, self.a_mean, self.a_var = (self.start[0], self.start[1],0,0,0) # unit localization, abs coords
-        self.__l_cos, self.__l_sin= (1.0, 0.0)    # unit cosine matrix, 'localized'
+        for area in self.map["AREAS"] :
+            parea0=area["AT"]
+            try:
+                for obj in area["OBJECTS"] :
+                    pobj0=(parea0[0]+obj["AT"][0], parea0[1]+obj["AT"][1])
+                    ovs=[]
+                    for c in obj["CS"] :
+                        op=c["C"]
+                        ovs.append((pobj0[0]+op[0], pobj0[1]+op[1]))
+                    status=self.polyIntersects(cell, ovs)
+                    if status!=0 : break
+            except KeyError :
+                print('Some obj attr missing')
+                pass
 
-    def Reset(self):
-        self.InitPos()
-        self.InitParticles()
+            if status!=0 : break
 
-    def InitParticles(self):
-        N_D=20
-        W=1.0/(N_D*N_D)
-        LOC_VAR=150
-        #ANG_VAR=math.pi/2
-        ANG_VAR=math.pi
-        self.particles = [] #clean
-        for i in range(N_D) :
-            for j in range(N_D) :
-                a=(random.random()-0.5)*ANG_VAR*2
-                x=(random.random()-0.5)*LOC_VAR+self.start[0]
-                y=(random.random()-0.5)*LOC_VAR+self.start[1]
-                self.particles.append(Particle(a=a, x=x, y=y, id=i*N_D+j, w=W))
-
-    def MoveUnit(self, angle, dist, scans, x, y):
-        if self.__move_step == 0 : # first step
-            move_rot=0
-            move_dist=0
-        else :
-            move_rot=angle-self.__angle
-            if move_rot>math.pi : move_rot=move_rot-math.pi*2
-            elif move_rot<-math.pi : move_rot=math.pi*2+move_rot
-            move_dist=dist-self.__dist
-
-        print("Unit Mov: Rot %s Dist %s " % (str(move_rot*180.0/math.pi), move_dist) )
-
-        self.__r_cos=math.cos(angle)
-        self.__r_sin=math.sin(angle)
-        self.__angle=angle
-        self.__dist=dist
-        self.scans=scans
-        self.__move_step = self.__move_step+1
-        self.updateParticles(move_dist, move_rot, scans)
-        self.__l_cos=math.cos(self.a_mean)
-        self.__l_sin=math.sin(self.a_mean)
-
-        self.__r_x, self.__r_y = x, y # simulated crd
-        self.isInside=self.isInsideTest(x+self.start[0], y+self.start[1])
-
-    def UnitToMapSim(self, x, y):
-        x1=x*self.__r_cos+y*self.__r_sin+self.__r_x+self.start[0]
-        y1=-x*self.__r_sin+y*self.__r_cos+self.__r_y+self.start[1]
-        return (x1,y1)
-
-    def UnitToMapLoc(self, x, y):
-        x1=x*self.__l_cos+y*self.__l_sin+self.x_mean
-        y1=-x*self.__l_sin+y*self.__l_cos+self.y_mean
-        return (x1,y1)
+        return status
 
     def isInsideTest(self, x, y):
         for area in self.map["AREAS"] :
@@ -156,98 +79,8 @@ class UnitMap:
         #print ("OUT")
         return False
 
-    def updateParticles(self, mov, rot, scans):
-        if len(self.particles)==0 : return
-        for p in self.particles :
-            p.move_d(mov+random.gauss(0, self.fwd_noise), rot+random.gauss(0, self.rot_noise))
-            if self.isInsideTest(p.x, p.y) :
-                self.updateParticleProbabilities(p, scans)
-            else : p.w=0.0
-        #print self.particles
-        mw=max(p.w for p in self.particles)
-#        if self.__move < 5 or self.__move%5==0 :
-        if True :
-            #resmple, use algorithm from udacity
-            N=len(self.particles)
-            p3 = []
-            index = int(random.random() * N)
-            beta = 0.0
-            for i in range(N):
-                beta += random.random() * 2.0 * mw
-                while beta > self.particles[index].w:
-                    beta -= self.particles[index].w
-                    index = (index + 1) % N
-                p3.append(copy.copy(self.particles[index]))
-            self.particles = p3
-            #print self.particles
-
-        #normalize
-        wsum=sum(p.w for p in self.particles)
-        if wsum>0 :
-            for p in self.particles :
-                p.w = p.w/wsum
-
-        #print self.particles
-        self.x_mean, self.y_mean, self.p_var, self.a_mean, self.a_var = self.getMeanDistribution()
-
-    def getMeanDistribution(self):
-        x,y, var=0,0,0
-        a, vara=0, 0
-        for p in self.particles :
-            x+=p.x*p.w
-            y+=p.y*p.w
-            a+=p.a*p.w
-
-        for p in self.particles :
-            ex=p.x-x
-            ey=p.y-y
-            var += (ex*ex+ey*ey)*p.w
-            ea=p.a-a
-            vara+=ea*ea*p.w
-
-        var= math.sqrt(var)
-        vara= math.sqrt(vara)
-        #print("Variance %s" % str(round(var,2)))
-        return (x, y, var, a, vara)
-
-    """
-    def getParticleRays(self, p): #just for visual debugging
-        rays=[]
-        p0=(p.x, p.y)
-        for a in self.scan_angles :
-            p1=(p.x+math.sin(p.a+a)*self.scan_max_dist, p.y+math.cos(p.a+a)*self.scan_max_dist)
-            rays.append((p0, p1))
-        return rays
-    """
-    """
-    def getParticleIntersects(self, p): #just for visual debugging
-        intersects=[]
-        p0=(p.x, p.y)
-        for a in self.scan_angles :
-            p1=(p.x+math.sin(p.a+a)*self.scan_max_dist, p.y+math.cos(p.a+a)*self.scan_max_dist)
-            intrs, ref = self.getIntersectionMap(p0, p1)
-            intersects.append(intrs)
-        return intersects
-    """
-
-    def updateParticleProbabilities(self, p, meas):
-        scan_dist=[]
-        prob = 1.0;
-        p0=(p.x, p.y)
-        for i in range(len(self.scan_angles)) :
-            a=self.scan_angles[i]
-            p1=(p.x+math.sin(p.a+a)*self.scan_max_dist, p.y+math.cos(p.a+a)*self.scan_max_dist)
-            intrs0, pr, intrs1, refstate, intrs = self.getIntersectionMapRefl(p0, p1)
-            if intrs==None : dist2 = -1
-            else :
-                dist2=math.sqrt((intrs[0]-p0[0])*(intrs[0]-p0[0])+(intrs[1]-p0[1])*(intrs[1]-p0[1]))
-            scan_dist.append(dist2)
-            prob*=self.Gaussian(dist2, self.sense_noise, meas[i])
-        p.w=prob
-        #print(scan_dist)
-
-    def getIntersectionMapRefl(self, p0, p1):
-        intrs0, ref=self.getIntersectionMap(p0, p1, True)
+    def getIntersectionMapRefl(self, p0, p1, scan_max_dist):
+        intrs0, ref=self.getIntersectionMap(p0, p1, True, scan_max_dist)
         refState = False
         pr = None
         intrs1 = None
@@ -259,11 +92,11 @@ class UnitMap:
                 pr, cosa, refState = ref
             if refState :
                 # secondary intersect if any
-                intrs1, ref=self.getIntersectionMap(intrs0, pr, False)
+                intrs1, ref=self.getIntersectionMap(intrs0, pr, False, scan_max_dist)
                 intrs=intrs1
         return (intrs0, pr, intrs1, refState, intrs)
 
-    def getIntersectionMap(self, p0, p1, findRefl=False):
+    def getIntersectionMap(self, p0, p1, findRefl, scan_max_dist):
         # line p0->p1 in absolute map coords (world)
         intrs = None
         ref=None
@@ -337,7 +170,7 @@ class UnitMap:
 
         if intrs!=None and findRefl :
             # find reflection vector
-            rl=self.scan_max_dist-math.sqrt(dist2)
+            rl=scan_max_dist-math.sqrt(dist2)
             #if rl>0 :
             if rl<=0 : rl=10
             ref=self.getReflection(p0, intrs, wsect[0], wsect[1], rl, reff)
@@ -396,8 +229,39 @@ class UnitMap:
         # this can be used for reflection modelling, after field tests
         return intersection_point
 
-    def Gaussian(self, mu, sigma, x):
-        # calculates the probability of x for 1-dim Gaussian with mean mu and var. sigma
-        if mu < 0 : mu=self.scan_max_dist
-        if x < 0 : x=self.scan_max_dist
-        return math.exp(- ((mu - x) ** 2) / (sigma ** 2) / 2.0) / math.sqrt(2.0 * math.pi * (sigma ** 2))
+    def polyIntersects(self,  vs0, vs1 ) :
+        isect=None
+        inside = False
+        v00=vs0[-1]
+        for v0 in vs0 :
+            v10=vs1[-1]
+            for v1 in vs1 :
+                isect=self.find_intersection(v00, v0, v10, v1)
+                if isect!=None : break
+                v10=v1
+            if isect!=None : break
+            v00=v0
+
+        if isect is None :
+            #test if one point of area1 inside of area2
+            p=((vs1[0][0]+vs1[-1][0])/2,(vs1[0][1]+vs1[-1][1])/2)
+            inside=self.polyInside(vs0, p)
+            if not inside :
+                p=((vs0[0][0]+vs0[-1][0])/2,(vs0[0][1]+vs0[-1][1])/2)
+                inside=self.polyInside(vs1, p)
+
+        if isect!=None or inside : return 1
+        return  0
+
+    def polyInside(self,  vs, p ) :
+        left, right = (0, 0)
+        v0=vs[-1]
+        for v in vs :
+            isect=self.intersectHor(p[1], v0[0], v0[1], v[0], v[1])
+            if isect!=None :
+                if isect<p[0] : left=left+1
+                else : right=right+1
+            v0=v
+        if left%2==1 and right%2==1 :
+            return True
+        return False
