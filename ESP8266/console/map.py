@@ -46,6 +46,7 @@ class MapPanel(wx.Window, UnitMap):
         self.planner=Planner(self)
         self.pfilter=PFilter(self)
         self.unit=Unit(self, self.pfilter)
+        self.planner.SetStart(self.start)
         self.Reset()
         self.OnSize(None)
 
@@ -142,18 +143,27 @@ class MapPanel(wx.Window, UnitMap):
 
     def SetStartPoint(self, pos):
         self.start=(round(pos[0],2), round(pos[1],2))
+        if self.planner.SetStart(self.start) :
+            self.DoPlan()
 
     def SetTargetPoint(self, pos):
         self.target=(round(pos[0],2), round(pos[1],2))
+        self.planner.SetTarget(self.target)
+        if self.planner.SetStart(self.start) :
+            self.DoPlan()
+
+    def DoPlan(self):
+        print("%s -> %s" % (self.start, self.target) )
+        self.planner.Plan()
+        self.UpdateDrawing()
 
     def Plan(self):
         if self.__show_plan :
             self.__show_plan=False
+            self.UpdateDrawing()
         else :
             self.__show_plan=True
-            print("%s -> %s" % (self.start, self.target) )
-            self.planner.Plan()
-        self.UpdateDrawing()
+            self.DoPlan()
 
     def Draw(self, dc):
         dc.Clear()
@@ -166,9 +176,14 @@ class MapPanel(wx.Window, UnitMap):
             self.DrawRobot(dc)
 
     def DrawPlan(self, dc):
+        dc.SetBackgroundMode(wx.TRANSPARENT)
+        dc.SetBrush(wx.TRANSPARENT_BRUSH)
         dc.SetPen(wx.Pen(wx.BLACK, 1))
-        for row in self.planner.grid:
-            for cell in row:
+        #for row in self.planner.grid:
+        #    for cell in row:
+        for row in range(len(self.planner.grid)):
+            for col in range(len(self.planner.grid[row])):
+                cell=self.planner.grid[row][col]
                 #print cell
                 x, y =cell[0], cell[1]
                 pts=[self.tc(x,y), self.tc(x+self.planner.GRID_SZ, y),
@@ -177,6 +192,24 @@ class MapPanel(wx.Window, UnitMap):
                 if cell[2] != 0 :
                     dc.DrawLinePoint(pts[0], pts[2])
                     dc.DrawLinePoint(pts[1], pts[3])
+                if self.planner.start_cell is not None and row==self.planner.start_cell[0] and col==self.planner.start_cell[1] :
+                    self.DrawCellText(dc, pts, "S")
+                if self.planner.target_cell is not None and row==self.planner.target_cell[0] and col==self.planner.target_cell[1] :
+                    self.DrawCellText(dc, pts, "T")
+                if cell[4] is not None:
+                    self.DrawCellText(dc, pts, str(cell[4])) #expand
+                    #self.DrawCellText(dc, pts, str(cell[5])) #Action
+
+        dc.SetBackgroundMode(wx.SOLID)
+        dc.SetBrush(wx.Brush(wx.BLUE))
+        dc.SetPen(wx.Pen(wx.BLACK, 1))
+        for step in self.planner.path :
+            cell=self.planner.grid[step[0]][step[1]]
+            x, y =cell[0], cell[1]
+            pts=[self.tc(x,y), self.tc(x+self.planner.GRID_SZ, y),
+                self.tc(x+self.planner.GRID_SZ, y+self.planner.GRID_SZ), self.tc(x, y+self.planner.GRID_SZ)]
+            dc.DrawRectangle(pts[0][0], pts[0][1], pts[1][0]-pts[0][0], pts[2][1]-pts[0][1])
+
 
     def DrawAreas(self, dc):
         dc.SetTextForeground(wx.BLACK)
@@ -399,3 +432,10 @@ class MapPanel(wx.Window, UnitMap):
         x=x/self.__scale+(self.boundRect[2]+self.boundRect[0])/2
         y=y/self.__scale+(self.boundRect[3]+self.boundRect[1])/2
         return (x,y)
+
+    def DrawCellText(self, dc, pts, str):
+        sw, sh = dc.GetTextExtent(str)
+        cw, ch= (pts[2][0]-pts[0][0]), (pts[2][1]-pts[0][1])
+        tx=pts[0][0]+(cw-sw)/2
+        ty=pts[0][1]+(ch-sh)/2
+        dc.DrawText(str,tx, ty)
