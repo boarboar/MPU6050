@@ -14,7 +14,7 @@ class MapPanel(wx.Window, UnitMap):
     " MAP panel, with doublebuffering"
     UNIT_WIDTH=18
     UNIT_HEIGHT=30
-    def __init__(self, parent, model, mapfile):
+    def __init__(self, parent, model, mapfile, LogString, LogErrorString):
         wx.Window.__init__(self, parent, wx.ID_ANY, style=wx.SIMPLE_BORDER, size=(240,240))
         UnitMap.__init__(self, mapfile)
         self.Bind(wx.EVT_PAINT, self.OnPaint)
@@ -23,7 +23,8 @@ class MapPanel(wx.Window, UnitMap):
         self.Bind(wx.EVT_LEFT_UP, self.OnMouseLeftUp)
         self.Bind(wx.EVT_LEFT_DOWN, self.OnMouseLeftDown)
         self.Bind(wx.EVT_MOTION, self.OnMouseMotion)
-        #self.__panel=parent
+        self.LogString=LogString
+        self.LogErrorString=LogErrorString
         self.__model=model
         self.__map=[]
         self.__x0, self.__y0 = (0, 0) # canvas center
@@ -43,7 +44,7 @@ class MapPanel(wx.Window, UnitMap):
                     ]
         self.start=self.init_start    # unit start point
         self.target=None  # target point
-        self.planner=Planner(self)
+        self.planner=Planner(self, LogString, LogErrorString)
         self.pfilter=PFilter(self)
         self.unit=Unit(self, self.pfilter)
         self.planner.SetStart(self.start)
@@ -77,11 +78,11 @@ class MapPanel(wx.Window, UnitMap):
         if not self.__dragged and self.__pos_set_on:
             X, Y = self.ScreenToClient(wx.GetMousePosition())
             if self.__pos_set_end==1 :
-                print("Start")
+                #print("Start")
                 self.SetStartPoint(self.tm(X, Y))
                 self.UpdateDrawing()
             else :
-                print("Target")
+                #print("Target")
                 self.SetTargetPoint(self.tm(X, Y))
                 self.UpdateDrawing()
         self.__dragged=False
@@ -109,7 +110,7 @@ class MapPanel(wx.Window, UnitMap):
         offs=move[dir]
         self.__x0+=offs[0]
         self.__y0+=offs[1]
-        print("(%s, %s) @ %s" % (self.__x0, self.__y0, self.__scale))
+        #print("(%s, %s) @ %s" % (self.__x0, self.__y0, self.__scale))
         self.UpdateDrawing()
 
     def onPosToggle(self,event, p, state):
@@ -138,7 +139,7 @@ class MapPanel(wx.Window, UnitMap):
         Size  = self.ClientSize
         self.__x0 = Size.width/2+(self.__x0-Size.width/2)*scale_factor
         self.__y0 = Size.height/2+(self.__y0-Size.height/2)*scale_factor
-        print("(%s, %s) @ %s" % (self.__x0, self.__y0, self.__scale))
+        #print("(%s, %s) @ %s" % (self.__x0, self.__y0, self.__scale))
         self.UpdateDrawing()
 
     def SetStartPoint(self, pos):
@@ -153,7 +154,8 @@ class MapPanel(wx.Window, UnitMap):
             self.DoPlan()
 
     def DoPlan(self):
-        print("%s -> %s" % (self.start, self.target) )
+        #print("%s -> %s" % (self.start, self.target) )
+        #self.LogString("%s -> %s" % (self.start, self.target))
         self.planner.Plan()
         self.UpdateDrawing()
 
@@ -176,6 +178,16 @@ class MapPanel(wx.Window, UnitMap):
             self.DrawRobot(dc)
 
     def DrawPlan(self, dc):
+        dc.SetBackgroundMode(wx.SOLID)
+        dc.SetBrush(wx.Brush(wx.BLUE))
+        dc.SetPen(wx.Pen(wx.BLACK, 1))
+        for step in self.planner.path :
+            cell=self.planner.grid[step[0]][step[1]]
+            x, y =cell[0], cell[1]
+            pts=[self.tc(x,y), self.tc(x+self.planner.GRID_SZ, y),
+                self.tc(x+self.planner.GRID_SZ, y+self.planner.GRID_SZ), self.tc(x, y+self.planner.GRID_SZ)]
+            dc.DrawRectangle(pts[0][0], pts[0][1], pts[1][0]-pts[0][0], pts[2][1]-pts[0][1])
+
         dc.SetBackgroundMode(wx.TRANSPARENT)
         dc.SetBrush(wx.TRANSPARENT_BRUSH)
         dc.SetPen(wx.Pen(wx.BLACK, 1))
@@ -196,19 +208,8 @@ class MapPanel(wx.Window, UnitMap):
                     self.DrawCellText(dc, pts, "S")
                 if self.planner.target_cell is not None and row==self.planner.target_cell[0] and col==self.planner.target_cell[1] :
                     self.DrawCellText(dc, pts, "T")
-                if cell[4] is not None:
-                    self.DrawCellText(dc, pts, str(cell[4])) #expand
-                    #self.DrawCellText(dc, pts, str(cell[5])) #Action
-
-        dc.SetBackgroundMode(wx.SOLID)
-        dc.SetBrush(wx.Brush(wx.BLUE))
-        dc.SetPen(wx.Pen(wx.BLACK, 1))
-        for step in self.planner.path :
-            cell=self.planner.grid[step[0]][step[1]]
-            x, y =cell[0], cell[1]
-            pts=[self.tc(x,y), self.tc(x+self.planner.GRID_SZ, y),
-                self.tc(x+self.planner.GRID_SZ, y+self.planner.GRID_SZ), self.tc(x, y+self.planner.GRID_SZ)]
-            dc.DrawRectangle(pts[0][0], pts[0][1], pts[1][0]-pts[0][0], pts[2][1]-pts[0][1])
+                #if cell[6] is not None:
+                #    self.DrawCellText(dc, pts, str(cell[7])) #weight
 
 
     def DrawAreas(self, dc):

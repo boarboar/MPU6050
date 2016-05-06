@@ -59,7 +59,7 @@ class MyForm(wx.Frame):
 
         self.unitPan = draw.UnitPanel(panel)
         self.chart = draw.ChartPanel(panel)
-        self.map = map.MapPanel(panel, self.model, "map.json")
+        self.map = map.MapPanel(panel, self.model, "map.json", self.LogString, self.LogErrorString)
 
         self.unitPan.SetMaxSize((240, 240))
         #self.canvas.SetMaxSize((240, 240))
