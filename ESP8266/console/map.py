@@ -211,6 +211,15 @@ class MapPanel(wx.Window, UnitMap):
                 #if cell[6] is not None:
                 #    self.DrawCellText(dc, pts, str(cell[7])) #weight
 
+        dc.SetPen(wx.Pen(wx.GREEN, 2))
+
+        fp=True
+        for step in self.planner.spath :
+            x, y = step
+            p=self.tc(x, y)
+            if not fp : dc.DrawLinePoint(p, p0)
+            fp=False
+            p0=p
 
     def DrawAreas(self, dc):
         dc.SetTextForeground(wx.BLACK)

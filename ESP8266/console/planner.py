@@ -16,6 +16,7 @@ class Planner:
         self.start_cell=None
         self.target_cell=None
         self.path=[]
+        self.spath=[]
 
     def SetStart(self, pos):
         self.start_pos=pos
@@ -109,8 +110,15 @@ class Planner:
                        (self.start_cell[0], self.start_cell[1], self.target_cell[0], self.target_cell[1]))
 
         del self.path[:]
+        del self.spath[:]
 
-        return self.AStarPlanning()
+        if not self.AStarPlanning() : return False
+
+        start_time = timeit.default_timer()
+        self.SmoothPath()
+        self.LogString('Smoothed in %s s' % (round(timeit.default_timer() - start_time, 2)))
+
+        return True
 
 
     def SimplePlanning(self):
@@ -127,7 +135,9 @@ class Planner:
         delta = [[-1, 0 ], # go down
          [ 0, -1], # go left
          [ 1, 0 ], # go up
-         [ 0, 1 ]] # go right
+         [ 0, 1 ],
+                 [1,1],[-1,-1],[1,-1],[-1,1]
+                 ] # go right
         irow = self.start_cell[0]
         icol = self.start_cell[1]
         #closed[init[0]][init[1]] = 1
@@ -209,10 +219,19 @@ class Planner:
                 cell[6]=abs(trow-irow)+abs(tcol-icol) #heuristics
 
         cost = 1
+        tcost=2
+        """
         delta = [[-1, 0 ], # go down
          [ 0, -1], # go left
          [ 1, 0 ], # go up
          [ 0, 1 ]] # go right
+         """
+        delta = [[-1, 0 ], # go down
+         [ 0, -1], # go left
+         [ 1, 0 ], # go up
+         [ 0, 1 ] # go right
+         #[1,1],[-1,-1],[1,-1],[-1,1]
+                 ]
         irow = self.start_cell[0]
         icol = self.start_cell[1]
         #closed[init[0]][init[1]] = 1
@@ -255,7 +274,10 @@ class Planner:
                         if irow2 >= 0 and irow2 < len(self.grid) and icol2 >=0 and icol2 < len(self.grid[0]):
                             #if closed[x2][y2] == 0 and grid[x2][y2] == 0:
                             if self.grid[irow2][icol2][3] == 0 and self.grid[irow2][icol2][2] == 0:
-                                g2 = g + cost + self.grid[irow2][icol2][7] # + weight
+                                turncost=0
+                                if self.grid[irow][icol][5]!=i : turncost=tcost
+
+                                g2 = g + cost + self.grid[irow2][icol2][7] + turncost # + weight
                                 #h2=heuristic[x2][y2]
                                 h2=self.grid[irow2][icol2][6]
                                 f2 = g2+h2
@@ -285,9 +307,35 @@ class Planner:
             irow=irow2
             icol=icol2
 
-        print(self.path)
+        #print(self.path)
         self.LogString('Done path')
 
         self.LogString('Planning done in %s s' % (round(timeit.default_timer() - start_time, 2)))
 
         return True
+
+    def SmoothPath(self):
+        path=[]
+        weight_data = 0.5
+        weight_smooth = 0.5
+        tolerance = 0.000001
+        for step in self.path :
+            cell=self.grid[step[0]][step[1]]
+            x, y =cell[0], cell[1]
+            #self.spath.append((x+self.GRID_SZ/2, y+self.GRID_SZ/2))
+            path.append([x+self.GRID_SZ/2, y+self.GRID_SZ/2])
+            self.spath.append([x+self.GRID_SZ/2, y+self.GRID_SZ/2])
+
+        tol = 999
+        while tol>=tolerance:
+            tol=0.0
+            for i in range(1, len(self.spath)-1):
+                for k in range(2):
+                    n=self.spath[i][k]+\
+                      weight_data*(path[i][k]-self.spath[i][k])+\
+                      weight_smooth*(self.spath[i+1][k]+self.spath[i-1][k]-2.0*self.spath[i][k])
+                    if n-self.spath[i][k]>tol:
+                        tol=n-self.spath[i][k]
+                    if self.spath[i][k]-n>tol:
+                        tol=self.spath[i][k]-n
+                    self.spath[i][k] = n
