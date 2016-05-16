@@ -33,7 +33,7 @@ class CommandThread(threading.Thread):
         self.__controller.log().LogString("Cmd thread starting: dev=%s:%s" % (self.__addr, str(self.__port)))
         while not self.__stop:
             try:
-                req_json = self.__q.get(timeout=1)
+                req_json, resp_q = self.__q.get(timeout=1)
             except Queue.Empty: req_json = None
             if req_json is not None:
                 self.__controller.log().LogString("REQ: %s" % json.dumps(req_json))
@@ -53,7 +53,14 @@ class CommandThread(threading.Thread):
                             d = self.__s.recvfrom(1024)
                             #self.__controller.log().LogString("From %s rsp %s" % (d[1], d[0]), 'GREY')
                             resp_json=json.loads(d[0])
-                            if self.__controller.resp(d[0], req_json) : break
+                            if int(req_json["I"]) != int(resp_json["I"]) :
+                                self.__controller.log().LogErrorString("UNMATCHED: "+d[0])
+                            else:
+                                if resp_q is not None:
+                                    resp_q.put_nowait(d[0])
+                                else:
+                                    self.__controller.resp(d[0], req_json)
+                                break
                     except socket.timeout as msg:
                         self.__controller.log().LogErrorString("Timeout")
                     except socket.error as msg:
@@ -163,3 +170,36 @@ class SimulationThread(threading.Thread):
             self.__controller.reqPosition()
 
         self.__controller.log().LogString("Simulation thread stopped")
+
+
+class PathThread(threading.Thread):
+    # device command-resp communication
+    def __init__(self, controller, planner):
+        threading.Thread.__init__(self)
+        self.__controller = controller
+        self.__planner = planner
+        self.__stop = False
+        self.setDaemon(1)
+
+    def stop(self) : self.__stop=True
+
+    def run (self):
+        self.__controller.log().LogString("Starting path running")
+        while not self.__stop :  #and not within target ....
+
+            # get crd
+            # rebuild path...
+            # signal map to redraw
+            # PID on bearing
+            # print PID output
+            # MOVE
+            # delay 1 s
+            #
+            # add method to planner, in order to rebuild path. Check if cell is not changed, to skip this case
+            # remove unnecessary output
+
+
+            self.__controller.reqPositionSync()
+            time.sleep(1)
+
+        self.__controller.log().LogString("Path running thread stopped")

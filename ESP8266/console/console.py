@@ -44,6 +44,7 @@ class MyForm(wx.Frame):
         self.btn_dump = wx.Button(panel, wx.ID_ANY, 'Dump')
         self.btn_sim = wx.Button(panel, wx.ID_ANY, 'Sim')
         self.btn_plan = wx.Button(panel, wx.ID_ANY, 'Plan')
+        self.btn_go = wx.Button(panel, wx.ID_ANY, 'Go!')
         self.txt_cmd = wx.TextCtrl(panel, style=wx.TE_PROCESS_ENTER, value='{"C":"INFO"}')
         self.btn_cmd = wx.Button(panel, wx.ID_ANY, 'Send')
         bsz=28
@@ -84,6 +85,7 @@ class MyForm(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onSendCmd, self.btn_cmd)
         self.Bind(wx.EVT_BUTTON, self.onSimReq, self.btn_sim)
         self.Bind(wx.EVT_BUTTON, self.onPlanReq, self.btn_plan)
+        self.Bind(wx.EVT_BUTTON, self.onGoReq, self.btn_go)
         self.Bind(wx.EVT_BUTTON, lambda evt, zoom='in': self.map.onZoom(evt, zoom), self.btn_map_zoom_in)
         self.Bind(wx.EVT_BUTTON, lambda evt, zoom='out': self.map.onZoom(evt, zoom), self.btn_map_zoom_out)
         self.Bind(wx.EVT_BUTTON, lambda evt, move='left': self.map.onButtonMove(evt, move), self.btn_map_left)
@@ -153,6 +155,7 @@ class MyForm(wx.Frame):
         sizer_ctrls.Add(self.btn_dump, 0, wx.ALL|wx.CENTER, 5)
         sizer_ctrls.Add(self.btn_sim, 0, wx.ALL|wx.CENTER, 5)
         sizer_ctrls.Add(self.btn_plan, 0, wx.ALL|wx.CENTER, 5)
+        sizer_ctrls.Add(self.btn_go, 0, wx.ALL|wx.CENTER, 5)
 
         sizer_cmd.Add(self.txt_cmd, 10, wx.ALL|wx.CENTER, 5)
         sizer_cmd.Add(self.btn_cmd, 0, wx.ALL|wx.CENTER, 5)
@@ -244,6 +247,15 @@ class MyForm(wx.Frame):
 
     def onPlanReq(self, event):
         self.map.Plan()
+
+    def onGoReq(self, event):
+        if self.controller.isPathRunning() :
+            self.controller.stopPathRunning()
+        else :
+            if len(self.map.planner.spath)<2 :
+                self.LogErrorString('No path')
+                return
+            self.controller.startPathRunning(self.map.planner)
 
     def onDumpModel(self, event):
         self.LogString(str(self.model.dump()))

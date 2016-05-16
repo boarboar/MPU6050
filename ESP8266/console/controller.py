@@ -1,6 +1,8 @@
-import comm
 import json
 import socket
+import Queue
+import threading
+import comm
 import model
 
 class Controller():
@@ -9,10 +11,13 @@ class Controller():
         self.__form = form
         self.__model = model
         self.__cmdid=0
+        self.__resp_q = Queue.Queue()
+        self.__lock=threading.Lock()
         self.__comm_thread = None
         self.__comm_listener_thread = None
         self.__comm_scan_thread = None
         self.__comm_sim_thread = None
+        self.__comm_path_thread = None
         self.__tstart()
 
     def __tstart(self):
@@ -87,6 +92,10 @@ class Controller():
         # {"I":1,"C":"POS"}
         self.__req({"C": "POS"})
 
+    def reqPositionSync(self):
+        # {"I":1,"C":"POS"}
+        return self.__req_sync({"C": "POS"})
+
     def reqUpload(self):
         # config upload
         # {"I":1,"C":"SYSL", "ON":1, "ADDR":"192.168.1.141", "PORT":4444}
@@ -99,9 +108,21 @@ class Controller():
         except KeyError : pass
 
     def __req(self, js):
-        self.__cmdid=self.__cmdid+1
-        js["I"]=self.__cmdid
-        self.__comm_thread.put(js)
+        js["I"]=self.__genId()
+        self.__comm_thread.put((js, None))
+
+    def __req_sync(self, js):
+        js["I"]=self.__genId()
+        resp_json=None
+        self.__comm_thread.put((js, self.__resp_q))
+        try:
+            resp = self.__resp_q.get(timeout=1)
+            resp_json=json.loads(resp)
+            self.__form.LogString("SYNC RSP: "+resp, 'FOREST GREEN')
+            self.onResp(resp_json)
+        except Queue.Empty: req_json = None
+
+        return resp_json
 
     def resp(self, js, req_json=None):
         " resp callback, called in thread context!!! "
@@ -112,16 +133,28 @@ class Controller():
                     self.__form.LogString("ALR: "+js, 'RED') #alarm
                 else :
                     self.__form.LogString("LOG: "+js, 'BLUE') #event
-            elif req_json is not None : #cmd-rsp
-                if int(req_json["I"]) != int(resp_json["I"]) :
-                    self.__form.LogErrorString("UNMATCHED: "+js)
-                    return False
+            #elif req_json is not None : #cmd-rsp
+            #    if int(req_json["I"]) != int(resp_json["I"]) :
+            #        self.__form.LogErrorString("UNMATCHED: "+js)
+            #        return False
+            else:
                 self.__form.LogString("RSP: "+js, 'FOREST GREEN')
         except ValueError : return True
         except KeyError : return True
 
-        model_reset = False
+        self.onResp(resp_json)
 
+        return True
+
+    def __genId(self):
+        self.__lock.acquire()
+        self.__cmdid=self.__cmdid+1
+        cmdid=self.__cmdid
+        self.__lock.release()
+        return cmdid
+
+    def onResp(self, resp_json):
+        model_reset=False
         #if "I" in resp_json and resp_json["T"] < self.__model["T"] : # command resp has time less saved one...
         if "T" in resp_json and resp_json["T"] < self.__model["T"] : # command resp has time less saved one...
             self.__form.LogErrorString("Device time is less than old one, Device is likely to reboot")
@@ -131,8 +164,21 @@ class Controller():
             self.__form.UpdatePos(reset=model_reset)
         else :
             self.__form.UpdateStatus(reset=model_reset)
-        return True
 
     def scanComplete(self, result=None):
         if result is None : self.__form.LogErrorString("Device not found")
         else : self.__form.LogString("FOUND %s" % result, 'FOREST GREEN')
+
+    def stopPathRunning(self):
+        if self.__comm_path_thread!=None:
+            self.__comm_path_thread.stop()
+            self.__comm_path_thread.join()
+            self.__comm_path_thread = None
+
+    def isPathRunning(self):
+        return self.__comm_path_thread!=None
+
+    def startPathRunning(self, planner):
+        self.__comm_path_thread=comm.PathThread(self, planner)
+        self.__comm_path_thread.start()
+

@@ -167,6 +167,10 @@ class MapPanel(wx.Window, UnitMap):
             self.__show_plan=True
             self.DoPlan()
 
+#    def GetPath(self):
+#        if len(self.planner.spath)<2 : return None
+#        return self.planner.spath
+
     def Draw(self, dc):
         dc.Clear()
         self.DrawAreas(dc)
@@ -176,6 +180,8 @@ class MapPanel(wx.Window, UnitMap):
         else :
             self.DrawParticles(dc)
             self.DrawRobot(dc)
+
+        self.DrawPath(dc)
 
     def DrawPlan(self, dc):
         dc.SetBackgroundMode(wx.SOLID)
@@ -211,8 +217,9 @@ class MapPanel(wx.Window, UnitMap):
                 #if cell[6] is not None:
                 #    self.DrawCellText(dc, pts, str(cell[7])) #weight
 
+    def DrawPath(self, dc):
+        if len(self.planner.spath)<2 : return
         dc.SetPen(wx.Pen(wx.GREEN, 2))
-
         fp=True
         for step in self.planner.spath :
             x, y = step
