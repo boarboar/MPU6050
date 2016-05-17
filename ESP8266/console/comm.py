@@ -174,10 +174,11 @@ class SimulationThread(threading.Thread):
 
 class PathThread(threading.Thread):
     # device command-resp communication
-    def __init__(self, controller, planner):
+    def __init__(self, controller, planner, unit):
         threading.Thread.__init__(self)
         self.__controller = controller
         self.__planner = planner
+        self.__unit = unit
         self.__stop = False
         self.setDaemon(1)
 
@@ -185,21 +186,27 @@ class PathThread(threading.Thread):
 
     def run (self):
         self.__controller.log().LogString("Starting path running")
+        self.__controller.reqMove(0.25,0.25)
         while not self.__stop :  #and not within target ....
-
-            # get crd
-            # rebuild path...
-            # signal map to redraw
-            # PID on bearing
-            # print PID output
-            # MOVE
-            # delay 1 s
+            resp_json = self.__controller.reqPositionSync()
+            try:
+                if resp_json is not None and resp_json["C"]=="POS":
+                    #y, p, r =resp_json["YPR"]
+                    #self.__controller.log().LogString("POS update %s, %s, %s" % (self.__unit.x_mean,self.__unit.y_mean, self.__unit.a_mean))
+                    time.sleep(0.5)
+                    self.__controller.log().LogString("After move %s %s %s"
+                                                      % (self.__unit.x_mean,self.__unit.y_mean, self.__unit.a_mean))
+                    self.__planner.RePlanOnMove((self.__unit.x_mean,self.__unit.y_mean))
+                    # planner rebuild path...
+                    # PID on bearing
+                    # print PID output
+                    # comm move rwg
+            except KeyError: pass
             #
             # add method to planner, in order to rebuild path. Check if cell is not changed, to skip this case
             # remove unnecessary output
 
+            time.sleep(2)
 
-            self.__controller.reqPositionSync()
-            time.sleep(1)
-
+        self.__controller.reqMove(0,0)
         self.__controller.log().LogString("Path running thread stopped")

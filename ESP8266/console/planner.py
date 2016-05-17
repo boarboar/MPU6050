@@ -94,7 +94,7 @@ class Planner:
 
         self.SetPath()
 
-        if self.start_cell is None or self.start_cell is None :
+        if self.start_cell is None or self.target_cell is None :
             self.LogErrorString("Start or Target not defined")
             return False
 
@@ -111,14 +111,24 @@ class Planner:
 
         del self.path[:]
         del self.spath[:]
-
         if not self.AStarPlanning() : return False
-
         start_time = timeit.default_timer()
         self.SmoothPath()
         self.LogString('Smoothed in %s s' % (round(timeit.default_timer() - start_time, 2)))
 
         return True
+
+    def RePlanOnMove(self, pos):
+        if self.grid is None:
+            return False
+        if self.start_cell is None or self.target_cell is None :
+            return False
+        cell0=self.grid[0][0]
+        new_start_cell=(int((pos[1]-cell0[1])/self.GRID_SZ), int((pos[0]-cell0[0])/self.GRID_SZ))
+        if self.start_cell is not None and self.start_cell[0]==new_start_cell[0] and self.start_cell[1]==new_start_cell[1] :
+            return True
+        self.SetStart(pos)
+        return self.Plan()
 
 
     def SimplePlanning(self):

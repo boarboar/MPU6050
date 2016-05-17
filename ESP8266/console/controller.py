@@ -96,6 +96,9 @@ class Controller():
         # {"I":1,"C":"POS"}
         return self.__req_sync({"C": "POS"})
 
+    def reqMove(self, l, r):
+        self.__req({"C":"D", "RPS":[l, r]})
+
     def reqUpload(self):
         # config upload
         # {"I":1,"C":"SYSL", "ON":1, "ADDR":"192.168.1.141", "PORT":4444}
@@ -120,8 +123,7 @@ class Controller():
             resp_json=json.loads(resp)
             self.__form.LogString("SYNC RSP: "+resp, 'FOREST GREEN')
             self.onResp(resp_json)
-        except Queue.Empty: req_json = None
-
+        except Queue.Empty: resp_json = None
         return resp_json
 
     def resp(self, js, req_json=None):
@@ -178,7 +180,7 @@ class Controller():
     def isPathRunning(self):
         return self.__comm_path_thread!=None
 
-    def startPathRunning(self, planner):
-        self.__comm_path_thread=comm.PathThread(self, planner)
+    def startPathRunning(self, planner, unit):
+        self.__comm_path_thread=comm.PathThread(self, planner, unit)
         self.__comm_path_thread.start()
 

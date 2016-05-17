@@ -255,7 +255,7 @@ class MyForm(wx.Frame):
             if len(self.map.planner.spath)<2 :
                 self.LogErrorString('No path')
                 return
-            self.controller.startPathRunning(self.map.planner)
+            self.controller.startPathRunning(self.map.planner, self.map.unit)
 
     def onDumpModel(self, event):
         self.LogString(str(self.model.dump()))
@@ -296,6 +296,9 @@ class MyForm(wx.Frame):
             self.map.Reset()
         else :
             self.map.UpdateData()
+            #if self.controller.isPathRunning() :
+            #    self.controller.updatePathRunning()
+
         self.unitPan.UpdateData(self.model["T_ATT"], self.model["YPR"], self.model["V"])
         self.chart.UpdateData(self.model["T_ATT"], self.model["YPR"], self.model["V"])
 
