@@ -97,7 +97,7 @@ class Controller():
         return self.__req_sync({"C": "POS"})
 
     def reqMove(self, l, r):
-        self.__req({"C":"D", "RPS":[l, r]})
+        self.__req({"C":"D", "RPS":[round(l,2), round(r,2)]})
 
     def reqUpload(self):
         # config upload
@@ -178,9 +178,13 @@ class Controller():
             self.__comm_path_thread = None
 
     def isPathRunning(self):
-        return self.__comm_path_thread!=None
+        return self.__comm_path_thread!=None and self.__comm_path_thread.complete!=True
 
     def startPathRunning(self, planner, unit):
         self.__comm_path_thread=comm.PathThread(self, planner, unit)
         self.__comm_path_thread.start()
+
+    def movePathRunning(self):
+        pass
+
 

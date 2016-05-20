@@ -4,6 +4,7 @@ import random
 import json
 import socket
 import time
+import math
 
 class CommandThread(threading.Thread):
     # device command-resp communication
@@ -180,31 +181,64 @@ class PathThread(threading.Thread):
         self.__planner = planner
         self.__unit = unit
         self.__stop = False
+        self.complete = False
         self.setDaemon(1)
 
     def stop(self) : self.__stop=True
 
     def run (self):
         self.__controller.log().LogString("Starting path running")
-        self.__controller.reqMove(0.25,0.25)
-        while not self.__stop :  #and not within target ....
+        move_var=[0.25, 0.25]
+        move_var_lim=0.25
+        base_move=0.25
+        self.__controller.reqMove(base_move+move_var[0],base_move+move_var[1])
+        gain_p, gain_d, gain_i, gain_f = 0.5, 2.0, 0.01, 0.05
+        degain_i=0.5
+        err_p_0=0
+        err_i=0
+        self.complete=False
+
+        while not self.__stop:  #and not within target ....
             resp_json = self.__controller.reqPositionSync()
             try:
                 if resp_json is not None and resp_json["C"]=="POS":
-                    #y, p, r =resp_json["YPR"]
-                    #self.__controller.log().LogString("POS update %s, %s, %s" % (self.__unit.x_mean,self.__unit.y_mean, self.__unit.a_mean))
                     time.sleep(0.5)
-                    self.__controller.log().LogString("After move %s %s %s"
-                                                      % (self.__unit.x_mean,self.__unit.y_mean, self.__unit.a_mean))
-                    self.__planner.RePlanOnMove((self.__unit.x_mean,self.__unit.y_mean))
-                    # planner rebuild path...
-                    # PID on bearing
-                    # print PID output
-                    # comm move rwg
+                    self.__planner.RePlanOnMove((self.__unit.x_mean,self.__unit.y_mean), False)
+
+                    if len(self.__planner.spath)<2 :
+                        self.__controller.log().LogString("Got there!")
+                        self.complete=True
+                        break
+
+                    plan_a=math.atan2( self.__planner.spath[1][0]-self.__planner.spath[0][0],
+                                        self.__planner.spath[1][1]-self.__planner.spath[0][1])
+
+                    self.__controller.log().LogString("After move CRD=(%s %s), A=%s, AP=%s"
+                                                      % (round(self.__unit.x_mean,2), round(self.__unit.y_mean, 2),
+                                                         round(self.__unit.a_mean*180/math.pi,2),
+                                                      round(plan_a*180/math.pi,2)))
+                    err_p=(self.__unit.a_mean-plan_a)
+                    if err_p < -math.pi :
+                        err_p += 2*math.pi
+
+                    #err_p=(self.__unit.a_mean-plan_a)%math.pi   # mod 180deg
+                    err_i=err_p+degain_i*err_i
+                    err_d=err_p-err_p_0
+                    err_p_0=err_p
+                    feedback=-(gain_p*err_p+gain_d*err_d+gain_i*err_i)*gain_f
+
+                    self.__controller.log().LogString("PID: %s %s %s => %s" %
+                                                      (round(err_p,2), round(err_d,2), round(err_i,2), round(feedback,2)))
+
+                    dmove=[feedback, -feedback]
+                    for im in range(2):
+                        move_var[im]+=dmove[im]
+                        if move_var[im]>move_var_lim: move_var[im]=move_var_lim
+                        if move_var[im]<-move_var_lim: move_var[im]=-move_var_lim
+
+                    self.__controller.reqMove(base_move+move_var[0], base_move+move_var[1])
+
             except KeyError: pass
-            #
-            # add method to planner, in order to rebuild path. Check if cell is not changed, to skip this case
-            # remove unnecessary output
 
             time.sleep(2)
 

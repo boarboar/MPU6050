@@ -38,7 +38,7 @@ class Planner:
         return True
 
 
-    def Plan(self):
+    def Plan(self, verbose=True):
         if self.grid is None:
             w=self.map.boundRect[2]-self.map.boundRect[0]
             h=self.map.boundRect[3]-self.map.boundRect[1]
@@ -90,35 +90,35 @@ class Planner:
                     for icol in range(len(self.grid[irow])): self.grid[irow][icol][7]=w2[irow][icol]
 
 
-            self.LogString('grid inited in %s s' % (round(timeit.default_timer() - start_time, 2)))
+            if verbose : self.LogString('grid inited in %s s' % (round(timeit.default_timer() - start_time, 2)))
 
         self.SetPath()
 
         if self.start_cell is None or self.target_cell is None :
-            self.LogErrorString("Start or Target not defined")
+            if verbose : self.LogErrorString("Start or Target not defined")
             return False
 
         if self.grid[self.start_cell[0]][self.start_cell[1]][2] != 0 :
-            self.LogErrorString("Start is occupied")
+            if verbose : self.LogErrorString("Start is occupied")
             return False
 
         if self.grid[self.target_cell[0]][self.target_cell[1]][2] != 0 :
-            self.LogErrorString("Target is occupied")
+            if verbose : self.LogErrorString("Target is occupied")
             return False
 
-        self.LogString("Do planning from (%s, %s) to (%s, %s)" %
+        if verbose : self.LogString("Do planning from (%s, %s) to (%s, %s)" %
                        (self.start_cell[0], self.start_cell[1], self.target_cell[0], self.target_cell[1]))
 
         del self.path[:]
         del self.spath[:]
-        if not self.AStarPlanning() : return False
+        if not self.AStarPlanning(verbose) : return False
         start_time = timeit.default_timer()
-        self.SmoothPath()
-        self.LogString('Smoothed in %s s' % (round(timeit.default_timer() - start_time, 2)))
+        self.SmoothPath(verbose)
+        if verbose : self.LogString('Smoothed in %s s' % (round(timeit.default_timer() - start_time, 2)))
 
         return True
 
-    def RePlanOnMove(self, pos):
+    def RePlanOnMove(self, pos, verbose=True):
         if self.grid is None:
             return False
         if self.start_cell is None or self.target_cell is None :
@@ -128,7 +128,7 @@ class Planner:
         if self.start_cell is not None and self.start_cell[0]==new_start_cell[0] and self.start_cell[1]==new_start_cell[1] :
             return True
         self.SetStart(pos)
-        return self.Plan()
+        return self.Plan(verbose)
 
 
     def SimplePlanning(self):
@@ -213,7 +213,7 @@ class Planner:
 
         return True
 
-    def AStarPlanning(self):
+    def AStarPlanning(self, verbose=True):
 
         start_time = timeit.default_timer()
 
@@ -298,10 +298,10 @@ class Planner:
                                 self.grid[irow2][icol2][5] = i #action
 
         if resign:
-            self.LogErrorString('fail')
+            if verbose : self.LogErrorString('fail')
             return False
 
-        self.LogString('Done expansion')
+        if verbose : self.LogString('Done expansion')
 
         del self.path[:]
 
@@ -318,13 +318,13 @@ class Planner:
             icol=icol2
 
         #print(self.path)
-        self.LogString('Done path')
+        if verbose : self.LogString('Done path')
 
-        self.LogString('Planning done in %s s' % (round(timeit.default_timer() - start_time, 2)))
+        if verbose : self.LogString('Planning done in %s s' % (round(timeit.default_timer() - start_time, 2)))
 
         return True
 
-    def SmoothPath(self):
+    def SmoothPath(self, verbose=True):
         path=[]
         weight_data = 0.5
         weight_smooth = 0.5
@@ -349,3 +349,4 @@ class Planner:
                     if self.spath[i][k]-n>tol:
                         tol=self.spath[i][k]-n
                     self.spath[i][k] = n
+        self.spath.reverse()
