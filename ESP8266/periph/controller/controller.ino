@@ -360,6 +360,7 @@ void readUSDist() {
     }
     //Serial.print("U."); Serial.print(current_sens); Serial.print("=");Serial.print(sens[current_sens]);Serial.print(" \tRAW="); Serial.println(tmp);
   } else {
+    sens[current_sens] = -1;
 #ifdef _SIMULATION_
     sens[current_sens] = current_sens*100+random(50);
 #endif

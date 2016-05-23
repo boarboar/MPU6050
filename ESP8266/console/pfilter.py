@@ -77,24 +77,50 @@ class PFilter:
         #self.x_mean, self.y_mean, self.p_var, self.a_mean, self.a_var = self.getMeanDistribution()
 
     def getMeanDistribution(self):
-        x,y, var=0,0,0
-        a, vara=0, 0
+        # mean distrubution of coords and angles
+        # weighted average of circular data - see
+        # http://stackoverflow.com/questions/491738/how-do-you-calculate-the-average-of-a-set-of-circular-data
+        x,y,var=0,0,0
+        #a,vara=0, 0
+        x_a,y_a= 0,0
+        a_a,var_a_a=0,0
         for p in self.particles :
             x+=p.x*p.w
             y+=p.y*p.w
-            a+=p.a*p.w
+            #a+=p.a*p.w ######### BUG in area of 180/-180 angle!!!!!!!!!!! Can not sum circular values
+            x_a+=math.sin(p.a)*p.w
+            y_a+=math.cos(p.a)*p.w
+
+        a_a=math.atan2(y_a, x_a)
+        a_a=math.pi*0.5-a_a
+        if a_a < -math.pi :
+            a_a += 2*math.pi
+        if a_a > math.pi :
+            a_a -= 2*math.pi
 
         for p in self.particles :
             ex=p.x-x
             ey=p.y-y
             var += (ex*ex+ey*ey)*p.w
-            ea=p.a-a
-            vara+=ea*ea*p.w
+            #ea=p.a-a
+            #vara+=ea*ea*p.w
+            e_a_a=p.a-a_a
+            if e_a_a < -math.pi :
+                e_a_a += 2*math.pi
+            if e_a_a > math.pi :
+                e_a_a -= 2*math.pi
+            var_a_a+=e_a_a*e_a_a*p.w
+
 
         var= math.sqrt(var)
-        vara= math.sqrt(vara)
+        #vara= math.sqrt(vara)
+        var_a_a= math.sqrt(var_a_a)
         #print("Variance %s" % str(round(var,2)))
-        return (x, y, var, a, vara)
+
+        #print("A/CA %s(%s) %s(%s)" % (round(a,2),round(vara,2),round(a_a,2), round(var_a_a,2),))
+
+        #return (x, y, var, a, vara)
+        return (x, y, var, a_a, var_a_a)
 
     def updateParticleProbabilities(self, p, meas, scan_angles, scan_max_dist):
         scan_dist=[]

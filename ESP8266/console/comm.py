@@ -191,7 +191,7 @@ class PathThread(threading.Thread):
         move_var=[0.25, 0.25]
         move_var_lim=0.25
         base_move=0.25
-        self.__controller.reqMove(base_move+move_var[0],base_move+move_var[1])
+        #self.__controller.reqMove(base_move+move_var[0],base_move+move_var[1])
         gain_p, gain_d, gain_i, gain_f = 0.5, 2.0, 0.01, 0.05
         degain_i=0.5
         err_p_0=0
@@ -220,6 +220,8 @@ class PathThread(threading.Thread):
                     err_p=(self.__unit.a_mean-plan_a)
                     if err_p < -math.pi :
                         err_p += 2*math.pi
+                    if err_p > math.pi :
+                        err_p -= 2*math.pi
 
                     #err_p=(self.__unit.a_mean-plan_a)%math.pi   # mod 180deg
                     err_i=err_p+degain_i*err_i
