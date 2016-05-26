@@ -62,9 +62,6 @@ class MyForm(wx.Frame):
         self.chart = draw.ChartPanel(panel)
         self.map = map.MapPanel(panel, self.model, "map.json", self.LogString, self.LogErrorString)
 
-        self.unitPan.SetMaxSize((240, 240))
-        #self.canvas.SetMaxSize((240, 240))
-
         self.log_bg=self.log.GetBackgroundColour()
 
         self.layout(panel)
@@ -112,6 +109,8 @@ class MyForm(wx.Frame):
 
 
     def layout(self, panel):
+        self.unitPan.SetMaxSize((240, 240))
+        #self.canvas.SetMaxSize((240, 240))
         # Add widgets to a sizer
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer_pan = wx.BoxSizer(wx.HORIZONTAL)
@@ -299,7 +298,7 @@ class MyForm(wx.Frame):
             #if self.controller.isPathRunning() :
             #    self.controller.updatePathRunning()
 
-        self.unitPan.UpdateData(self.model["T_ATT"], self.model["YPR"], self.model["V"])
+        self.unitPan.UpdateData(self.model["T_ATT"], self.model["YPR"], self.model["V"], self.map.unit.a_mean)
         self.chart.UpdateData(self.model["T_ATT"], self.model["YPR"], self.model["V"])
 
 

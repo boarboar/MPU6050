@@ -3,16 +3,22 @@
 //#define _SIMULATION_ 1
 //#define _PID_DEBUG_ 
 
+#define _MOTOR_ONE_WIRE_ 
+
 #define M_OWN_ID 0x53
 
 // MOTOR OUT
 
 #define M2_OUT_1  P1_4
-#define M2_OUT_2  P1_3
+#ifndef _MOTOR_ONE_WIRE_
+  #define M2_OUT_2  P1_3
+#endif
 #define M2_EN     P2_1 // analog write
 
 #define M1_OUT_1  P2_4
-#define M1_OUT_2  P2_3
+#ifndef _MOTOR_ONE_WIRE_
+  #define M1_OUT_2  P2_3
+#endif  
 #define M1_EN     P2_5 // analog write
 
 // ENC IN
@@ -70,6 +76,7 @@
 
 uint32_t lastEvTime, lastPidTime;
 int16_t sens[M_SENS_N];
+uint8_t sens_fail_cnt[M_SENS_N];
 int16_t targ_rot_rate[2]={0,0}; // RPS, 10000 = 1 RPS  (use DRV_RPS_NORM)
 int16_t targ_new_rot_rate[2]={0, 0}; // RPS, 10000 = 1 RPS  (use DRV_RPS_NORM), +/-
 int16_t targ_old_rot_rate[2]={0, 0}; // prev
@@ -108,11 +115,18 @@ void setup()
   P2SEL &= ~BIT7;
   
   uint8_t i;
+#ifndef _MOTOR_ONE_WIRE_  
   int ports[9]={M1_OUT_1,M1_OUT_2,M2_OUT_1,M2_OUT_2, M1_EN, M2_EN, US_1_OUT, US_2_OUT, US_3_OUT};
-  for(i=0;i<9;i++) {
+  const int portlen=9;
+#else
+  int ports[7]={M1_OUT_1,M2_OUT_1,M1_EN, M2_EN, US_1_OUT, US_2_OUT, US_3_OUT};
+  const int portlen=7;
+#endif
+  for(i=0;i<portlen;i++) {
     digitalWrite(ports[i], LOW); 
     pinMode(ports[i], OUTPUT);
   }
+
   pinMode(ENC1_IN, INPUT);   
   pinMode(ENC2_IN, INPUT);   
   pinMode(US_IN, INPUT);   
@@ -136,7 +150,7 @@ void setup()
   Wire.onRequest(requestEvent); // register event  
   
   analogFrequency(32); 
-  for(int i=0; i<M_SENS_N; i++) sens[i]=0;
+  for(int i=0; i<M_SENS_N; i++) { sens[i]=0; sens_fail_cnt[i]=0; }
   
   lastEvTime = lastPidTime = millis();  
 }
@@ -317,14 +331,19 @@ void doPID(uint16_t ctime)
 
 void Drive(uint8_t ldir, uint8_t lpow, uint8_t rdir, uint8_t rpow) 
 {
+#ifndef _MOTOR_ONE_WIRE_  
   Drive_s(ldir, lpow, M1_EN, M1_OUT_1, M1_OUT_2);
   Drive_s(rdir, rpow, M2_EN, M2_OUT_1, M2_OUT_2);
+#else
+  Drive_s1(ldir, lpow, M1_EN, M1_OUT_1);
+#endif  
 }
 
 void Drive_s(uint8_t dir, uint8_t pow, int16_t p_en, uint8_t p1, uint8_t p2) 
 {
   if(dir==0 || pow==0) {
-    digitalWrite(p_en, LOW); digitalWrite(p1, LOW); digitalWrite(p2, LOW); 
+    digitalWrite(p_en, LOW); 
+    digitalWrite(p1, LOW); digitalWrite(p2, LOW); 
     return;
   }
   else if(dir==1) {
@@ -332,6 +351,21 @@ void Drive_s(uint8_t dir, uint8_t pow, int16_t p_en, uint8_t p1, uint8_t p2)
   }
   else {
     digitalWrite(p1, HIGH); digitalWrite(p2, LOW);
+  } 
+  analogWrite(p_en, pow);
+}
+
+void Drive_s1(uint8_t dir, uint8_t pow, int16_t p_en, uint8_t p1) 
+{
+  if(dir==0 || pow==0) {
+    digitalWrite(p_en, LOW); 
+    return;
+  }
+  else if(dir==1) {
+    digitalWrite(p1, LOW); 
+  }
+  else {
+    digitalWrite(p1, HIGH); 
   } 
   analogWrite(p_en, pow);
 }
@@ -348,11 +382,12 @@ void readUSDist() {
   delayMicroseconds(10);
   digitalWrite(out_port, LOW);
   
-  int16_t tmp =(int16_t)(pulseIn(US_IN, HIGH, 18000)/58);  //58.138
+  //int16_t tmp =(int16_t)(pulseIn(US_IN, HIGH, 18000)/58);  //58.138
+  int16_t tmp =(int16_t)(pulseIn(US_IN, HIGH, 25000)/58);  //58.138
   
-  if(tmp) {
-    
-    if(sens[current_sens]==0) sens[current_sens] = tmp;
+  if(tmp) {    
+    sens_fail_cnt[current_sens] = 0;
+    if(sens[current_sens]<=0) sens[current_sens] = tmp;
     else {
        // do LPM filter here ?
        //sens[current_sens] = (sens[current_sens]*2 - (sens[current_sens] - tmp))/2;
@@ -360,7 +395,10 @@ void readUSDist() {
     }
     //Serial.print("U."); Serial.print(current_sens); Serial.print("=");Serial.print(sens[current_sens]);Serial.print(" \tRAW="); Serial.println(tmp);
   } else {
-    sens[current_sens] = -1;
+    sens_fail_cnt[current_sens]++;
+    if(sens_fail_cnt[current_sens]>1) // this is to avoid one-time reading failures
+      sens[current_sens] = -1;
+    if(sens_fail_cnt[current_sens]>8) sens_fail_cnt[current_sens]=8; 
 #ifdef _SIMULATION_
     sens[current_sens] = current_sens*100+random(50);
 #endif

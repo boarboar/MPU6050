@@ -14,6 +14,7 @@ class UnitPanel(wx.Window):
         self.Bind(wx.EVT_PAINT, self.OnPaint)
         self.Bind(wx.EVT_SIZE, self.OnSize)
         self.att=[0,0,0]
+        self.a_loc=0
         self.t=0
         self.v=[0,0,0]
         self.r_sin=0.0
@@ -46,10 +47,11 @@ class UnitPanel(wx.Window):
         self.Refresh()
         self.Update()
 
-    def UpdateData(self, t, att, v=None):
+    def UpdateData(self, t, att, v=None, a_loc=None):
         self.t=t
         self.att=att
         self.v=v
+        if a_loc is not None: self.a_loc=a_loc
         self.UpdateDrawing()
 
     def Draw(self, dc):
@@ -60,7 +62,7 @@ class UnitPanel(wx.Window):
         dc.SetTextForeground(wx.BLACK)
         dc.SetTextBackground(wx.WHITE)
         dc.DrawText(str(self.t/1000), self.x0*2-50, 5)
-        dc.SetPen(wx.Pen(wx.BLUE, 4))
+        dc.SetPen(wx.Pen('GRAY', 4))
         yaw, pitch, roll = [a*math.pi/180.0 for a in self.att]
         self.SetRotation(yaw)
         dc.DrawPolygon(self.ts(self.shape))
@@ -91,6 +93,11 @@ class UnitPanel(wx.Window):
             self.SetRotation(math.atan2(zy, zx))
             dc.SetPen(wx.Pen("SALMON", 4))
             dc.DrawLines(self.ts(line))
+
+        # localized
+        dc.SetPen(wx.Pen(wx.BLUE, 4))
+        self.SetRotation(self.a_loc)
+        dc.DrawPolygon(self.ts(self.shape))
 
     def MakeArrow(self, len):
         return [wx.Point(0,0), wx.Point(0,len),

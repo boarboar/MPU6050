@@ -145,9 +145,9 @@ class Planner:
         delta = [[-1, 0 ], # go down
          [ 0, -1], # go left
          [ 1, 0 ], # go up
-         [ 0, 1 ],
-                 [1,1],[-1,-1],[1,-1],[-1,1]
-                 ] # go right
+         [ 0, 1 ], # go right
+                 [1,1],[-1,-1],[1,-1],[-1,1] #go diagonal
+                 ]
         irow = self.start_cell[0]
         icol = self.start_cell[1]
         #closed[init[0]][init[1]] = 1
@@ -228,7 +228,7 @@ class Planner:
                 cell[5]=-1 #action
                 cell[6]=abs(trow-irow)+abs(tcol-icol) #heuristics
 
-        cost = 1
+        #cost = 1
         tcost=2
         """
         delta = [[-1, 0 ], # go down
@@ -236,11 +236,12 @@ class Planner:
          [ 1, 0 ], # go up
          [ 0, 1 ]] # go right
          """
-        delta = [[-1, 0 ], # go down
-         [ 0, -1], # go left
-         [ 1, 0 ], # go up
-         [ 0, 1 ] # go right
-         #[1,1],[-1,-1],[1,-1],[-1,1]
+        delta = [
+            [-1, 0, 1 ], # go down
+            [ 0, -1, 1], # go left
+            [ 1, 0, 1 ], # go up
+            [ 0, 1, 1 ] # go right
+         ,[1,1, 1.4],[-1,-1, 1.4],[1,-1, 1.4],[-1,1, 1.4] #go diagonal, higher weights
                  ]
         irow = self.start_cell[0]
         icol = self.start_cell[1]
@@ -285,8 +286,8 @@ class Planner:
                             #if closed[x2][y2] == 0 and grid[x2][y2] == 0:
                             if self.grid[irow2][icol2][3] == 0 and self.grid[irow2][icol2][2] == 0:
                                 turncost=0
-                                if self.grid[irow][icol][5]!=i : turncost=tcost
-
+                                if self.grid[irow][icol][5]!=i : turncost=tcost # avoid turns
+                                cost=delta[i][2]
                                 g2 = g + cost + self.grid[irow2][icol2][7] + turncost # + weight
                                 #h2=heuristic[x2][y2]
                                 h2=self.grid[irow2][icol2][6]
@@ -339,6 +340,7 @@ class Planner:
         tol = 999
         while tol>=tolerance:
             tol=0.0
+            # TODO - avoid occupied cells (get newpos (2 crds), check occupancy, replace if not occupied)
             for i in range(1, len(self.spath)-1):
                 for k in range(2):
                     n=self.spath[i][k]+\

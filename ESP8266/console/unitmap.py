@@ -151,7 +151,11 @@ class UnitMap:
                     op0=obj["CS"][-1]["C"]
                     for c in obj["CS"] :
                         op=c["C"]
-                        isect=self.find_intersection(p0, p1, (pobj0[0]+op0[0], pobj0[1]+op0[1]), (pobj0[0]+op[0], pobj0[1]+op[1]))
+                        fixed=1 #fixed
+                        if 'F' in obj : fixed=obj["F"]
+                        isect=None
+                        if fixed==1 or random.random()>0.5 :
+                            isect=self.find_intersection(p0, p1, (pobj0[0]+op0[0], pobj0[1]+op0[1]), (pobj0[0]+op[0], pobj0[1]+op[1]))
                         #isect=None
                         if isect!=None :
                             d2 = (isect[0]-p0[0])*(isect[0]-p0[0])+(isect[1]-p0[1])*(isect[1]-p0[1])

@@ -191,7 +191,6 @@ class PathThread(threading.Thread):
         move_var=[0.25, 0.25]
         move_var_lim=0.25
         base_move=0.25
-        #self.__controller.reqMove(base_move+move_var[0],base_move+move_var[1])
         gain_p, gain_d, gain_i, gain_f = 0.5, 2.0, 0.01, 0.05
         degain_i=0.5
         err_p_0=0
@@ -202,7 +201,7 @@ class PathThread(threading.Thread):
             resp_json = self.__controller.reqPositionSync()
             try:
                 if resp_json is not None and resp_json["C"]=="POS":
-                    time.sleep(0.5)
+                    time.sleep(0.5) # bad design... wait until map object perform unit location procedure....
                     self.__planner.RePlanOnMove((self.__unit.x_mean,self.__unit.y_mean), False)
 
                     if len(self.__planner.spath)<2 :

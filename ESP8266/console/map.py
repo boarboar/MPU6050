@@ -236,8 +236,10 @@ class MapPanel(wx.Window, UnitMap):
 
         obj_brush_hi_dens=wx.Brush("GREY")
         obj_brush_lo_dens=wx.Brush("LIGHT GREY")
+        obj_brush_hidden=wx.Brush("WHITE")
         wall_pen=wx.Pen(wx.BLACK, 4)
         obj_pen=wx.Pen(wx.BLACK, 2)
+        obj_pen_transient=wx.Pen(wx.BLACK, 2, wx.PENSTYLE_DOT)
         obj_pen_hidden=wx.Pen(wx.BLACK, 2, wx.PENSTYLE_SHORT_DASH)
         door_pen_open=wx.Pen("GREEN", 4)
         door_pen_closed=wx.Pen("RED", 4)
@@ -262,8 +264,13 @@ class MapPanel(wx.Window, UnitMap):
                     for obj in area["OBJECTS"] :
                         brush=obj_brush_hi_dens
                         pen = obj_pen
+                        fixed=1 #fixed
+                        if 'F' in obj : fixed=obj["F"]
                         if obj["DENSITY"] <= 0.5 : brush=obj_brush_lo_dens
-                        if obj["DENSITY"] < 0.1 : pen=obj_pen_hidden
+                        if obj["DENSITY"] < 0.1 :
+                            pen=obj_pen_hidden
+                            brush=obj_brush_hidden
+                        elif fixed==0 : pen=obj_pen_transient
                         dc.SetBrush(brush)
                         dc.SetPen(pen)
                         pobj0=(parea0[0]+obj["AT"][0],
