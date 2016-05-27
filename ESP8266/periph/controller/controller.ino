@@ -61,7 +61,7 @@
 #define M_WUP_PID_CNT 3
 
 #define M_SENS_N       3 // number of sensors 
-#define M_SENS_CYCLE   2 // number of sensors to read at cycle
+#define M_SENS_CYCLE   1 // number of sensors to read at cycle
 
 #define REG_WHO_AM_I         0xFF  // 1 unsigned byte
 #define REG_TARG_ROT_RATE    0x03  // 2 signed ints (4 bytes)
@@ -151,6 +151,8 @@ void setup()
   
   analogFrequency(32); 
   for(int i=0; i<M_SENS_N; i++) { sens[i]=0; sens_fail_cnt[i]=0; }
+  
+  Serial.println("Ready");
   
   lastEvTime = lastPidTime = millis();  
 }
@@ -373,17 +375,20 @@ void Drive_s1(uint8_t dir, uint8_t pow, int16_t p_en, uint8_t p1)
 
 void readUSDist() {
   for(uint8_t i=0; i<M_SENS_CYCLE; i++) {
-    
+  if(digitalRead(US_IN)==HIGH) continue; // TODO reset here ?
+  // bad sensor strategy - skip next time ??? TODO
+  
   int ports[M_SENS_N]={US_1_OUT, US_2_OUT, US_3_OUT};
   int out_port=ports[current_sens];
   digitalWrite(out_port, LOW);
-  delayMicroseconds(2);
+  delayMicroseconds(2); // or 5?
   digitalWrite(out_port, HIGH);
   delayMicroseconds(10);
   digitalWrite(out_port, LOW);
   
+  // actual constant should be 58.138
   //int16_t tmp =(int16_t)(pulseIn(US_IN, HIGH, 18000)/58);  //58.138
-  int16_t tmp =(int16_t)(pulseIn(US_IN, HIGH, 25000)/58);  //58.138
+  int16_t tmp =(int16_t)(pulseIn(US_IN, HIGH, 40000)/58);  //play with timing ?
   
   if(tmp) {    
     sens_fail_cnt[current_sens] = 0;
@@ -394,17 +399,28 @@ void readUSDist() {
        sens[current_sens] = tmp;
     }
     //Serial.print("U."); Serial.print(current_sens); Serial.print("=");Serial.print(sens[current_sens]);Serial.print(" \tRAW="); Serial.println(tmp);
-  } else {
+  } else {    
     sens_fail_cnt[current_sens]++;
     if(sens_fail_cnt[current_sens]>1) // this is to avoid one-time reading failures
       sens[current_sens] = -1;
+      
+    if(digitalRead(US_IN)==HIGH) { // need to reset
+      sens[current_sens] = -2;
+      //play with timing ?
+      //delay(100);
+      pinMode(US_IN, OUTPUT);
+      digitalWrite(US_IN, LOW);
+      delay(100);
+      pinMode(US_IN, INPUT);
+      Serial.print("US Reset: "); Serial.println(current_sens);
+    }
+      
     if(sens_fail_cnt[current_sens]>8) sens_fail_cnt[current_sens]=8; 
 #ifdef _SIMULATION_
     sens[current_sens] = current_sens*100+random(50);
 #endif
   }
-  current_sens=(current_sens+1)%M_SENS_N;
-  
+  current_sens=(current_sens+1)%M_SENS_N;  
   }
 }
 
