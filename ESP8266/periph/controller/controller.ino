@@ -375,7 +375,10 @@ void Drive_s1(uint8_t dir, uint8_t pow, int16_t p_en, uint8_t p1)
 
 void readUSDist() {
   for(uint8_t i=0; i<M_SENS_CYCLE; i++) {
-  if(digitalRead(US_IN)==HIGH) continue; // TODO reset here ?
+  if(digitalRead(US_IN)==HIGH) {
+    Serial.print("US read abort: "); Serial.println(current_sens);
+    continue; // TODO reset here ?
+  }
   // bad sensor strategy - skip next time ??? TODO
   
   int ports[M_SENS_N]={US_1_OUT, US_2_OUT, US_3_OUT};
@@ -412,7 +415,8 @@ void readUSDist() {
       digitalWrite(US_IN, LOW);
       delay(100);
       pinMode(US_IN, INPUT);
-      Serial.print("US Reset: "); Serial.println(current_sens);
+      if(digitalRead(US_IN)==HIGH) { Serial.print("US Reset failed: "); Serial.println(current_sens);}
+      else { Serial.print("US Reset OK: "); Serial.println(current_sens);}
     }
       
     if(sens_fail_cnt[current_sens]>8) sens_fail_cnt[current_sens]=8; 
