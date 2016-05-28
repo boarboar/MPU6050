@@ -374,10 +374,13 @@ void Drive_s1(uint8_t dir, uint8_t pow, int16_t p_en, uint8_t p1)
 
 
 void readUSDist() {
-  for(uint8_t i=0; i<M_SENS_CYCLE; i++) {
+  static bool ignore=false;
+  //for(uint8_t i=0; i<M_SENS_CYCLE; i++) {
   if(digitalRead(US_IN)==HIGH) {
-    Serial.print("US read abort: "); Serial.println(current_sens);
-    continue; // TODO reset here ?
+    //Serial.print("US read abort: "); Serial.println(current_sens);
+    delay(50);
+    ignore=true;
+    return; // TODO reset here ?
   }
   // bad sensor strategy - skip next time ??? TODO
   
@@ -392,6 +395,16 @@ void readUSDist() {
   // actual constant should be 58.138
   //int16_t tmp =(int16_t)(pulseIn(US_IN, HIGH, 18000)/58);  //58.138
   int16_t tmp =(int16_t)(pulseIn(US_IN, HIGH, 40000)/58);  //play with timing ?
+  
+  if(ignore) {
+    //Serial.println("Ignored");
+    ignore=false;
+    return;
+  }
+  
+  Serial.print("\t\t\t\t\t");
+  for(int j=0; j<current_sens; j++) Serial.print("\t");
+   Serial.println(tmp);
   
   if(tmp) {    
     sens_fail_cnt[current_sens] = 0;
@@ -409,14 +422,18 @@ void readUSDist() {
       
     if(digitalRead(US_IN)==HIGH) { // need to reset
       sens[current_sens] = -2;
+      //delay(50);
+      ignore=true;
+      /*
       //play with timing ?
-      //delay(100);
+      delay(100);
       pinMode(US_IN, OUTPUT);
       digitalWrite(US_IN, LOW);
       delay(100);
       pinMode(US_IN, INPUT);
       if(digitalRead(US_IN)==HIGH) { Serial.print("US Reset failed: "); Serial.println(current_sens);}
       else { Serial.print("US Reset OK: "); Serial.println(current_sens);}
+      */
     }
       
     if(sens_fail_cnt[current_sens]>8) sens_fail_cnt[current_sens]=8; 
@@ -425,7 +442,7 @@ void readUSDist() {
 #endif
   }
   current_sens=(current_sens+1)%M_SENS_N;  
-  }
+  //}
 }
 
 void encodeInterrupt_1() { baseInterrupt(0); }
