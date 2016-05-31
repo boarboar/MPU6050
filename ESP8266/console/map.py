@@ -150,7 +150,7 @@ class MapPanel(wx.Window, UnitMap):
     def SetTargetPoint(self, pos):
         self.target=(round(pos[0],2), round(pos[1],2))
         self.planner.SetTarget(self.target)
-        if self.planner.SetStart(self.start) :
+        if self.planner.start_pos is None and self.planner.SetStart(self.start) :
             self.DoPlan()
 
     def DoPlan(self):

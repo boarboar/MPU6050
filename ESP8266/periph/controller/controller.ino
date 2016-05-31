@@ -338,6 +338,7 @@ void Drive(uint8_t ldir, uint8_t lpow, uint8_t rdir, uint8_t rpow)
   Drive_s(rdir, rpow, M2_EN, M2_OUT_1, M2_OUT_2);
 #else
   Drive_s1(ldir, lpow, M1_EN, M1_OUT_1);
+  Drive_s1(rdir, rpow, M2_EN, M2_OUT_1);
 #endif  
 }
 
