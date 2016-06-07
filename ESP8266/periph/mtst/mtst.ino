@@ -27,7 +27,10 @@ volatile uint8_t v_es[2]={0,0};
 
 void setup()
 {
-  
+    Serial.begin(9600);
+
+  Serial.println("Init...");
+
   uint8_t i;
 #ifndef _MOTOR_ONE_WIRE_  
   int ports[9]={M1_OUT_1,M1_OUT_2,M2_OUT_1,M2_OUT_2, M1_EN, M2_EN};
@@ -47,16 +50,71 @@ void setup()
   // encoders interrupts
   attachInterrupt(ENC1_IN, encodeInterrupt_1, CHANGE); 
   attachInterrupt(ENC2_IN, encodeInterrupt_2, CHANGE); 
+
+  Drive(0, 0, 0, 0); 
   
-  delay(1000);
+  delay(2000);
     
   analogFrequency(32); 
   
   Serial.println("Go...");
  
-  Drive(1, 100, 1, 100); 
+ /*
+ digitalWrite(M1_OUT_1, LOW);
+ digitalWrite(M2_OUT_1, LOW);
  
-  delay(200);
+ analogWrite(M1_EN, 254);
+ 
+ delay(1000);
+ 
+ analogWrite(M1_EN, 0);
+ 
+ delay(1000);
+ 
+ analogWrite(M2_EN, 254);
+ 
+ delay(1000);
+ 
+ analogWrite(M2_EN, 0);
+ 
+ delay(1000);
+ 
+ digitalWrite(M1_OUT_1, HIGH);
+ digitalWrite(M2_OUT_1, HIGH);
+ 
+ analogWrite(M1_EN, 254);
+ 
+ delay(1000);
+ 
+ analogWrite(M1_EN, 0);
+ 
+ delay(1000);
+ 
+ analogWrite(M2_EN, 254);
+ 
+ delay(1000);
+ 
+ analogWrite(M2_EN, 0);
+ 
+ delay(1000);
+ */
+ 
+ 
+  Drive(1, 254, 1, 254); 
+ 
+  delay(500);
+  
+  Drive(0, 0, 0, 0); 
+  
+  delay(500);
+  
+  readEnc(400);
+  
+  Serial.print("Enc \t");  Serial.print(enc_cnt[0]);  Serial.print("\t\t");  Serial.println(enc_cnt[1]);  
+  
+  Drive(2, 254, 2, 254); 
+ 
+  delay(500);
   
   Drive(0, 0, 0, 0); 
   
@@ -64,20 +122,11 @@ void setup()
   
   readEnc(400);
   
-  Serial.print("Enc \t");  Serial.print(enc_cnt[0]);  Serial.print("\t\t");  Serial.print(enc_cnt[1]);  
+  Serial.print("Enc \t");  Serial.print(enc_cnt[0]);  Serial.print("\t\t");  Serial.println(enc_cnt[1]);  
   
-  Drive(2, 100, 2, 100); 
+  
+  Serial.println("Stop...");
  
-  delay(200);
-  
-  Drive(0, 0, 0, 0); 
-  
-  delay(200);
-  
-  readEnc(400);
-  
-  Serial.print("Enc \t");  Serial.print(enc_cnt[0]);  Serial.print("\t\t");  Serial.print(enc_cnt[1]);  
-  
 } 
 
 void loop()
