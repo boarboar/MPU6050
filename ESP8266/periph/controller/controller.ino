@@ -9,17 +9,17 @@
 
 // MOTOR OUT
 
-#define M2_OUT_1  P1_4
+#define M1_OUT_1  P1_4
 #ifndef _MOTOR_ONE_WIRE_
-  #define M2_OUT_2  P1_3
+  #define M1_OUT_2  P1_3
 #endif
-#define M2_EN     P2_1 // analog write
+#define M1_EN     P2_1 // analog write
 
-#define M1_OUT_1  P2_4
+#define M2_OUT_1  P2_4
 #ifndef _MOTOR_ONE_WIRE_
-  #define M1_OUT_2  P2_3
+  #define M2_OUT_2  P2_3
 #endif  
-#define M1_EN     P2_5 // analog write
+#define M2_EN     P2_5 // analog write
 
 // ENC IN
 #define ENC2_IN   P1_5

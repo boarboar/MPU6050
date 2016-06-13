@@ -2,7 +2,7 @@
 #define _MOTOR_ONE_WIRE_ 
 
 // MOTOR OUT
-
+/*
 #define M2_OUT_1  P1_4
 #ifndef _MOTOR_ONE_WIRE_
   #define M2_OUT_2  P1_3
@@ -14,7 +14,20 @@
   #define M1_OUT_2  P2_3
 #endif  
 #define M1_EN     P2_5 // analog write
+*/
 
+#define M1_OUT_1  P1_4
+#ifndef _MOTOR_ONE_WIRE_
+  #define M1_OUT_2  P1_3
+#endif
+#define M1_EN     P2_1 // analog write
+
+#define M2_OUT_1  P2_4
+#ifndef _MOTOR_ONE_WIRE_
+  #define M2_OUT_2  P2_3
+#endif  
+#define M2_EN     P2_5 // analog write
+  
 // ENC IN
 #define ENC2_IN   P1_5
 #define ENC1_IN   P2_0
@@ -57,23 +70,31 @@ void setup()
     
   analogFrequency(32); 
   
-  Serial.println("Go...");
- 
+  //analogFrequency(16);
  /*
+ 
  digitalWrite(M1_OUT_1, LOW);
  digitalWrite(M2_OUT_1, LOW);
+ 
+ Serial.println("M1 F");
  
  analogWrite(M1_EN, 254);
  
  delay(1000);
  
+ Serial.println("M1 ST");
+ 
  analogWrite(M1_EN, 0);
  
  delay(1000);
  
+ Serial.println("M2 F");
+ 
  analogWrite(M2_EN, 254);
  
  delay(1000);
+ 
+ Serial.println("M2 ST");
  
  analogWrite(M2_EN, 0);
  
@@ -82,43 +103,92 @@ void setup()
  digitalWrite(M1_OUT_1, HIGH);
  digitalWrite(M2_OUT_1, HIGH);
  
+ Serial.println("M1 B");
+ 
  analogWrite(M1_EN, 254);
  
  delay(1000);
+ 
+ Serial.println("M1 ST");
  
  analogWrite(M1_EN, 0);
  
  delay(1000);
  
+ Serial.println("M2 B");
+ 
  analogWrite(M2_EN, 254);
  
  delay(1000);
  
+ Serial.println("M2 ST");
+ 
  analogWrite(M2_EN, 0);
  
  delay(1000);
+ 
  */
+
+uint8_t pow=128;
+
+  Serial.println("Go fwd...");
  
+  Drive(1, pow, 1, pow); 
  
-  Drive(1, 254, 1, 254); 
- 
-  delay(500);
+  delay(2000);
+  Serial.println("Stop...");
   
   Drive(0, 0, 0, 0); 
   
-  delay(500);
+  delay(2000);
   
   readEnc(400);
   
   Serial.print("Enc \t");  Serial.print(enc_cnt[0]);  Serial.print("\t\t");  Serial.println(enc_cnt[1]);  
   
-  Drive(2, 254, 2, 254); 
+  Serial.println("Go Bck...");
+
+  Drive(2, pow, 2, pow); 
  
-  delay(500);
+  delay(2000);
+  
+  Serial.println("Stop...");
   
   Drive(0, 0, 0, 0); 
   
-  delay(200);
+  delay(2000);
+  
+  readEnc(400);
+  
+  Serial.print("Enc \t");  Serial.print(enc_cnt[0]);  Serial.print("\t\t");  Serial.println(enc_cnt[1]);  
+  
+  Serial.println("Left fwd...");
+
+  Drive(1, pow, 0, pow); 
+ 
+  delay(2000);
+  
+  Serial.println("Stop...");
+  
+  Drive(0, 0, 0, 0); 
+  
+  delay(2000);
+  
+  readEnc(400);
+  
+  Serial.print("Enc \t");  Serial.print(enc_cnt[0]);  Serial.print("\t\t");  Serial.println(enc_cnt[1]);  
+  
+  Serial.println("Right fwd...");
+
+  Drive(0, pow, 1, pow); 
+ 
+  delay(2000);
+  
+  Serial.println("Stop...");
+  
+  Drive(0, 0, 0, 0); 
+  
+  delay(2000);
   
   readEnc(400);
   

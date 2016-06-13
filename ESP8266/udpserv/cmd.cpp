@@ -206,9 +206,11 @@ int16_t c_getpos(JsonObject& root, JsonObject& rootOut) {
   for(i=0; i<3; i++) ya.add(ypr[i] * 180/M_PI);
   JsonArray& v = rootOut.createNestedArray("V");
   for(i=0; i<3; i++) v.add(vf[i]);
-  float *crd = Controller::ControllerProc.getCoords();
+  //float *crd = Controller::ControllerProc.getCoords();
   JsonArray& r = rootOut.createNestedArray("CRD");
-  for(i=0; i<2; i++) r.add(crd[i]);
+  //for(i=0; i<2; i++) r.add(crd[i]);
+  r.add(Controller::ControllerProc.getX());
+  r.add(Controller::ControllerProc.getY());
   r.add(0.0); // Z-crd
   
   uint8_t ns=Controller::ControllerProc.getNumSensors();

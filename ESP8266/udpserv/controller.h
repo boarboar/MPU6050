@@ -42,7 +42,9 @@ public:
   float getRotation();
   float getDistance();
   float getAngle();
-  float *getCoords();
+  float getX();
+  float getY();
+  //float *getCoords();
 protected:  
   Controller();
   uint8_t testConnection();
