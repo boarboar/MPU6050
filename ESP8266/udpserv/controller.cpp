@@ -32,6 +32,7 @@ bool Controller::init() {
     nsens=_getNumSensors();      
   } else {
     fail_reason=CTL_FAIL_INIT;
+    need_reset=true;
   }
   return pready;
 }
@@ -67,9 +68,11 @@ bool Controller::process(float yaw) {
   r[0]+=mov*sin(yaw);
   r[1]+=mov*cos(yaw);
 
+/*
   Serial.print(F("CTRL: ")); Serial.print(mov/10.0f); Serial.print(F(" \t ")); Serial.print(yaw);
   Serial.print(F(" \t ")); Serial.print(r[0]/10.0f); Serial.print(F(" \t ")); Serial.print(r[1]/10.0f);   
   Serial.println();
+*/
             
   return true;
 }
@@ -80,11 +83,11 @@ int16_t *Controller::getStoredAdvance() { return act_advance;}
 int16_t *Controller::getStoredSensors() { return sensors;}
 float Controller::getMovement() { return mov;}
 float Controller::getRotation() { return rot;}
-float Controller::getDistance() { return dist/10.0f;}
+float Controller::getDistance() { return dist*0.1f;}
 float Controller::getAngle() { return angle;}
 //float *Controller::getCoords() { return r;}
-float Controller::getX() { return r[0]/10.0f;}
-float Controller::getY() { return r[1]/10.0f;}
+float Controller::getX() { return r[0]*0.1f;}
+float Controller::getY() { return r[1]*0.1f;}
 
 bool Controller::setTargRotRate(float l, float r) {
   int16_t d[2];

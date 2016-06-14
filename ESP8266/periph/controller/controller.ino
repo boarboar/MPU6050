@@ -286,10 +286,11 @@ void readEnc(uint16_t ctime)
       //Serial.print("SIM_");Serial.print(i);Serial.print(" \t");Serial.print(act_rot_rate[i]); Serial.println(" \t");Serial.print(s[i]);     
 #endif      
 #endif
+      act_adv_accu_mm[i]+=(int16_t)(CHGST_TO_MM(s[i]));
+    } else { // ctime==0 
+      act_rot_rate[i]=0;      
     }
-    else act_rot_rate[i]=0;
-    act_adv_accu_mm[i]+=(int16_t)(CHGST_TO_MM(s[i]));
-  }
+  } // for i
 }
 
 void doPID(uint16_t ctime)
@@ -403,9 +404,11 @@ void readUSDist() {
     return;
   }
   
+  /*
   Serial.print("\t\t\t\t\t");
   for(int j=0; j<current_sens; j++) Serial.print("\t");
    Serial.println(tmp);
+  */
   
   if(tmp) {    
     sens_fail_cnt[current_sens] = 0;
@@ -418,7 +421,7 @@ void readUSDist() {
     //Serial.print("U."); Serial.print(current_sens); Serial.print("=");Serial.print(sens[current_sens]);Serial.print(" \tRAW="); Serial.println(tmp);
   } else {    
     sens_fail_cnt[current_sens]++;
-    if(sens_fail_cnt[current_sens]>1) // this is to avoid one-time reading failures
+    if(sens_fail_cnt[current_sens]>3) // this is to avoid one-time reading failures
       sens[current_sens] = -1;
       
     if(digitalRead(US_IN)==HIGH) { // need to reset

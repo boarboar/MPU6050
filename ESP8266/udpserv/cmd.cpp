@@ -156,6 +156,7 @@ int16_t c_info(JsonObject& root, JsonObject& rootOut) {
   //Serial.println("INFO"); 
   rootOut["MST"]=MpuDrv::Mpu.getStatus();
   rootOut["MDR"]=MpuDrv::Mpu.isDataReady();
+  rootOut["CST"]=Controller::ControllerProc.getStatus() ? 0 : 6; // tmp
   rootOut["FHS"]=ESP.getFreeHeap();
   rootOut["FSS"]=ESP.getFreeSketchSpace();
   rootOut["MDC"]=Stat::StatStore.cycle_mpu_dry_cnt;

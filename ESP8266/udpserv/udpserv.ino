@@ -16,7 +16,8 @@ const char* password = "boarboar";
 const char* cfg_file = "/config.json";
 const int udp_port = 4444;
 const int CYCLE_TO = 5;
-const int CYCLE_SLOW_TO = 500;
+const int CYCLE_MED_TO = 200;
+const int CYCLE_SLOW_TO = 2000;
 const int MPU_SDA=0;
 const int MPU_SDL=2;
 const int MPU_INT=15;
@@ -24,6 +25,7 @@ const int MPU_INT=15;
 const int PERIPH_UNIT_ID=4;
 
 uint32_t last_cycle;
+uint32_t last_med_cycle;
 uint32_t last_slow_cycle;
 
 CmdProc& cmd = CmdProc::Cmd;
@@ -85,7 +87,7 @@ void setup() {
     Serial.println(F("Failed to init Ctrl!"));
   } 
   
-  last_cycle=last_slow_cycle=millis();
+  last_cycle=last_med_cycle=last_slow_cycle=millis();
 }
 
 void loop() {
@@ -104,10 +106,12 @@ void loop() {
 void doCycle() {
   uint32_t t = millis();
   uint16_t dt=t-last_cycle;
+
+   // Do fast cycle
+
   if(dt < CYCLE_TO) return;
   last_cycle = t;
-  
-  // Do fast cycle
+ 
   int16_t mpu_res = MpuDrv::Mpu.cycle(dt);
 /*
   if(mpu_res==1) {
@@ -119,14 +123,20 @@ void doCycle() {
   while(i<3 && dt>(CYCLE_TO<<i)) i++;
   Stat::StatStore.cycle_delay_cnt[i]++;
   if(!mpu_res) Stat::StatStore.cycle_mpu_dry_cnt++;
-  dt=t-last_slow_cycle;
-  if(dt < CYCLE_SLOW_TO) return;
-  last_slow_cycle = t;
   
-  // Do medium cycle // (200ms - later on). Now in slow cycle
+  // Do medium cycle // (200ms)
+  dt=t-last_med_cycle;
+  if(dt < CYCLE_MED_TO) return;
+  last_med_cycle = t;
+  
   MpuDrv::Mpu.process();  
   Controller::ControllerProc.process(MpuDrv::Mpu.getYaw()); 
   yield();
+
+// Do slow cycle // (2000 ms)
+  dt=t-last_slow_cycle;
+  if(dt < CYCLE_SLOW_TO) return;
+  last_slow_cycle = t;
   
   if(MpuDrv::Mpu.getFailReason()) {
     Serial.print(F("MPU FAILURE ")); Serial.println(MpuDrv::Mpu.getFailReason());
@@ -146,6 +156,7 @@ void doCycle() {
     cmd.sendAlarm(CmdProc::ALR_CTL_RESET, 0);
     Controller::ControllerProc.init();
   }
+  
   if(CfgDrv::Cfg.needToStore()) CfgDrv::Cfg.store(cfg_file);
   cmd.sendSysLogStatus();
 

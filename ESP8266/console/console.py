@@ -16,7 +16,8 @@ UpdStatusEvent, EVT_UPD_STAT_EVENT = wx.lib.newevent.NewEvent()
 class MyForm(wx.Frame):
     LOG_LINES = 20
     def __init__(self):
-        wx.Frame.__init__(self, None, title="Console", size=(640,480))
+        #wx.Frame.__init__(self, None, title="Console", size=(640,480))
+        wx.Frame.__init__(self, None, title="Console", size=(800,720))
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
         self.model=model.Model("ROBO")
@@ -58,6 +59,13 @@ class MyForm(wx.Frame):
         self.btn_map_pos = wx.ToggleButton(panel, wx.ID_ANY, u"\u25C9", size=( bsz,  bsz))
         self.btn_map_targ = wx.ToggleButton(panel, wx.ID_ANY, u"\u2605", size=( bsz,  bsz))
 
+        self.btn_mov_left = wx.Button(panel, wx.ID_ANY, u"\u2190", size=( bsz,  bsz))
+        self.btn_mov_right = wx.Button(panel, wx.ID_ANY, u"\u2192", size=( bsz,  bsz))
+        self.btn_mov_up = wx.Button(panel, wx.ID_ANY, u"\u2191", size=( bsz,  bsz))
+        self.btn_mov_dn = wx.Button(panel, wx.ID_ANY, u"\u2193", size=( bsz,  bsz))
+        self.btn_mov_stop = wx.Button(panel, wx.ID_ANY, u"\u2717", size=( bsz,  bsz))
+
+
         self.unitPan = draw.UnitPanel(panel)
         self.chart = draw.ChartPanel(panel)
         self.map = map.MapPanel(panel, self.model, "map.json", self.LogString, self.LogErrorString)
@@ -97,6 +105,12 @@ class MyForm(wx.Frame):
                   lambda evt : self.map.onPosToggle(evt, 2, self.btn_map_targ.GetValue()) and self.btn_map_pos.SetValue(False),
                   self.btn_map_targ)
         self.txt_cmd.Bind(wx.EVT_KEY_DOWN, self.onEnterCmdText)
+
+        self.Bind(wx.EVT_BUTTON, lambda evt, move=(-0.4, 0.4): self.controller.reqMove(move[0], move[1]), self.btn_mov_left)
+        self.Bind(wx.EVT_BUTTON, lambda evt, move=(0.4, -0.4): self.controller.reqMove(move[0], move[1]), self.btn_mov_right)
+        self.Bind(wx.EVT_BUTTON, lambda evt, move=(0.4, 0.4): self.controller.reqMove(move[0], move[1]), self.btn_mov_up)
+        self.Bind(wx.EVT_BUTTON, lambda evt, move=(-0.4, -0.4): self.controller.reqMove(move[0], move[1]), self.btn_mov_dn)
+        self.Bind(wx.EVT_BUTTON, lambda evt, move=(0.0, 0.0): self.controller.reqMove(move[0], move[1]), self.btn_mov_stop)
 
         self.config=config.Config(self, self.model)
         self.controller=controller.Controller(self, self.model)
@@ -143,6 +157,13 @@ class MyForm(wx.Frame):
         sizer_map_ctrls.Add(self.btn_map_fit, 0, wx.LEFT|wx.BOTTOM, 0)
         sizer_map_ctrls.Add(self.btn_map_pos, 0, wx.LEFT|wx.BOTTOM, 0)
         sizer_map_ctrls.Add(self.btn_map_targ, 0, wx.LEFT|wx.BOTTOM, 0)
+
+        sizer_map_ctrls.AddSpacer(24)
+        sizer_map_ctrls.Add(self.btn_mov_left, 0, wx.LEFT|wx.BOTTOM, 0)
+        sizer_map_ctrls.Add(self.btn_mov_right, 0, wx.LEFT|wx.BOTTOM, 0)
+        sizer_map_ctrls.Add(self.btn_mov_up, 0, wx.LEFT|wx.BOTTOM, 0)
+        sizer_map_ctrls.Add(self.btn_mov_dn, 0, wx.LEFT|wx.BOTTOM, 0)
+        sizer_map_ctrls.Add(self.btn_mov_stop, 0, wx.LEFT|wx.BOTTOM, 0)
 
         sizer_pan.Add(sizer_ctrls, 0, wx.ALL|wx.RIGHT, 5)
         sizer_ctrls.Add(self.btn_st, 0, wx.ALL|wx.CENTER, 5)
@@ -231,6 +252,8 @@ class MyForm(wx.Frame):
 
     def onResetMPUIntReq(self, event):
         self.controller.reqResetMPU(action="MPU_INT") # reset integrator
+        self.map.Reset()
+        self.map.UpdateDrawing()
 
     def onScanReq(self, event):
         if self.controller.isScanning() :
