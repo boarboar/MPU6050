@@ -1,0 +1,20 @@
+RSP: {"T":406534,"I":276,"C":"POS","MST":1,"YPR":[-33.05,0.49,-3.08],"V":[0.99,-0.03,0.16],"CRD":[-46.84,109.40,0.00],"S":[95,197,173],"D":106.15,"R":0}
+REQ: {"I": 277, "C": "POS"}
+RSP: {"T":407520,"I":277,"C":"POS","MST":1,"YPR":[-27.17,0.78,-1.95],"V":[1.03,-0.02,0.17],"CRD":[-298.66,550.30,0.00],"S":[109,189,122],"D":613.90,"R":0}
+REQ: {"I": 278, "C": "POS"}
+RSP: {"T":408490,"I":278,"C":"POS","MST":1,"YPR":[-17.75,-0.30,-1.68],"V":[1.02,-0.06,0.16],"CRD":[-302.12,559.14,0.00],"S":[107,178,124],"D":623.40,"R":0}
+REQ: {"I": 279, "C": "POS"}
+
+Unit Mov: Rot -6.87 Dist 10.0
+Unit Mov: Rot -9.1 Dist 8.75
+Unit Mov: Rot -10.29 Dist 6.0
+Unit Mov: Rot -4.05 Dist 6.5
+Unit Mov: Rot 2.15 Dist 8.25
+Unit Mov: Rot 5.88 Dist 507.7
+Unit Mov: Rot 9.42 Dist 9.5
+Unit Mov: Rot 4.8 Dist 8.0
+Unit Mov: Rot 3.42 Dist 7.25
+Unit Mov: Rot -2.7 Dist 7.25
+Unit Mov: Rot -7.48 Dist 7.75
+Unit Mov: Rot -10.2 Dist 8.0
+Unit Mov: Rot -5.2 Dist 8.0
