@@ -50,7 +50,8 @@
 //#define M_PID_NORM 1000
 #define M_PID_NORM 500
 #define M_PID_KP_0   25
-#define M_PID_KD_0  140
+//#define M_PID_KD_0  140
+#define M_PID_KD_0  160
 #define M_PID_KI_0    2
 #define M_PID_DIV   50
 
@@ -70,9 +71,9 @@
 #define REG_SENSORS_CNT      0x20  // 1 unsigned byte
 #define REG_SENSORS_ALL      0x28  // 8 unsigned ints
 
-#define CHGST_TO_MM(CNT)  ((int32_t)(CNT)*V_NORM_PI2*WHEEL_RAD_MM/WHEEL_CHGSTATES/V_NORM)
-#define CHGST_TO_ANG_NORM(CNT)  ((int32_t)(CNT)*V_NORM_PI2/WHEEL_CHGSTATES)
-#define CHGST_TO_RPS_NORM(CNT, MSEC)  ((int32_t)(CNT)*V_NORM*1000/WHEEL_CHGSTATES/(MSEC))
+#define CHGST_TO_MM(CNT)  ((uint32_t)(CNT)*V_NORM_PI2*WHEEL_RAD_MM/WHEEL_CHGSTATES/V_NORM)
+#define CHGST_TO_ANG_NORM(CNT)  ((uint32_t)(CNT)*V_NORM_PI2/WHEEL_CHGSTATES)
+#define CHGST_TO_RPS_NORM(CNT, MSEC)  ((uint32_t)(CNT)*V_NORM*1000/WHEEL_CHGSTATES/(MSEC))
 
 uint32_t lastEvTime, lastPidTime;
 int16_t sens[M_SENS_N];
@@ -84,7 +85,7 @@ int16_t act_rot_rate[2]={0,0}; // OUT - actual rate, 10000 = 1 RPS  (use DRV_RPS
 int16_t act_adv_accu_mm[2]={0,0};  // OUT - in mm, after last request. Should be zeored after get request
 
 uint8_t  drv_dir[2]={0,0}; // (0,1,2) - NO, FWD, REV
-uint8_t enc_cnt[2]={0,0}; 
+//uint8_t enc_cnt[2]={0,0}; 
 
 // PID section
 uint16_t pid_cnt=0;
@@ -101,7 +102,7 @@ uint8_t current_sens=0;
 uint8_t buffer[16];
 
 // volatile encoder section
-volatile uint8_t v_enc_cnt[2]={0,0}; 
+volatile uint16_t v_enc_cnt[2]={0,0}; 
 volatile uint8_t v_es[2]={0,0};
 
 void setup()
@@ -264,12 +265,20 @@ void readEnc(uint16_t ctime)
 {
   int16_t s[2];
   for(int i=0; i<2; i++) {
+    /*
     enc_cnt[i]=v_enc_cnt[i];
     v_enc_cnt[i] = 0;
     if(drv_dir[i]==2) s[i]=-enc_cnt[i];
     else s[i]=enc_cnt[i];
+    */
+    s[i]=v_enc_cnt[i];
+    v_enc_cnt[i] = 0;
+    
+    
     if(ctime>0) {
-      act_rot_rate[i]=CHGST_TO_RPS_NORM(enc_cnt[i], ctime); 
+      //act_rot_rate[i]=CHGST_TO_RPS_NORM(enc_cnt[i], ctime); 
+      act_rot_rate[i]=CHGST_TO_RPS_NORM(s[i], ctime); 
+      /*
 #ifdef _SIMULATION_
 #if _SIMULATION_ == 0
       // test interface
@@ -286,7 +295,11 @@ void readEnc(uint16_t ctime)
       //Serial.print("SIM_");Serial.print(i);Serial.print(" \t");Serial.print(act_rot_rate[i]); Serial.println(" \t");Serial.print(s[i]);     
 #endif      
 #endif
-      act_adv_accu_mm[i]+=(int16_t)(CHGST_TO_MM(s[i]));
+*/
+      int16_t mov=(int16_t)(CHGST_TO_MM(s[i]));
+      if(drv_dir[i]==2) mov=-mov;      
+      act_adv_accu_mm[i]+=mov;
+      //act_adv_accu_mm[i]+=(int16_t)(CHGST_TO_MM(s[i]));
     } else { // ctime==0 
       act_rot_rate[i]=0;      
     }
