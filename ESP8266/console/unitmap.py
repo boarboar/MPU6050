@@ -16,8 +16,17 @@ class UnitMap:
             for area in self.map["AREAS"] :
                 parea0=area["AT"]
                 for wall in area["WALLS"] :
-                    self.AdjustBound(parea0[0]+wall["C"][0], parea0[1]+wall["C"][1])
-                    self.AdjustBound(parea0[0]+wall["C"][2], parea0[1]+wall["C"][3])
+                    wall_crd=wall["C"]
+                    self.AdjustBound(parea0[0]+wall_crd[0], parea0[1]+wall_crd[1])
+                    self.AdjustBound(parea0[0]+wall_crd[2], parea0[1]+wall_crd[3])
+                for obj in area["OBJECTS"] :
+                    pobj0=(parea0[0]+obj["AT"][0], parea0[1]+obj["AT"][1])
+                    pts=[]
+                    for c in obj["CS"] :
+                        p = c["C"]
+                        pts.append((pobj0[0]+p[0], pobj0[1]+p[1]))
+                    obj["CS_P"]=pts
+
             self.init_start=self.map["START"]
             print("Map loaded")
             print(self.boundRect)
@@ -48,12 +57,14 @@ class UnitMap:
             parea0=area["AT"]
             try:
                 for obj in area["OBJECTS"] :
-                    pobj0=(parea0[0]+obj["AT"][0], parea0[1]+obj["AT"][1])
+                    """
+                    pobj0=(parea0[0]+obj['AT'][0], parea0[1]+obj['AT'][1])
                     ovs=[]
-                    for c in obj["CS"] :
-                        op=c["C"]
+                    for c in obj['CS'] :
+                        op=c['C']
                         ovs.append((pobj0[0]+op[0], pobj0[1]+op[1]))
-                    status=self.polyIntersects(cell, ovs)
+                    """
+                    status=self.polyIntersects(cell, obj['CS_P'])
                     if status!=0 : break
             except KeyError :
                 print('Some obj attr missing')
@@ -80,6 +91,7 @@ class UnitMap:
         return False
 
     def getIntersectionMapRefl(self, p0, p1, scan_max_dist):
+
         intrs0, ref=self.getIntersectionMap(p0, p1, True, scan_max_dist)
         refState = False
         pr = None
@@ -114,7 +126,6 @@ class UnitMap:
                 if 'S' in wall : opened=wall["S"]
                 if opened==0 or (opened==2 and random.random()>0.5):
                     isect=self.find_intersection(p0, p1, p2, p3)
-                    #isect=None
                 if isect!=None :
                     d2 = (isect[0]-p0[0])*(isect[0]-p0[0])+(isect[1]-p0[1])*(isect[1]-p0[1])
                     if intrs==None or d2<dist2 :
@@ -127,8 +138,8 @@ class UnitMap:
 
             try:
                 for obj in area["OBJECTS"] :
-                    if len(obj["CS"])<2 or obj["DENSITY"] < 0.1 : continue
-                    pobj0=(parea0[0]+obj["AT"][0], parea0[1]+obj["AT"][1])
+                    crd_p=obj['CS_P']
+                    if len(crd_p)<2 or obj['DENSITY'] < 0.1 : continue
 
                     """
                     #test insideness, and skip object if inside!
@@ -148,23 +159,22 @@ class UnitMap:
                         continue
                     """
 
-                    op0=obj["CS"][-1]["C"]
-                    for c in obj["CS"] :
-                        op=c["C"]
-                        fixed=1 #fixed
-                        if 'F' in obj : fixed=obj["F"]
+                    free_pos=0 #0-fixed; 2-freepos
+                    if 'F' in obj : free_pos=obj['F']
+                    op0=crd_p[-1]
+                    for op in crd_p :
                         isect=None
-                        if fixed==1 or random.random()>0.5 :
-                            isect=self.find_intersection(p0, p1, (pobj0[0]+op0[0], pobj0[1]+op0[1]), (pobj0[0]+op[0], pobj0[1]+op[1]))
-                        #isect=None
+                        if free_pos==0 or (free_pos==2 and random.random()>0.5) :
+                            isect=self.find_intersection(p0, p1, op0, op)
                         if isect!=None :
                             d2 = (isect[0]-p0[0])*(isect[0]-p0[0])+(isect[1]-p0[1])*(isect[1]-p0[1])
                             if intrs==None or d2<dist2 :
                                 intrs=isect
                                 dist2=d2
-                                wsect=((pobj0[0]+op0[0], pobj0[1]+op0[1]), (pobj0[0]+op[0], pobj0[1]+op[1]))
+                                wsect=(op0, op)
                                 reff=0
                         op0=op
+
             except KeyError :
                 print('Some obj attr missing')
                 pass

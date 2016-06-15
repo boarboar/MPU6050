@@ -14,7 +14,7 @@ UpdEvent, EVT_UPD_EVENT = wx.lib.newevent.NewEvent()
 UpdStatusEvent, EVT_UPD_STAT_EVENT = wx.lib.newevent.NewEvent()
 
 class MyForm(wx.Frame):
-    LOG_LINES = 20
+    LOG_LINES = 36
     def __init__(self):
         #wx.Frame.__init__(self, None, title="Console", size=(640,480))
         wx.Frame.__init__(self, None, title="Console", size=(800,720))

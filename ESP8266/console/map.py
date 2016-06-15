@@ -257,29 +257,29 @@ class MapPanel(wx.Window, UnitMap):
                         elif status==1 : pen=door_pen_open
                         else : pen=door_pen_undef
                     dc.SetPen(pen)
-                    dc.DrawLinePoint(self.tc(parea0[0]+wall["C"][0],parea0[1]+wall["C"][1]),
-                                     self.tc(parea0[0]+wall["C"][2],parea0[1]+wall["C"][3]))
+                    wall_crd=wall["C"]
+                    dc.DrawLinePoint(self.tc(parea0[0]+wall_crd[0],parea0[1]+wall_crd[1]),
+                                     self.tc(parea0[0]+wall_crd[2],parea0[1]+wall_crd[3]))
                 # optional - objects
                 try :
                     for obj in area["OBJECTS"] :
                         brush=obj_brush_hi_dens
                         pen = obj_pen
-                        fixed=1 #fixed
-                        if 'F' in obj : fixed=obj["F"]
-                        if obj["DENSITY"] <= 0.5 : brush=obj_brush_lo_dens
-                        if obj["DENSITY"] < 0.1 :
+                        free_pos=0 #fixed
+                        if 'F' in obj : free_pos=obj["F"]
+                        den=obj["DENSITY"]
+                        if den <= 0.5 : brush=obj_brush_lo_dens
+                        if den < 0.1 :
                             pen=obj_pen_hidden
                             brush=obj_brush_hidden
-                        elif fixed==0 : pen=obj_pen_transient
+                        elif free_pos==1 : pen=obj_pen_transient
                         dc.SetBrush(brush)
                         dc.SetPen(pen)
-                        pobj0=(parea0[0]+obj["AT"][0],
-                               parea0[1]+obj["AT"][1])
+
                         pts=[]
-                        for c in obj["CS"] :
-                            p = c["C"]
-                            pts.append(self.tc(pobj0[0]+p[0],
-                                               pobj0[1]+p[1]))
+                        for c in obj['CS_P'] :
+                            pts.append(self.tc(c[0], c[1]))
+
                         dc.DrawPolygon(pts)
 
                 except KeyError : pass

@@ -1,4 +1,5 @@
 import math
+import timeit
 
 class Unit:
     " Unit"
@@ -32,6 +33,7 @@ class Unit:
         self.__l_cos, self.__l_sin= (1.0, 0.0)    # unit cosine matrix, 'localized'
 
     def MoveUnit(self, angle, dist, scans, x, y):
+        start_time = timeit.default_timer()
         if self.__move_step == 0 : # first step
             move_rot=0
             move_dist=0
@@ -41,8 +43,6 @@ class Unit:
             elif move_rot<-math.pi : move_rot=math.pi*2+move_rot
             move_dist=dist-self.__dist
         self.__move_step = self.__move_step+1
-
-        print("Unit Mov: Rot %s Dist %s " % (str(move_rot*180.0/math.pi), move_dist) )
 
         self.__r_cos=math.cos(angle)
         self.__r_sin=math.sin(angle)
@@ -57,6 +57,9 @@ class Unit:
 
         self.__r_x, self.__r_y = x, y # simulated crd
         self.isInside=self.map.isInsideTest(x+self.start[0], y+self.start[1])
+
+        print("Unit Mov: Rot %s Dist %s in %s s" %
+              (str(move_rot*180.0/math.pi), move_dist, str(round(timeit.default_timer() - start_time, 2))))
 
     def UnitToMapSim(self, x, y):
         x1=x*self.__r_cos+y*self.__r_sin+self.__r_x+self.start[0]
