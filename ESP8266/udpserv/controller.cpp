@@ -56,7 +56,11 @@ bool Controller::process(float yaw) {
   getSensors(sensors);
   act_rot_rate[0]=(float)tmp[0]/V_NORM;
   act_rot_rate[1]=(float)tmp[1]/V_NORM;
-  mov=(float)(act_advance[0]+act_advance[1])*0.5f;
+
+  if(abs(act_advance[0])>128 || abs(act_advance[1])>128)
+    fail_reason=CTL_FAIL_OVF;
+  
+  mov=(float)(act_advance[0]+act_advance[1])*0.5f; // in mm
   rot=(float)(act_advance[0]-act_advance[1])/(float)WHEEL_BASE_MM;
   dist+=mov;
   angle+=rot;

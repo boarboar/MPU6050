@@ -205,18 +205,22 @@ int16_t c_getpos(JsonObject& root, JsonObject& rootOut) {
   uint8_t i;
   MpuDrv::Mpu.getAll(ypr, af, vf); 
   for(i=0; i<3; i++) ya.add(ypr[i] * 180/M_PI);
-  JsonArray& v = rootOut.createNestedArray("V");
-  for(i=0; i<3; i++) v.add(vf[i]);
-  //float *crd = Controller::ControllerProc.getCoords();
+  //JsonArray& v = rootOut.createNestedArray("V");
+  //for(i=0; i<3; i++) v.add(vf[i]);
+  
   JsonArray& r = rootOut.createNestedArray("CRD");
   //for(i=0; i<2; i++) r.add(crd[i]);
-  r.add(Controller::ControllerProc.getX());
-  r.add(Controller::ControllerProc.getY());
-  r.add(0.0); // Z-crd
+  r.add((int)Controller::ControllerProc.getX());
+  r.add((int)Controller::ControllerProc.getY());
+  r.add(0); // Z-crd
+
+  JsonArray& rs = rootOut.createNestedArray("RS");
+  float *arps=Controller::ControllerProc.getStoredRotRate();
+  rs.add(arps[0]), rs.add(arps[1]);
   
   uint8_t ns=Controller::ControllerProc.getNumSensors();
   JsonArray& s = rootOut.createNestedArray("S");
-  for(i=0; i<3; i++) s.add(Controller::ControllerProc.getStoredSensors()[i]);
+  for(i=0; i<3; i++) s.add((int)Controller::ControllerProc.getStoredSensors()[i]);
   
   rootOut["D"]=Controller::ControllerProc.getDistance();
   return 0;

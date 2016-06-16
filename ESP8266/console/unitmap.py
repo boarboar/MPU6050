@@ -13,19 +13,36 @@ class UnitMap:
             with open(mapfile) as data_file:
                 self.map = json.load(data_file)
             #pprint(__map)
+            walls=[]
             for area in self.map["AREAS"] :
                 parea0=area["AT"]
                 for wall in area["WALLS"] :
+                    parea0=area["AT"]
                     wall_crd=wall["C"]
                     self.AdjustBound(parea0[0]+wall_crd[0], parea0[1]+wall_crd[1])
                     self.AdjustBound(parea0[0]+wall_crd[2], parea0[1]+wall_crd[3])
+                    opened=0
+                    if 'S' in wall : opened=wall["S"]
+                    walls.append((
+                        (parea0[0]+wall_crd[0], parea0[1]+wall_crd[1]), (parea0[0]+wall_crd[2], parea0[1]+wall_crd[3]),
+                        opened, area["WALLSREFL"]
+                    ))
                 for obj in area["OBJECTS"] :
                     pobj0=(parea0[0]+obj["AT"][0], parea0[1]+obj["AT"][1])
-                    pts=[]
+                    crd_p=[]
                     for c in obj["CS"] :
                         p = c["C"]
-                        pts.append((pobj0[0]+p[0], pobj0[1]+p[1]))
-                    obj["CS_P"]=pts
+                        crd_p.append((pobj0[0]+p[0], pobj0[1]+p[1]))
+                    obj["CS_P"]=crd_p
+                    if len(crd_p)<2 or obj['DENSITY'] < 0.1 : continue
+                    free_pos=0 #0-fixed; 2-freepos
+                    if 'F' in obj : free_pos=obj['F']
+                    op0=crd_p[-1]
+                    for op in crd_p :
+                        walls.append(( op0, op, free_pos, 0))
+                        op0=op
+
+            self.map["WALLS"]=walls
 
             self.init_start=self.map["START"]
             print("Map loaded")
@@ -57,13 +74,6 @@ class UnitMap:
             parea0=area["AT"]
             try:
                 for obj in area["OBJECTS"] :
-                    """
-                    pobj0=(parea0[0]+obj['AT'][0], parea0[1]+obj['AT'][1])
-                    ovs=[]
-                    for c in obj['CS'] :
-                        op=c['C']
-                        ovs.append((pobj0[0]+op[0], pobj0[1]+op[1]))
-                    """
                     status=self.polyIntersects(cell, obj['CS_P'])
                     if status!=0 : break
             except KeyError :
@@ -91,8 +101,7 @@ class UnitMap:
         return False
 
     def getIntersectionMapRefl(self, p0, p1, scan_max_dist):
-
-        intrs0, ref=self.getIntersectionMap(p0, p1, True, scan_max_dist)
+        intrs0, ref=self.getIntersectionMap1(p0, p1, True, scan_max_dist)
         refState = False
         pr = None
         intrs1 = None
@@ -104,11 +113,49 @@ class UnitMap:
                 pr, cosa, refState = ref
             if refState :
                 # secondary intersect if any
-                intrs1, ref=self.getIntersectionMap(intrs0, pr, False, scan_max_dist)
+                intrs1, ref=self.getIntersectionMap1(intrs0, pr, False, scan_max_dist)
                 intrs=intrs1
         return (intrs0, pr, intrs1, refState, intrs)
 
+
+    def getIntersectionMap1(self, p0, p1, findRefl, scan_max_dist):
+        # line p0->p1 in absolute map coords (world)
+        intrs = None
+        ref=None
+        dist2=0
+        reff=0
+        all_walls=self.map["WALLS"]
+        for walls in all_walls :
+            isect=None
+            p2=walls[0]
+            p3=walls[1]
+            movable=walls[2]
+            reffw=walls[3]
+            if movable==0 or (movable==2 and random.random()>0.5):
+                isect=self.find_intersection(p0, p1, p2, p3)
+            if isect!=None :
+                d2 = (isect[0]-p0[0])*(isect[0]-p0[0])+(isect[1]-p0[1])*(isect[1]-p0[1])
+                if intrs==None or d2<dist2 :
+                    intrs=isect
+                    dist2=d2
+                    wsect=(p2, p3)
+                    reff=reffw
+
+        #return intrs, ref
+
+        if intrs!=None and findRefl :
+            # find reflection vector
+            rl=scan_max_dist-math.sqrt(dist2)
+            #if rl>0 :
+            if rl<=0 : rl=10
+            ref=self.getReflection(p0, intrs, wsect[0], wsect[1], rl, reff)
+
+        return intrs, ref
+
     def getIntersectionMap(self, p0, p1, findRefl, scan_max_dist):
+        """
+        OBSOLETE
+        """
         # line p0->p1 in absolute map coords (world)
         intrs = None
         ref=None
@@ -194,7 +241,7 @@ class UnitMap:
     def intersectHor(self, y, x0, y0, x1, y1):
         if y0==y1 : #with hor line
             if y!=y0 : return None # no intersect
-            else : return None # SPECIAL CASE :: OM LINE (TODO)
+            else : return None # SPECIAL CASE :: ON LINE (TODO)
         if (y<y1 and y<=y0) or (y>y1 and y>=y0) : return None  # no intersect, note - left point not included (?)
 
         if x0>x1 : x0, y0, x1, y1 = x1, y1, x0, y0 #reorder

@@ -2,6 +2,7 @@ import wx
 import math
 import json
 import sys
+import timeit
 from unitmap import UnitMap
 from planner import Planner
 from pfilter import PFilter
@@ -229,6 +230,7 @@ class MapPanel(wx.Window, UnitMap):
             p0=p
 
     def DrawAreas(self, dc):
+
         dc.SetTextForeground(wx.BLACK)
         dc.SetTextBackground(wx.WHITE)
         dc.SetBackgroundMode(wx.SOLID)
@@ -307,6 +309,7 @@ class MapPanel(wx.Window, UnitMap):
             dc.DrawCirclePoint(zero, 8)
 
     def DrawParticles(self, dc):
+        #start_time = timeit.default_timer()
         dc.SetBackgroundMode(wx.SOLID)
         dc.SetBrush(wx.RED_BRUSH)
 
@@ -317,11 +320,16 @@ class MapPanel(wx.Window, UnitMap):
         for p in self.pfilter.particles :
             rad=1+math.log10(1+p.w*10)*8
             c=self.tc(p.x,p.y)
-            if rad>1 : dc.SetPen(c_pen)
-            else : dc.SetPen(c_pen_0)
-            dc.DrawCirclePoint(c, rad)
-            ca=wx.Point(c.x+10*math.sin(p.a), c.y-10*math.cos(p.a))
-            dc.DrawLinePoint(c, ca)
+            # this is nonsence...
+            if rad>1 :
+                dc.SetPen(c_pen)
+                dc.DrawCirclePoint(c, rad)
+                ca=wx.Point(c.x+10*math.sin(p.a), c.y-10*math.cos(p.a))
+                dc.DrawLinePoint(c, ca)
+            else :
+                dc.SetPen(c_pen_0)
+                dc.DrawPoint(c)
+
             """
             # this staff below is for test purposes, skip it
             continue
@@ -349,6 +357,7 @@ class MapPanel(wx.Window, UnitMap):
         c2a=wx.Point(c.x+40*math.sin(ma), c.y-40*math.cos(ma))
         c3a=wx.Point(c.x+30*math.sin(ma+vara), c.y-30*math.cos(ma+vara))
         dc.DrawPolygon([c, c1a, c2a, c3a])
+        #print("Drawn in %s s" % (str(round(timeit.default_timer() - start_time, 3))))
 
     def DrawRobot(self, dc):
         dc.SetBackgroundMode(wx.TRANSPARENT)

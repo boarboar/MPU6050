@@ -49,11 +49,11 @@
 
 //#define M_PID_NORM 1000
 #define M_PID_NORM 500
-#define M_PID_KP_0   25
+#define M_PID_KP_0   12
 //#define M_PID_KD_0  140
-#define M_PID_KD_0  160
-#define M_PID_KI_0    2
-#define M_PID_DIV   50
+#define M_PID_KD_0  100
+#define M_PID_KI_0    1
+#define M_PID_DIV   25
 
 #define M_PID_KP M_PID_KP_0
 #define M_PID_KD M_PID_KD_0

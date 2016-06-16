@@ -16,7 +16,6 @@ UpdStatusEvent, EVT_UPD_STAT_EVENT = wx.lib.newevent.NewEvent()
 class MyForm(wx.Frame):
     LOG_LINES = 36
     def __init__(self):
-        #wx.Frame.__init__(self, None, title="Console", size=(640,480))
         wx.Frame.__init__(self, None, title="Console", size=(800,720))
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
@@ -43,7 +42,7 @@ class MyForm(wx.Frame):
         self.btn_rst_int = wx.Button(panel, wx.ID_ANY, 'ResetINT')
         self.btn_hist = wx.Button(panel, wx.ID_ANY, 'Measmts')
         self.btn_dump = wx.Button(panel, wx.ID_ANY, 'Dump')
-        self.btn_sim = wx.Button(panel, wx.ID_ANY, 'Sim')
+        self.btn_sim = wx.Button(panel, wx.ID_ANY, 'Track')
         self.btn_plan = wx.Button(panel, wx.ID_ANY, 'Plan')
         self.btn_go = wx.Button(panel, wx.ID_ANY, 'Go!')
         self.txt_cmd = wx.TextCtrl(panel, style=wx.TE_PROCESS_ENTER, value='{"C":"INFO"}')

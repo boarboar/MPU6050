@@ -133,25 +133,30 @@ void doCycle() {
   Controller::ControllerProc.process(MpuDrv::Mpu.getYaw()); 
   yield();
 
-// Do slow cycle // (2000 ms)
-  dt=t-last_slow_cycle;
-  if(dt < CYCLE_SLOW_TO) return;
-  last_slow_cycle = t;
-  
   if(MpuDrv::Mpu.getFailReason()) {
     Serial.print(F("MPU FAILURE ")); Serial.println(MpuDrv::Mpu.getFailReason());
     cmd.sendAlarm(CmdProc::ALR_MPU_FAILURE, MpuDrv::Mpu.getFailReason());
     MpuDrv::Mpu.clearFailReason();
   }
-  if(MpuDrv::Mpu.isNeedReset()) {
-    cmd.sendAlarm(CmdProc::ALR_MPU_RESET, 0);
-    MpuDrv::Mpu.init();
-  }
+
   if(Controller::ControllerProc.getFailReason()) {
     Serial.print(F("CTL FAILURE ")); Serial.println(Controller::ControllerProc.getFailReason());
     cmd.sendAlarm(CmdProc::ALR_CTL_FAILURE, Controller::ControllerProc.getFailReason());
     Controller::ControllerProc.clearFailReason();
   }
+  
+// Do slow cycle // (2000 ms)
+  dt=t-last_slow_cycle;
+  if(dt < CYCLE_SLOW_TO) return;
+  last_slow_cycle = t;
+  
+
+  if(MpuDrv::Mpu.isNeedReset()) {
+    cmd.sendAlarm(CmdProc::ALR_MPU_RESET, 0);
+    MpuDrv::Mpu.init();
+    yield();
+  }
+  
   if(Controller::ControllerProc.isNeedReset()) {
     cmd.sendAlarm(CmdProc::ALR_CTL_RESET, 0);
     Controller::ControllerProc.init();

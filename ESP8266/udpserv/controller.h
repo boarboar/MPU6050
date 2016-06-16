@@ -18,7 +18,7 @@
 
 class Controller {
 public:
-  enum FailReason {CTL_FAIL_NONE=0, CTL_FAIL_INIT=1, CTL_FAIL_WRT=2, CTL_FAIL_RD=3};
+  enum FailReason {CTL_FAIL_NONE=0, CTL_FAIL_INIT=1, CTL_FAIL_WRT=2, CTL_FAIL_RD=3, CTL_FAIL_OVF=4};
   static Controller ControllerProc; // singleton  
   bool init();
   uint8_t getStatus();
