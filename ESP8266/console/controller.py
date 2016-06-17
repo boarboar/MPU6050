@@ -132,7 +132,8 @@ class Controller():
             resp_json = json.loads(js)
             if req_json is None : # syslog
                 if resp_json["C"]=="A" :
-                    self.__form.LogString("ALR: "+js, 'RED') #alarm
+                    #self.__form.LogString("ALR: "+js, 'RED') #alarm
+                    self.__form.LogErrorString('ALR: '+js) #alarm
                 else :
                     self.__form.LogString("LOG: "+js, 'BLUE') #event
             #elif req_json is not None : #cmd-rsp

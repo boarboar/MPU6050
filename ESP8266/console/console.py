@@ -32,6 +32,7 @@ class MyForm(wx.Frame):
         self.statusbar.SetFieldsCount(3)
         self.statusbar.SetStatusText("---", 0)
         self.statusbar.SetStatusText("---,----", 1)
+        self.statusbar.SetStatusText("none", 2)
         # Add a panel so it looks the correct on all platforms
         panel = wx.Panel(self, wx.ID_ANY)
         self.log = wx.TextCtrl(panel, wx.ID_ANY, size=(400,200), style=wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.TE_RICH)
@@ -205,6 +206,7 @@ class MyForm(wx.Frame):
 
     def LogErrorString(self, message) :
         self.LogString(message, color='RED')
+        self.statusbar.SetStatusText(message, 2)
 
     def UpdatePos(self, **kwargs) :
         event = UpdEvent(**kwargs)

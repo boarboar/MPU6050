@@ -51,20 +51,19 @@ uint8_t Controller::testConnection() {
 bool Controller::process(float yaw) {
   if(!pready) return false;
   int16_t tmp[2];
-  getActRotRate(tmp);
-  getActAdvance(act_advance);
-  getSensors(sensors);
-  act_rot_rate[0]=(float)tmp[0]/V_NORM;
-  act_rot_rate[1]=(float)tmp[1]/V_NORM;
 
-  if(abs(act_advance[0])>128 || abs(act_advance[1])>128)
+  if(!getActAdvance(act_advance)) return false;
+
+  if(abs(act_advance[0])>128 || abs(act_advance[1])>128) {
     fail_reason=CTL_FAIL_OVF;
+    return false;
+  }
   
   mov=(float)(act_advance[0]+act_advance[1])*0.5f; // in mm
   rot=(float)(act_advance[0]-act_advance[1])/(float)WHEEL_BASE_MM;
   dist+=mov;
   angle+=rot;
-
+  
   if(angle>PI) angle-=PI*2.0f;
   else if(angle<-PI) angle+=PI*2.0f;
 
@@ -72,13 +71,18 @@ bool Controller::process(float yaw) {
   r[0]+=mov*sin(yaw);
   r[1]+=mov*cos(yaw);
 
+  if(!getActRotRate(tmp)) return false;
+   
+  act_rot_rate[0]=(float)tmp[0]/V_NORM;
+  act_rot_rate[1]=(float)tmp[1]/V_NORM;
+
+  return getSensors(sensors);
+   
 /*
   Serial.print(F("CTRL: ")); Serial.print(mov/10.0f); Serial.print(F(" \t ")); Serial.print(yaw);
   Serial.print(F(" \t ")); Serial.print(r[0]/10.0f); Serial.print(F(" \t ")); Serial.print(r[1]/10.0f);   
   Serial.println();
 */
-            
-  return true;
 }
 
 uint8_t Controller::getNumSensors() { return nsens;}
