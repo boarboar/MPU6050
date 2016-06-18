@@ -5,6 +5,7 @@
 #define REG_TARG_ROT_RATE    0x03  // 2 signed ints (4 bytes)
 #define REG_ACT_ROT_RATE     0x06  // 2 signed ints (4 bytes)
 #define REG_ACT_ADV_ACC      0x09  // 2 signed ints (4 bytes)
+#define REG_ACT_POW          0x0A  // 2 signed ints (4 bytes)
 #define REG_SENSORS_CNT      0x20  // 8 unsigned ints
 #define REG_SENSORS_ALL      0x28  // 8 unsigned ints
 
@@ -38,6 +39,7 @@ public:
   uint8_t getNumSensors();
   float *getStoredRotRate();
   int16_t *getStoredAdvance();
+  int16_t *getStoredPower();
   int16_t *getStoredSensors();  
   float getMovement();
   float getRotation();
@@ -52,6 +54,7 @@ protected:
   uint8_t _getNumSensors();
   bool getActRotRate(int16_t *d); // in V_NORM-ed RPS
   bool getActAdvance(int16_t *d); // in MMs
+  bool getActPower(int16_t *d); 
   bool getSensors(int16_t *sens); 
   void raiseFail(uint8_t reason, int16_t p1=0, int16_t p2=0);  
   bool writeInt16_2(uint16_t reg, int16_t left, int16_t right);
@@ -69,6 +72,7 @@ private:
   float act_rot_rate[2];
   float mov, rot;
   int16_t act_advance[2];
+  int16_t act_power[2];
   int16_t sensors[SENS_SIZE];
   uint8_t pready;
   uint8_t nsens;

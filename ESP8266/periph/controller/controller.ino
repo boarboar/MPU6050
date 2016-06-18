@@ -35,7 +35,7 @@
 #define V_NORM_MAX 30000
 #define V_NORM_PI2 62832L
 
-#define  PID_TIMEOUT 100
+#define  PID_TIMEOUT 200
 #define  CMD_TIMEOUT 6000 // !!!! 
 #define  WHEEL_CHGSTATES 40
 #define  WHEEL_RAD_MM   33 // measured 32
@@ -46,6 +46,8 @@
 //#define M_POW_MAX  120
 #define M_POW_MAX  240
 #define M_POW_STEP 2
+
+// RPS 0.4 -> 60-100 POW
 
 //#define M_PID_NORM 1000
 #define M_PID_NORM 500
@@ -68,6 +70,7 @@
 #define REG_TARG_ROT_RATE    0x03  // 2 signed ints (4 bytes)
 #define REG_ACT_ROT_RATE     0x06  // 2 signed ints (4 bytes)
 #define REG_ACT_ADV_ACC      0x09  // 2 signed ints (4 bytes)
+#define REG_ACT_POW          0x0A  // 2 signed ints (4 bytes)
 #define REG_SENSORS_CNT      0x20  // 1 unsigned byte
 #define REG_SENSORS_ALL      0x28  // 8 unsigned ints
 
@@ -434,7 +437,7 @@ void readUSDist() {
     //Serial.print("U."); Serial.print(current_sens); Serial.print("=");Serial.print(sens[current_sens]);Serial.print(" \tRAW="); Serial.println(tmp);
   } else {    
     sens_fail_cnt[current_sens]++;
-    if(sens_fail_cnt[current_sens]>3) // this is to avoid one-time reading failures
+    if(sens_fail_cnt[current_sens]>1) // this is to avoid one-time reading failures
       sens[current_sens] = -1;
       
     if(digitalRead(US_IN)==HIGH) { // need to reset
@@ -511,6 +514,11 @@ void requestEvent()
       writeInt16_2(act_adv_accu_mm);
       act_adv_accu_mm[0]=act_adv_accu_mm[1]=0;
       break;            
+    case REG_ACT_POW:
+      int16_t tmp[2];
+      tmp[0]=cur_power[0]; tmp[1]=cur_power[1];    
+      writeInt16_2(tmp);
+      break;      
     case REG_SENSORS_CNT:  
       Wire.write((uint8_t)M_SENS_N);
       break;

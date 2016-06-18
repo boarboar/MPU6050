@@ -86,6 +86,8 @@ bool Controller::process(float yaw) {
   act_rot_rate[0]=(float)tmp[0]/V_NORM;
   act_rot_rate[1]=(float)tmp[1]/V_NORM;
 
+  if(!getActPower(act_power)) return false;
+
   return getSensors(sensors);
    
 /*
@@ -98,6 +100,7 @@ bool Controller::process(float yaw) {
 uint8_t Controller::getNumSensors() { return nsens;}
 float *Controller::getStoredRotRate() { return act_rot_rate;}
 int16_t *Controller::getStoredAdvance() { return act_advance;}
+int16_t *Controller::getStoredPower() { return act_power;}
 int16_t *Controller::getStoredSensors() { return sensors;}
 float Controller::getMovement() { return mov;}
 float Controller::getRotation() { return rot;}
@@ -157,6 +160,12 @@ bool Controller::getActAdvance(int16_t *d) {
   bool res = readInt16_2(REG_ACT_ADV_ACC, d, d+1); 
   //if(!res) fail_reason=CTL_FAIL_RD;
   if(!res) raiseFail(CTL_FAIL_RD, REG_ACT_ADV_ACC);
+  return res;
+}
+
+bool Controller::getActPower(int16_t *d) {
+  bool res = readInt16_2(REG_ACT_POW, d, d+1); 
+  if(!res) raiseFail(CTL_FAIL_RD, REG_ACT_POW);
   return res;
 }
 

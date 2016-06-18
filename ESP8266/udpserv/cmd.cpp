@@ -205,7 +205,7 @@ int16_t c_setsyslog(JsonObject& root, JsonObject& rootOut) {
 }
 
 int16_t c_getpos(JsonObject& root, JsonObject& rootOut) {
-  //{"C": "I", "T":12345, "R":0, "C": "POS", "YPR": [59, 12, 13], "A": [0.01, 0.02, -0.03], "V": [0.1, 0.2, -0.3], "P": [100.01, 200.44, 0.445]}
+  //{"C": "I", "T":12345, "R":0, "C": "POS", "YPR": [59, 12, 13], "A": [0.01, 0.02, -0.03], "P": [100.01, 200.44, 0.445]}
   rootOut["MST"]=MpuDrv::Mpu.getStatus();
   if(!MpuDrv::Mpu.isDataReady()) return -5;
   JsonArray& ya = rootOut.createNestedArray("YPR");
@@ -225,7 +225,11 @@ int16_t c_getpos(JsonObject& root, JsonObject& rootOut) {
   JsonArray& rs = rootOut.createNestedArray("RS");
   float *arps=Controller::ControllerProc.getStoredRotRate();
   rs.add(arps[0]), rs.add(arps[1]);
-  
+
+  JsonArray& pw = rootOut.createNestedArray("W");
+  int16_t *pwrs=Controller::ControllerProc.getStoredPower();
+  pw.add(pwrs[0]), pw.add(pwrs[1]);
+
   uint8_t ns=Controller::ControllerProc.getNumSensors();
   JsonArray& s = rootOut.createNestedArray("S");
   for(i=0; i<3; i++) s.add((int)Controller::ControllerProc.getStoredSensors()[i]);
