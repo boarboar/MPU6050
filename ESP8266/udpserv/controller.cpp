@@ -14,7 +14,14 @@ uint8_t Controller::isDataReady() { return pready && data_ready; }
 uint8_t Controller::isNeedReset() { return need_reset; }
 void    Controller::needReset() {  need_reset=true; }
 uint8_t Controller::getFailReason() { return fail_reason; }
+int16_t* Controller::getFailParams() { return fail_p; } 
 void  Controller::clearFailReason() { fail_reason=CTL_FAIL_NONE; }
+
+void Controller::raiseFail(uint8_t reason, int16_t p1, int16_t p2) {
+  fail_reason=reason;
+  fail_p[0]=p1;
+  fail_p[1]=p2;
+}
 
 bool Controller::init() {
   pready=false;
@@ -28,10 +35,12 @@ bool Controller::init() {
   resetIntegrator();
   pready=testConnection();
   if(pready) {
-    fail_reason=CTL_FAIL_NONE;
+    //fail_reason=CTL_FAIL_NONE;
+    raiseFail(CTL_FAIL_NONE);
     nsens=_getNumSensors();      
   } else {
-    fail_reason=CTL_FAIL_INIT;
+    //fail_reason=CTL_FAIL_INIT;
+    raiseFail(CTL_FAIL_INIT);
     need_reset=true;
   }
   return pready;
@@ -55,7 +64,8 @@ bool Controller::process(float yaw) {
   if(!getActAdvance(act_advance)) return false;
 
   if(abs(act_advance[0])>128 || abs(act_advance[1])>128) {
-    fail_reason=CTL_FAIL_OVF;
+    //fail_reason=CTL_FAIL_OVF;
+    raiseFail(CTL_FAIL_OVF, act_advance[0], act_advance[1]);
     return false;
   }
   
@@ -107,7 +117,8 @@ bool Controller::setTargRotRate(float l, float r) {
 uint8_t Controller::_getNumSensors() {
   bool res = I2Cdev::readByte(DEV_ID, REG_SENSORS_CNT, buf); 
   if(!res) {
-    fail_reason=CTL_FAIL_RD;
+    //fail_reason=CTL_FAIL_RD;
+    raiseFail(CTL_FAIL_RD, REG_SENSORS_CNT);
     return 0;
   }
   if(buf[0]>8) buf[0]=8;   
@@ -116,37 +127,43 @@ uint8_t Controller::_getNumSensors() {
 
 bool Controller::getTargRotRate(int16_t *d) { 
   bool res = readInt16_2(REG_TARG_ROT_RATE, d, d+1); 
-  if(!res) fail_reason=CTL_FAIL_RD;
+  //if(!res) fail_reason=CTL_FAIL_RD;
+  if(!res) raiseFail(CTL_FAIL_RD, REG_TARG_ROT_RATE);
   return res;
 }
 
 bool Controller::setTargRotRate(int16_t *d) {
   bool res = writeInt16_2(REG_TARG_ROT_RATE, d[0], d[1]); 
-  if(!res) fail_reason=CTL_FAIL_WRT;
+  //if(!res) fail_reason=CTL_FAIL_WRT;
+  if(!res) raiseFail(CTL_FAIL_WRT, REG_TARG_ROT_RATE);
   return res;
 }
 
 bool Controller::stopDrive() {
   bool res = writeInt16_2(REG_TARG_ROT_RATE, 0, 0); 
-  if(!res) fail_reason=CTL_FAIL_WRT;
+  //if(!res) fail_reason=CTL_FAIL_WRT;
+  if(!res) raiseFail(CTL_FAIL_WRT, REG_TARG_ROT_RATE);
   return res;
 }
 
 bool Controller::getActRotRate(int16_t *d) {
   bool res = readInt16_2(REG_ACT_ROT_RATE, d, d+1); 
-  if(!res) fail_reason=CTL_FAIL_RD;
+  //if(!res) fail_reason=CTL_FAIL_RD;
+  if(!res) raiseFail(CTL_FAIL_RD, REG_ACT_ROT_RATE);
   return res;
 }
 
 bool Controller::getActAdvance(int16_t *d) {
   bool res = readInt16_2(REG_ACT_ADV_ACC, d, d+1); 
-  if(!res) fail_reason=CTL_FAIL_RD;
+  //if(!res) fail_reason=CTL_FAIL_RD;
+  if(!res) raiseFail(CTL_FAIL_RD, REG_ACT_ADV_ACC);
   return res;
 }
 
 bool Controller::getSensors(int16_t *sens) {
   bool res = readInt16_N(REG_SENSORS_ALL, 8, sens); 
-  if(!res) fail_reason=CTL_FAIL_RD;
+  //if(!res) fail_reason=CTL_FAIL_RD;
+  if(!res) raiseFail(CTL_FAIL_RD, REG_SENSORS_ALL);
   return res;
 }
 

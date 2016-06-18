@@ -3,7 +3,7 @@
 
 class CfgDrv {
 public:
-  const int LAZY_WRITE_TIMEOUT=10; //seconds
+  const unsigned int LAZY_WRITE_TIMEOUT=10; //seconds
   static CfgDrv Cfg; // singleton
   int16_t init();  
   int16_t load(const char* fname);

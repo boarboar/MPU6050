@@ -26,6 +26,7 @@ public:
   uint8_t isNeedReset();
   void needReset();
   uint8_t getFailReason();
+  int16_t* getFailParams();
   void clearFailReason();
   void resetIntegrator();
   bool process(float yaw);  
@@ -51,7 +52,8 @@ protected:
   uint8_t _getNumSensors();
   bool getActRotRate(int16_t *d); // in V_NORM-ed RPS
   bool getActAdvance(int16_t *d); // in MMs
-  bool getSensors(int16_t *sens);  
+  bool getSensors(int16_t *sens); 
+  void raiseFail(uint8_t reason, int16_t p1=0, int16_t p2=0);  
   bool writeInt16_2(uint16_t reg, int16_t left, int16_t right);
   bool readInt16_2(uint16_t reg, int16_t *left, int16_t *right);  
   bool readInt16_2(uint16_t reg, int16_t *d);
@@ -60,6 +62,7 @@ private:
   uint8_t data_ready;
   uint8_t need_reset;
   uint8_t fail_reason;
+  int16_t fail_p[2]; 
   
   uint8_t buf[16];  
   //int16_t act_rot_rate[2];

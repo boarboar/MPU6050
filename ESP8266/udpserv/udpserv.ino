@@ -92,7 +92,7 @@ void setup() {
 
 void loop() {
   if(cmd.connected()) {
-    uint32_t m1=millis();
+    //uint32_t m1=millis();
     if (cmd.read()) {
       doCycle(); yield();
       cmd.doCmd();
@@ -141,7 +141,8 @@ void doCycle() {
 
   if(Controller::ControllerProc.getFailReason()) {
     Serial.print(F("CTL FAILURE ")); Serial.println(Controller::ControllerProc.getFailReason());
-    cmd.sendAlarm(CmdProc::ALR_CTL_FAILURE, Controller::ControllerProc.getFailReason());
+    int16_t *pa=Controller::ControllerProc.getFailParams();
+    cmd.sendAlarm(CmdProc::ALR_CTL_FAILURE, Controller::ControllerProc.getFailReason(), pa[0], pa[1]);
     Controller::ControllerProc.clearFailReason();
   }
   

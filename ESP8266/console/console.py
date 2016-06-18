@@ -35,7 +35,8 @@ class MyForm(wx.Frame):
         self.statusbar.SetStatusText("none", 2)
         # Add a panel so it looks the correct on all platforms
         panel = wx.Panel(self, wx.ID_ANY)
-        self.log = wx.TextCtrl(panel, wx.ID_ANY, size=(400,200), style=wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.TE_RICH)
+        self.log = wx.TextCtrl(panel, wx.ID_ANY, size=(600,200), style=wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.TE_RICH)
+        self.log_a = wx.TextCtrl(panel, wx.ID_ANY, size=(400,200), style=wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.TE_RICH)
         self.btn_st = wx.Button(panel, wx.ID_ANY, 'Status')
         self.btn_pos = wx.Button(panel, wx.ID_ANY, 'Pos')
         self.btn_upl = wx.Button(panel, wx.ID_ANY, 'Upload')
@@ -71,6 +72,7 @@ class MyForm(wx.Frame):
         self.map = map.MapPanel(panel, self.model, "map.json", self.LogString, self.LogErrorString)
 
         self.log_bg=self.log.GetBackgroundColour()
+        self.log_a.SetDefaultStyle(wx.TextAttr('RED',self.log_bg))
 
         self.layout(panel)
         # redirect text here
@@ -133,16 +135,21 @@ class MyForm(wx.Frame):
         sizer_map_ctrls = wx.BoxSizer(wx.HORIZONTAL)
         sizer_map = wx.BoxSizer(wx.VERTICAL)
         sizer_cmd = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_logs = wx.BoxSizer(wx.HORIZONTAL)
 
         sizer.Add(sizer_pan, 2, wx.ALL|wx.EXPAND, 5)
         #sizer.Add(self.grid, 0, wx.ALL|wx.EXPAND, 5)
-        sizer.Add(self.log, 1, wx.ALL|wx.EXPAND, 5)
+        sizer.Add(sizer_logs, 1, wx.ALL|wx.EXPAND, 5)
+        #sizer.Add(self.log, 1, wx.ALL|wx.EXPAND, 5)
         sizer.Add(sizer_cmd, 0, wx.ALL|wx.EXPAND, 5)
 
         ##sizer_pan.Add(self.unitPan, 1, wx.ALL|wx.EXPAND, 5)
         sizer_charts.Add(self.unitPan, 1, wx.ALL|wx.EXPAND, border=0)
         sizer_charts.Add(self.chart, 1, wx.ALL|wx.EXPAND, border=0)
         sizer_pan.Add(sizer_charts, 1, wx.ALL|wx.EXPAND, border=0)
+
+        sizer_logs.Add(self.log, 2, wx.ALL|wx.EXPAND, 5)
+        sizer_logs.Add(self.log_a, 1, wx.ALL|wx.EXPAND, 5)
 
         #sizer_pan.Add(self.map, 2, wx.ALL|wx.EXPAND, border=0)
         sizer_pan.Add(sizer_map, 2, wx.ALL|wx.EXPAND, border=0)
@@ -194,11 +201,16 @@ class MyForm(wx.Frame):
 
         self.log.SetDefaultStyle(wx.TextAttr(color,self.log_bg))
 
-        # self.log.AppendText("%d : %s" % (self.logcnt, msg))
         self.log.AppendText(msg)
         if not msg.endswith('\n'):
             self.log.AppendText('\n')
         self.logcnt=self.logcnt+1
+        
+        # temp!!!
+        if color=='RED' :
+            self.log_a.AppendText(msg)
+            if not msg.endswith('\n'):
+                self.log_a.AppendText('\n')
 
     def LogString(self, message, color='BLACK') :
         event = LogEvent(msg=message, color=color)
