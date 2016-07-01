@@ -1,33 +1,20 @@
-REQ: {"I": 378, "C": "POS"}
-RSP: {"T":582282,"I":378,"C":"POS","MST":1,"YPR":[112.79,-8.46,2.04],"CRD":[-49,-17,0],"RS":[0.50,0.50],"S":[276,94,107],"D":622.00,"R":0}
-ALR: {"C":"A","T":582764,"R":21,"P":4}
-REQ: {"I": 379, "C": "D", "RPS": [0.0, 0.0]}
-RSP: {"T":582989,"I":379,"C":"D","ARPS":[0.50,0.50],"AA":0.98,"R":0}
-REQ: {"I": 380, "C": "POS"}
-RSP: {"T":583278,"I":380,"C":"POS","MST":1,"YPR":[34.21,-2.48,2.00],"CRD":[378,240,0],"RS":[0.00,0.00],"S":[96,298,96],"D":1120.75,"R":0}
-REQ: {"I": 381, "C": "POS"}
+RSP: {"T":663881,"I":868,"C":"POS","MST":1,"YPR":[-95.86,-4.78,-6.26],"CRD":[-62,154,0],"RS":[0.37,0.50],"W":[75,107],"S":[141,235,79],"D":770.85,"R":0}
+REQ: {"I": 869, "C": "POS"}
+RSP: {"T":664895,"I":869,"C":"POS","MST":1,"YPR":[-96.52,-5.07,-6.48],"CRD":[-74,152,0],"RS":[0.50,0.50],"W":[62,113],"S":[154,185,96],"D":782.90,"R":0}
+REQ: {"I": 870, "C": "POS"}
+RSP: {"T":665886,"I":870,"C":"POS","MST":1,"YPR":[-112.29,-6.46,-6.43],"CRD":[-83,150,0],"RS":[0.50,0.62],"W":[61,110],"S":[308,179,96],"D":792.50,"R":0}
 
-Unit Mov: Rot -0.00999999999997 Dist 0.0 in 0.5 s
-Unit Mov: Rot 0.0 Dist 0.0 in 0.51 s
-Unit Mov: Rot -0.01 Dist 0.0 in 0.53 s
-Unit Mov: Rot -0.02 Dist 0.0 in 0.61 s
-Unit Mov: Rot -0.01 Dist 0.0 in 0.51 s
-Unit Mov: Rot -0.00999999999997 Dist 0.0 in 0.51 s
-Unit Mov: Rot -0.01 Dist 0.0 in 0.52 s
-Unit Mov: Rot 0.0 Dist 0.0 in 0.52 s
-Unit Mov: Rot 0.0 Dist 0.0 in 0.5 s
-Unit Mov: Rot -4.94 Dist -0.5 in 0.5 s
-Unit Mov: Rot -31.34 Dist -1.5 in 0.5 s
-Unit Mov: Rot -78.58 Dist 498.75 in 0.24 s
-Unit Mov: Rot -0.03 Dist 0.0 in 0.61 s
-Unit Mov: Rot 0.22 Dist 0.0 in 0.6 s
-Unit Mov: Rot 16.02 Dist 1.5 in 0.6 s
-Unit Mov: Rot 10.87 Dist 7.0 in 0.74 s
-Unit Mov: Rot -16.59 Dist 9.25 in 0.6 s
-Unit Mov: Rot -9.05 Dist 11.0 in 0.58 s
-Unit Mov: Rot -4.02 Dist 10.5 in 0.58 s
-Unit Mov: Rot -0.24 Dist 1.0 in 0.57 s
-Unit Mov: Rot 0.0 Dist 0.0 in 0.58 s
-Unit Mov: Rot -0.01 Dist 0.0 in 0.57 s
-Unit Mov: Rot 0.0 Dist 0.0 in 0.57 s
-Unit Mov: Rot 0.0 Dist 0.0 in 0.57 s
+ALR: {"C":"A","T":666174,"R":21,"P":4,"PA":[308,215]}
+
+REQ: {"I": 871, "C": "POS"}
+RSP: {"T":666855,"I":871,"C":"POS","MST":1,"YPR":[-126.08,-7.71,-5.94],"CRD":[-93,144,0],"RS":[0.50,0.50],"W":[54,115],"S":[359,209,100],"D":804.10,"R":0}
+REQ: {"I": 872, "C": "D", "RPS": [0.0, 0.0]}
+RSP: {"T":667770,"I":872,"C":"D","ARPS":[0.25,0.62],"AA":-1.23,"R":0}
+REQ: {"I": 873, "C": "POS"}
+RSP: {"T":667901,"I":873,"C":"POS","MST":1,"YPR":[-146.15,-9.35,-4.69],"CRD":[-101,136,0],"RS":[0.50,0.62],"W":[0,0],"S":[-2,200,104],"D":815.15,"R":0}
+REQ
+
+
+Timeout
+ALR: {"C":"A","T":137314,"R":21,"P":4,"PA":[-10240]}
+ALR: {"C":"A","T":199192,"R":21,"P":4,"PA":[-10240]}

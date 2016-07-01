@@ -1,7 +1,10 @@
 #include <Wire.h>
 
 //#define _SIMULATION_ 1
-//#define _PID_DEBUG_ 
+#define _PID_DEBUG_ 
+//#define _US_DEBUG_ 
+
+#define _US_M_WIRE_  // multiple input wires 
 
 #define _MOTOR_ONE_WIRE_ 
 
@@ -21,12 +24,19 @@
 #endif  
 #define M2_EN     P2_5 // analog write
 
+#ifdef _US_M_WIRE_
+  #define US_1_IN      P2_2 
+  #define US_2_IN      P1_3
+  #define US_3_IN      P2_3
+#else
+  #define US_IN      P2_2 // try to tie all of them to one echo pin
+#endif
+
 // ENC IN
 #define ENC2_IN   P1_5
 #define ENC1_IN   P2_0
 
 // USSENS
-#define US_IN      P2_2 // try to tie all of them to one echo pin
 #define US_1_OUT   P1_0
 #define US_2_OUT   P2_6   // XTAL remove sel
 #define US_3_OUT   P2_7   // XTAL remove sel
@@ -40,20 +50,21 @@
 #define  WHEEL_CHGSTATES 40
 #define  WHEEL_RAD_MM   33 // measured 32
 
-// for 7.5v
-#define M_POW_LOWEST_LIM   10
-#define M_POW_HIGH_LIM 100
+// for 3.7v
+//#define M_POW_LOWEST_LIM   10
+//#define M_POW_HIGH_LIM 100
 //#define M_POW_MAX  120
+#define M_POW_MIN  30
 #define M_POW_MAX  240
 #define M_POW_STEP 2
 
-// RPS 0.4 -> 60-100 POW
+// RPS 0.5 -> 50-70 POW
 
 //#define M_PID_NORM 1000
 #define M_PID_NORM 500
 #define M_PID_KP_0   12
-//#define M_PID_KD_0  140
-#define M_PID_KD_0  100
+#define M_PID_KD_0  140
+//#define M_PID_KD_0  100
 #define M_PID_KI_0    1
 #define M_PID_DIV   25
 
@@ -133,8 +144,14 @@ void setup()
 
   pinMode(ENC1_IN, INPUT);   
   pinMode(ENC2_IN, INPUT);   
+#ifdef _US_M_WIRE_
+  pinMode(US_1_IN, INPUT);   
+  pinMode(US_2_IN, INPUT);   
+  pinMode(US_3_IN, INPUT);   
+#else
   pinMode(US_IN, INPUT);   
-  
+#endif
+
   // encoders interrupts
   attachInterrupt(ENC1_IN, encodeInterrupt_1, CHANGE); 
   attachInterrupt(ENC2_IN, encodeInterrupt_2, CHANGE); 
@@ -314,12 +331,12 @@ void doPID(uint16_t ctime)
   if(ctime>0) {
     int i;  
 #ifdef _PID_DEBUG_
-    Serial.print(pid_cnt); Serial.print(" "); Serial.print(ctime);
+    Serial.print(pid_cnt); Serial.print("\t"); Serial.print(ctime);
 #endif
     for(i=0; i<2; i++) {      
       int16_t p_err=0, d_err;
 #ifdef _PID_DEBUG_
-      Serial.print(i==0 ? " L: " : " R: ");
+      Serial.print(i==0 ? "\t L: " : "\t R: ");
       //act_rot_rate[i]=CHGST_TO_RPS_NORM(enc_cnt[i], ctime); 
       Serial.print(act_rot_rate[i]);
 #endif      
@@ -329,14 +346,15 @@ void doPID(uint16_t ctime)
         int_err[i]=int_err[i]+p_err;
         int16_t pow=cur_power[i]+((int16_t)p_err*M_PID_KP+(int16_t)int_err[i]*M_PID_KI+(int16_t)d_err*M_PID_KD)/M_PID_DIV;
         if(pow<0) pow=0;
+        if(drv_dir[i] && pow<M_POW_MIN) pow=M_POW_MIN;
         if(pow>M_POW_MAX) pow=M_POW_MAX;
         if(cur_power[i]!=pow) analogWrite(i==0 ? M1_EN : M2_EN , pow); 
         cur_power[i]=pow;
 #ifdef _PID_DEBUG_        
-        Serial.print(" , "); Serial.print(p_err);
-        Serial.print(" , "); Serial.print(d_err);
-        Serial.print(" , "); Serial.print(int_err[i]);        
-        Serial.print(" > "); Serial.print(pow);
+        Serial.print("\t, "); Serial.print(p_err);
+        Serial.print("\t, "); Serial.print(d_err);
+        Serial.print("\t, "); Serial.print(int_err[i]);        
+        Serial.print("\t > "); Serial.print(pow);
 #endif        
       }
       prev_err[i]=p_err;
@@ -392,9 +410,17 @@ void Drive_s1(uint8_t dir, uint8_t pow, int16_t p_en, uint8_t p1)
 
 
 void readUSDist() {
+#ifdef _US_M_WIRE_
+  int ports_in[M_SENS_N]={US_1_IN, US_2_IN, US_3_IN};
+#else
+  int ports_in[M_SENS_N]={US_IN, US_IN, US_IN};
+#endif  
+  int ports[M_SENS_N]={US_1_OUT, US_2_OUT, US_3_OUT};
+  int out_port=ports[current_sens];
+  int in_port=ports_in[current_sens];
   static bool ignore=false;
   //for(uint8_t i=0; i<M_SENS_CYCLE; i++) {
-  if(digitalRead(US_IN)==HIGH) {
+  if(digitalRead(in_port)==HIGH) {
     //Serial.print("US read abort: "); Serial.println(current_sens);
     delay(50);
     ignore=true;
@@ -402,8 +428,6 @@ void readUSDist() {
   }
   // bad sensor strategy - skip next time ??? TODO
   
-  int ports[M_SENS_N]={US_1_OUT, US_2_OUT, US_3_OUT};
-  int out_port=ports[current_sens];
   digitalWrite(out_port, LOW);
   delayMicroseconds(2); // or 5?
   digitalWrite(out_port, HIGH);
@@ -412,7 +436,7 @@ void readUSDist() {
   
   // actual constant should be 58.138
   //int16_t tmp =(int16_t)(pulseIn(US_IN, HIGH, 18000)/58);  //58.138
-  int16_t tmp =(int16_t)(pulseIn(US_IN, HIGH, 40000)/58);  //play with timing ?
+  int16_t tmp =(int16_t)(pulseIn(in_port, HIGH, 40000)/58);  //play with timing ?
   
   if(ignore) {
     //Serial.println("Ignored");
@@ -420,11 +444,11 @@ void readUSDist() {
     return;
   }
   
-  /*
+#ifdef _US_DEBUG_  
   Serial.print("\t\t\t\t\t");
   for(int j=0; j<current_sens; j++) Serial.print("\t");
    Serial.println(tmp);
-  */
+#endif  
   
   if(tmp) {    
     sens_fail_cnt[current_sens] = 0;
@@ -440,17 +464,19 @@ void readUSDist() {
     if(sens_fail_cnt[current_sens]>1) // this is to avoid one-time reading failures
       sens[current_sens] = -1;
       
-    if(digitalRead(US_IN)==HIGH) { // need to reset
+    if(digitalRead(in_port)==HIGH) { // need to reset
       sens[current_sens] = -2;
       //delay(50);
       ignore=true;
       /*
       //play with timing ?
-      delay(100);
+      delay(50);
       pinMode(US_IN, OUTPUT);
       digitalWrite(US_IN, LOW);
-      delay(100);
+      delay(50);
       pinMode(US_IN, INPUT);
+      */
+      /*
       if(digitalRead(US_IN)==HIGH) { Serial.print("US Reset failed: "); Serial.println(current_sens);}
       else { Serial.print("US Reset OK: "); Serial.println(current_sens);}
       */

@@ -108,10 +108,11 @@ class MyForm(wx.Frame):
                   self.btn_map_targ)
         self.txt_cmd.Bind(wx.EVT_KEY_DOWN, self.onEnterCmdText)
 
-        self.Bind(wx.EVT_BUTTON, lambda evt, move=(-0.4, 0.4): self.controller.reqMove(move[0], move[1]), self.btn_mov_left)
-        self.Bind(wx.EVT_BUTTON, lambda evt, move=(0.4, -0.4): self.controller.reqMove(move[0], move[1]), self.btn_mov_right)
-        self.Bind(wx.EVT_BUTTON, lambda evt, move=(0.4, 0.4): self.controller.reqMove(move[0], move[1]), self.btn_mov_up)
-        self.Bind(wx.EVT_BUTTON, lambda evt, move=(-0.4, -0.4): self.controller.reqMove(move[0], move[1]), self.btn_mov_dn)
+        rps=0.5    
+        self.Bind(wx.EVT_BUTTON, lambda evt, move=(-rps, rps): self.controller.reqMove(move[0], move[1]), self.btn_mov_left)
+        self.Bind(wx.EVT_BUTTON, lambda evt, move=(rps, -rps): self.controller.reqMove(move[0], move[1]), self.btn_mov_right)
+        self.Bind(wx.EVT_BUTTON, lambda evt, move=(rps, rps): self.controller.reqMove(move[0], move[1]), self.btn_mov_up)
+        self.Bind(wx.EVT_BUTTON, lambda evt, move=(-rps, -rps): self.controller.reqMove(move[0], move[1]), self.btn_mov_dn)
         self.Bind(wx.EVT_BUTTON, lambda evt, move=(0.0, 0.0): self.controller.reqMove(move[0], move[1]), self.btn_mov_stop)
 
         self.config=config.Config(self, self.model)
