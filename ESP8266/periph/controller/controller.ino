@@ -54,7 +54,7 @@
 //#define M_POW_LOWEST_LIM   10
 //#define M_POW_HIGH_LIM 100
 //#define M_POW_MAX  120
-#define M_POW_MIN  30
+#define M_POW_MIN  40
 #define M_POW_MAX  240
 #define M_POW_STEP 2
 
@@ -63,7 +63,7 @@
 //#define M_PID_NORM 1000
 #define M_PID_NORM 500
 #define M_PID_KP_0   12
-#define M_PID_KD_0  140
+#define M_PID_KD_0  200
 //#define M_PID_KD_0  100
 #define M_PID_KI_0    1
 #define M_PID_DIV   25
@@ -78,6 +78,7 @@
 #define M_SENS_CYCLE   1 // number of sensors to read at cycle
 
 #define REG_WHO_AM_I         0xFF  // 1 unsigned byte
+#define REG_STATUS           0x01  // 2 unsigned bytes
 #define REG_TARG_ROT_RATE    0x03  // 2 signed ints (4 bytes)
 #define REG_ACT_ROT_RATE     0x06  // 2 signed ints (4 bytes)
 #define REG_ACT_ADV_ACC      0x09  // 2 signed ints (4 bytes)
@@ -96,7 +97,7 @@ int16_t targ_rot_rate[2]={0,0}; // RPS, 10000 = 1 RPS  (use DRV_RPS_NORM)
 int16_t targ_new_rot_rate[2]={0, 0}; // RPS, 10000 = 1 RPS  (use DRV_RPS_NORM), +/-
 int16_t targ_old_rot_rate[2]={0, 0}; // prev
 int16_t act_rot_rate[2]={0,0}; // OUT - actual rate, 10000 = 1 RPS  (use DRV_RPS_NORM)
-int16_t act_adv_accu_mm[2]={0,0};  // OUT - in mm, after last request. Should be zeored after get request
+volatile int16_t act_adv_accu_mm[2]={0,0};  // OUT - in mm, after last request. Should be zeored after get request
 
 uint8_t  drv_dir[2]={0,0}; // (0,1,2) - NO, FWD, REV
 //uint8_t enc_cnt[2]={0,0}; 
@@ -108,8 +109,10 @@ int16_t  prev_err[2]={0,0};
 uint8_t cur_power[2]={0,0};
 
 // 
-uint8_t setEvent = 0, getEvent = 0, eventRegister = 0;
+volatile uint8_t setEvent = 0, getEvent = 0, eventRegister = 0;
 uint8_t isDriving=0;
+//volatile uint8_t status=0, alarms=0;
+uint8_t sta[2]={0,0};
 
 uint8_t current_sens=0;
 
@@ -216,6 +219,7 @@ void loop()
   if(getEvent) {
     //Serial.print("GetReg ");
     //Serial.println(eventRegister);
+    //if(eventRegister==REG_STATUS) Serial.println("===STAT requested"); 
     getEvent=0;
   } 
 }
@@ -268,6 +272,7 @@ void startDrive() {
   readEnc(0);
   Drive(drv_dir[0], cur_power[0], drv_dir[1], cur_power[1]); 
   isDriving=true;
+  sta[0] |= 0x01;
   pid_cnt=0;
   lastPidTime=millis(); 
 }
@@ -277,6 +282,7 @@ void stopDrive() {
   Drive(0, 0, 0, 0);
   cur_power[0]=cur_power[1]=0;
   isDriving=0;
+  sta[0] &= ~0x01;
   pid_cnt=0;
   Serial.println("Stop drive"); 
 }
@@ -319,6 +325,14 @@ void readEnc(uint16_t ctime)
       int16_t mov=(int16_t)(CHGST_TO_MM(s[i]));
       if(drv_dir[i]==2) mov=-mov;      
       act_adv_accu_mm[i]+=mov;
+      if(abs(mov)>256) {
+        sta[1] |= 1<<i;
+        Serial.print("ALR1"); Serial.print("\t "); Serial.print(i); Serial.print("\t "); Serial.println(mov); 
+      }
+      if(abs(act_adv_accu_mm[i])>256) {
+        sta[1] |= 4<<i;
+        Serial.print("ALR2"); Serial.print("\t "); Serial.print("\t "); Serial.println(act_adv_accu_mm[i]);
+      }
       //act_adv_accu_mm[i]+=(int16_t)(CHGST_TO_MM(s[i]));
     } else { // ctime==0 
       act_rot_rate[i]=0;      
@@ -360,7 +374,8 @@ void doPID(uint16_t ctime)
       prev_err[i]=p_err;
     } 
     pid_cnt++;
-#ifdef _PID_DEBUG_            
+#ifdef _PID_DEBUG_
+    Serial.print("\t STA: "); Serial.print(sta[0]); Serial.print("\t "); Serial.print(sta[1], BIN);        
     Serial.println();
 #endif    
   }
@@ -530,6 +545,12 @@ void requestEvent()
     case REG_WHO_AM_I:  
       Wire.write((uint8_t)M_OWN_ID);
       break;
+    case REG_STATUS:  
+      //Wire.write((uint8_t)status);
+      //Wire.write((uint8_t)alarms);
+      Wire.write(sta, 2);
+      sta[1]=0;
+      break;
     case REG_TARG_ROT_RATE:
       writeInt16_2(targ_new_rot_rate);
       break;
@@ -537,7 +558,14 @@ void requestEvent()
       writeInt16_2(act_rot_rate);
       break;      
     case REG_ACT_ADV_ACC:
-      writeInt16_2(act_adv_accu_mm);
+      //int16_t tmp[2];
+      //tmp[0]=act_adv_accu_mm[0];
+      //tmp[1]=act_adv_accu_mm[1];
+      //writeInt16_2(tmp);
+      
+      //writeInt16_2(act_adv_accu_mm);
+      
+      writeInt16_2_v(act_adv_accu_mm[0], act_adv_accu_mm[1]);
       act_adv_accu_mm[0]=act_adv_accu_mm[1]=0;
       break;            
     case REG_ACT_POW:
@@ -575,6 +603,14 @@ void writeInt16_2(int16_t *reg) {
   buffer[1] = (uint8_t)((reg[0])&0xFF);
   buffer[2] = (uint8_t)((reg[1])>>8);
   buffer[3] = (uint8_t)((reg[1])&0xFF);  
+  Wire.write(buffer, 4);
+}
+
+void writeInt16_2_v(int16_t v1, int16_t v2) {
+  buffer[0] = (uint8_t)((v1)>>8);
+  buffer[1] = (uint8_t)((v1)&0xFF);
+  buffer[2] = (uint8_t)((v2)>>8);
+  buffer[3] = (uint8_t)((v2)&0xFF);  
   Wire.write(buffer, 4);
 }
 

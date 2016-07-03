@@ -59,9 +59,29 @@ uint8_t Controller::testConnection() {
 
 bool Controller::process(float yaw) {
   if(!pready) return false;
-  int16_t tmp[2];
+  boolean alr=false;
+  //int16_t tmp[2];
 
-  if(!getActAdvance(act_advance)) return false;
+  if(!getControllerStatus()) return false;
+
+ Serial.print(F("CTRL STAT: ")); Serial.print(sta[0]); Serial.print(F(" \t ")); Serial.println(sta[1]);
+
+/*
+  if(sta[1]) {
+    raiseFail(CTL_FAIL_ALR, sta[0], sta[1]);
+    return false;
+  }
+*/
+
+  //if(!getActAdvance(act_advance)) return false;
+  if(!getActAdvance()) return false;
+
+/*
+  if(sta[1]) {
+    raiseFail(CTL_FAIL_ALR, sta[0], sta[1]);
+    return false;
+  }
+*/
 
   if(abs(act_advance[0])>128 || abs(act_advance[1])>128) {
     //fail_reason=CTL_FAIL_OVF;
@@ -81,20 +101,22 @@ bool Controller::process(float yaw) {
   r[0]+=mov*sin(yaw);
   r[1]+=mov*cos(yaw);
 
-  if(!getActRotRate(tmp)) return false;
+  if(!getActRotRate(/*tmp*/)) return false;
    
-  act_rot_rate[0]=(float)tmp[0]/V_NORM;
-  act_rot_rate[1]=(float)tmp[1]/V_NORM;
+  //act_rot_rate[0]=(float)tmp[0]/V_NORM;
+  //act_rot_rate[1]=(float)tmp[1]/V_NORM;
 
-  if(!getActPower(act_power)) return false;
+  if(!getActPower(/*act_power*/)) return false;
 
-  return getSensors(sensors);
+  return getSensors(/*sensors*/);
    
 /*
   Serial.print(F("CTRL: ")); Serial.print(mov/10.0f); Serial.print(F(" \t ")); Serial.print(yaw);
   Serial.print(F(" \t ")); Serial.print(r[0]/10.0f); Serial.print(F(" \t ")); Serial.print(r[1]/10.0f);   
   Serial.println();
 */
+
+
 }
 
 uint8_t Controller::getNumSensors() { return nsens;}
@@ -117,6 +139,12 @@ bool Controller::setTargRotRate(float l, float r) {
   return setTargRotRate(d);
 }
 
+bool Controller::getControllerStatus() { 
+  bool res = I2Cdev::readBytes(DEV_ID, REG_STATUS, 2, sta); 
+  if(!res) raiseFail(CTL_FAIL_RD, REG_STATUS);
+  return res;
+}
+
 uint8_t Controller::_getNumSensors() {
   bool res = I2Cdev::readByte(DEV_ID, REG_SENSORS_CNT, buf); 
   if(!res) {
@@ -130,48 +158,49 @@ uint8_t Controller::_getNumSensors() {
 
 bool Controller::getTargRotRate(int16_t *d) { 
   bool res = readInt16_2(REG_TARG_ROT_RATE, d, d+1); 
-  //if(!res) fail_reason=CTL_FAIL_RD;
   if(!res) raiseFail(CTL_FAIL_RD, REG_TARG_ROT_RATE);
   return res;
 }
 
 bool Controller::setTargRotRate(int16_t *d) {
   bool res = writeInt16_2(REG_TARG_ROT_RATE, d[0], d[1]); 
-  //if(!res) fail_reason=CTL_FAIL_WRT;
   if(!res) raiseFail(CTL_FAIL_WRT, REG_TARG_ROT_RATE);
   return res;
 }
 
 bool Controller::stopDrive() {
   bool res = writeInt16_2(REG_TARG_ROT_RATE, 0, 0); 
-  //if(!res) fail_reason=CTL_FAIL_WRT;
   if(!res) raiseFail(CTL_FAIL_WRT, REG_TARG_ROT_RATE);
   return res;
 }
 
-bool Controller::getActRotRate(int16_t *d) {
-  bool res = readInt16_2(REG_ACT_ROT_RATE, d, d+1); 
-  //if(!res) fail_reason=CTL_FAIL_RD;
+bool Controller::getActRotRate(/*int16_t *d*/) {
+  //bool res = readInt16_2(REG_ACT_ROT_RATE, d, d+1); 
+  int16_t tmp[2];
+  bool res = readInt16_2(REG_ACT_ROT_RATE, tmp, tmp+1);
+  act_rot_rate[0]=(float)tmp[0]/V_NORM;
+  act_rot_rate[1]=(float)tmp[1]/V_NORM;
   if(!res) raiseFail(CTL_FAIL_RD, REG_ACT_ROT_RATE);
   return res;
 }
 
-bool Controller::getActAdvance(int16_t *d) {
-  bool res = readInt16_2(REG_ACT_ADV_ACC, d, d+1); 
-  //if(!res) fail_reason=CTL_FAIL_RD;
+bool Controller::getActAdvance(/*int16_t *d*/) {
+  //bool res = readInt16_2(REG_ACT_ADV_ACC, d, d+1); 
+  bool res = readInt16_2(REG_ACT_ADV_ACC, act_advance, act_advance+1);  
   if(!res) raiseFail(CTL_FAIL_RD, REG_ACT_ADV_ACC);
   return res;
 }
 
-bool Controller::getActPower(int16_t *d) {
-  bool res = readInt16_2(REG_ACT_POW, d, d+1); 
+bool Controller::getActPower(/*int16_t *d*/) {
+  //bool res = readInt16_2(REG_ACT_POW, d, d+1);
+  bool res = readInt16_2(REG_ACT_POW, act_power, act_power+1); 
   if(!res) raiseFail(CTL_FAIL_RD, REG_ACT_POW);
   return res;
 }
 
-bool Controller::getSensors(int16_t *sens) {
-  bool res = readInt16_N(REG_SENSORS_ALL, 8, sens); 
-  //if(!res) fail_reason=CTL_FAIL_RD;
+bool Controller::getSensors(/*int16_t *sens*/) {
+  //bool res = readInt16_N(REG_SENSORS_ALL, 8, sens); 
+  bool res = readInt16_N(REG_SENSORS_ALL, 8, sensors); 
   if(!res) raiseFail(CTL_FAIL_RD, REG_SENSORS_ALL);
   return res;
 }

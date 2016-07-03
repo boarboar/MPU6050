@@ -2,6 +2,7 @@
 #define _UMP_CONTROLLER_H_
 
 #define REG_WHO_AM_I         0xFF  // 1 unsigned byte
+#define REG_STATUS           0x01  // 2 unsigned bytes
 #define REG_TARG_ROT_RATE    0x03  // 2 signed ints (4 bytes)
 #define REG_ACT_ROT_RATE     0x06  // 2 signed ints (4 bytes)
 #define REG_ACT_ADV_ACC      0x09  // 2 signed ints (4 bytes)
@@ -19,7 +20,7 @@
 
 class Controller {
 public:
-  enum FailReason {CTL_FAIL_NONE=0, CTL_FAIL_INIT=1, CTL_FAIL_WRT=2, CTL_FAIL_RD=3, CTL_FAIL_OVF=4};
+  enum FailReason {CTL_FAIL_NONE=0, CTL_FAIL_INIT=1, CTL_FAIL_WRT=2, CTL_FAIL_RD=3, CTL_FAIL_OVF=4, CTL_FAIL_ALR=5};
   static Controller ControllerProc; // singleton  
   bool init();
   uint8_t getStatus();
@@ -52,10 +53,11 @@ protected:
   Controller();
   uint8_t testConnection();
   uint8_t _getNumSensors();
-  bool getActRotRate(int16_t *d); // in V_NORM-ed RPS
-  bool getActAdvance(int16_t *d); // in MMs
-  bool getActPower(int16_t *d); 
-  bool getSensors(int16_t *sens); 
+  bool getControllerStatus();
+  bool getActRotRate(/*int16_t *d*/); // in RPS
+  bool getActAdvance(/*int16_t *d*/); // in MMs
+  bool getActPower(/*int16_t *d*/); 
+  bool getSensors(/*int16_t *sens*/); 
   void raiseFail(uint8_t reason, int16_t p1=0, int16_t p2=0);  
   bool writeInt16_2(uint16_t reg, int16_t left, int16_t right);
   bool readInt16_2(uint16_t reg, int16_t *left, int16_t *right);  
@@ -68,6 +70,7 @@ private:
   int16_t fail_p[2]; 
   
   uint8_t buf[16];  
+  uint8_t sta[2];
   //int16_t act_rot_rate[2];
   float act_rot_rate[2];
   float mov, rot;
