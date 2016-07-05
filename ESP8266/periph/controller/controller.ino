@@ -90,12 +90,13 @@
 
 #define ST_SET_DRIVE_ON()       (sta[0] |= ST_DRIVE)
 #define ST_SET_DRIVE_OFF()       (sta[0] &= ~ST_DRIVE)
-#define ST_IS_DRINING()         (sta[0]&ST_DRIVE)  
+#define ST_IS_DRIVING()         (sta[0]&ST_DRIVE)  
 
 
 #define CHGST_TO_MM(CNT)  ((uint32_t)(CNT)*V_NORM_PI2*WHEEL_RAD_MM/WHEEL_CHGSTATES/V_NORM)
 #define CHGST_TO_ANG_NORM(CNT)  ((uint32_t)(CNT)*V_NORM_PI2/WHEEL_CHGSTATES)
 #define CHGST_TO_RPS_NORM(CNT, MSEC)  ((uint32_t)(CNT)*V_NORM*1000/WHEEL_CHGSTATES/(MSEC))
+#define RPS_TO_CHGST_NORM(RPS, MSEC)  ((uint32_t)(RPS)*WHEEL_CHGSTATES*(MSEC)/V_NORM/1000)
 
 uint32_t lastEvTime, lastPidTime;
 int16_t sens[M_SENS_N];
@@ -107,7 +108,7 @@ int16_t act_rot_rate[2]={0,0}; // OUT - actual rate, 10000 = 1 RPS  (use DRV_RPS
 volatile int16_t act_adv_accu_mm[2]={0,0};  // OUT - in mm, after last request. Should be zeored after get request
 
 uint8_t  drv_dir[2]={0,0}; // (0,1,2) - NO, FWD, REV
-//uint8_t enc_cnt[2]={0,0}; 
+uint16_t enc_cnt[2]={0,0}; 
 
 // PID section
 uint16_t pid_cnt=0;
@@ -198,10 +199,10 @@ void loop()
       // comm lost!
       Serial.println("Comm lost!");
       lastEvTime = cycleTime;
-      if(ST_IS_DRINING()) stopDrive();
+      if(ST_IS_DRIVING()) stopDrive();
     }    
     readEnc(ctime);
-    if (ST_IS_DRINING()) doPID(ctime);       
+    if (ST_IS_DRIVING()) doPID(ctime);       
     readUSDist(); 
     lastPidTime=cycleTime;
   } // PID cycle 
@@ -232,7 +233,7 @@ void loop()
 
 
 void startDrive() {
-  if(ST_IS_DRINING() && targ_old_rot_rate[0]==targ_new_rot_rate[0] && targ_old_rot_rate[1]==targ_new_rot_rate[1]) {
+  if(ST_IS_DRIVING() && targ_old_rot_rate[0]==targ_new_rot_rate[0] && targ_old_rot_rate[1]==targ_new_rot_rate[1]) {
     Serial.print("Continue drive"); 
     return;
   }
@@ -269,10 +270,14 @@ void startDrive() {
     targ_old_rot_rate[i]=targ_new_rot_rate[i];     
     prev_err[i]=0;
     int_err[i]=0;   
-    Serial.print(changeDir ? "RST" : "PID"); Serial.print(", ");
-    Serial.print(drv_dir[i]); Serial.print(", "); Serial.print(targ_rot_rate[i]); Serial.print(", "); Serial.print(cur_power[i]); Serial.print("\t : ");
+    uint8_t chgst=RPS_TO_CHGST_NORM(targ_rot_rate[i], PID_TIMEOUT);
+    if(targ_rot_rate[i]>0 && chgst==0) chgst=1;
+    Serial.print(i);
+    Serial.print(changeDir ? " RST" : " PID"); Serial.print(", ");
+    Serial.print(drv_dir[i]); Serial.print(", "); Serial.print(targ_rot_rate[i]); Serial.print(", "); Serial.print(cur_power[i]);
+    Serial.print("\t "); Serial.println(chgst);
   }
-  Serial.println();
+  //Serial.println();
    
   readEnc(0);
   Drive(drv_dir[0], cur_power[0], drv_dir[1], cur_power[1]); 
@@ -284,7 +289,7 @@ void startDrive() {
 }
 
 void stopDrive() {
-  if(!ST_IS_DRINING()) return;
+  if(!ST_IS_DRIVING()) return;
   Drive(0, 0, 0, 0);
   cur_power[0]=cur_power[1]=0;
   //isDriving=0;
@@ -296,13 +301,16 @@ void stopDrive() {
 
 void readEnc(uint16_t ctime)
 {
-  int16_t s[2];
+  //uint16_t s[2];
   for(int i=0; i<2; i++) {
-    s[i]=v_enc_cnt[i];
+    //s[i]=v_enc_cnt[i];
+    enc_cnt[i]=v_enc_cnt[i]; 
     v_enc_cnt[i] = 0;
        
+   
     if(ctime>0) {
-      act_rot_rate[i]=CHGST_TO_RPS_NORM(s[i], ctime); 
+      //act_rot_rate[i]=CHGST_TO_RPS_NORM(s[i], ctime); 
+      act_rot_rate[i]=CHGST_TO_RPS_NORM(enc_cnt[i], ctime); 
       /*
 #ifdef _SIMULATION_
 #if _SIMULATION_ == 0
@@ -321,7 +329,8 @@ void readEnc(uint16_t ctime)
 #endif      
 #endif
 */
-      int16_t mov=(int16_t)(CHGST_TO_MM(s[i]));
+      //int16_t mov=(int16_t)(CHGST_TO_MM(s[i]));
+      int16_t mov=(int16_t)(CHGST_TO_MM(enc_cnt[i]));
       if(drv_dir[i]==2) mov=-mov;      
       act_adv_accu_mm[i]+=mov;
       if(abs(mov)>256) {
@@ -351,6 +360,7 @@ void doPID(uint16_t ctime)
       Serial.print(i==0 ? "\t L: " : "\t R: ");
       //act_rot_rate[i]=CHGST_TO_RPS_NORM(enc_cnt[i], ctime); 
       Serial.print(act_rot_rate[i]);
+      Serial.print("\t, "); Serial.print(enc_cnt[i]);
 #endif      
       if(pid_cnt>=M_WUP_PID_CNT) { // do not correct for the first cycles - ca 100-200ms(warmup)
         p_err = (int32_t)(targ_rot_rate[i]-act_rot_rate[i])/M_PID_NORM;
