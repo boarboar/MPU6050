@@ -86,6 +86,13 @@
 #define REG_SENSORS_CNT      0x20  // 1 unsigned byte
 #define REG_SENSORS_ALL      0x28  // 8 unsigned ints
 
+#define ST_DRIVE             0x01 
+
+#define ST_SET_DRIVE_ON()       (sta[0] |= ST_DRIVE)
+#define ST_SET_DRIVE_OFF()       (sta[0] &= ~ST_DRIVE)
+#define ST_IS_DRINING()         (sta[0]&ST_DRIVE)  
+
+
 #define CHGST_TO_MM(CNT)  ((uint32_t)(CNT)*V_NORM_PI2*WHEEL_RAD_MM/WHEEL_CHGSTATES/V_NORM)
 #define CHGST_TO_ANG_NORM(CNT)  ((uint32_t)(CNT)*V_NORM_PI2/WHEEL_CHGSTATES)
 #define CHGST_TO_RPS_NORM(CNT, MSEC)  ((uint32_t)(CNT)*V_NORM*1000/WHEEL_CHGSTATES/(MSEC))
@@ -110,8 +117,7 @@ uint8_t cur_power[2]={0,0};
 
 // 
 volatile uint8_t setEvent = 0, getEvent = 0, eventRegister = 0;
-uint8_t isDriving=0;
-//volatile uint8_t status=0, alarms=0;
+//uint8_t isDriving=0;
 uint8_t sta[2]={0,0};
 
 uint8_t current_sens=0;
@@ -192,10 +198,10 @@ void loop()
       // comm lost!
       Serial.println("Comm lost!");
       lastEvTime = cycleTime;
-      if(isDriving) stopDrive();
+      if(ST_IS_DRINING()) stopDrive();
     }    
     readEnc(ctime);
-    if (isDriving) doPID(ctime);       
+    if (ST_IS_DRINING()) doPID(ctime);       
     readUSDist(); 
     lastPidTime=cycleTime;
   } // PID cycle 
@@ -226,7 +232,7 @@ void loop()
 
 
 void startDrive() {
-  if(isDriving && targ_old_rot_rate[0]==targ_new_rot_rate[0] && targ_old_rot_rate[1]==targ_new_rot_rate[1]) {
+  if(ST_IS_DRINING() && targ_old_rot_rate[0]==targ_new_rot_rate[0] && targ_old_rot_rate[1]==targ_new_rot_rate[1]) {
     Serial.print("Continue drive"); 
     return;
   }
@@ -235,7 +241,6 @@ void startDrive() {
    
   for(int i=0; i<2; i++) {
     boolean changeDir=false; 
-    //uint16_t oldRotRate=targ_rot_rate[i];
     if(targ_new_rot_rate[i]==0) {
       changeDir=true;
       drv_dir[i]=0;
@@ -271,18 +276,20 @@ void startDrive() {
    
   readEnc(0);
   Drive(drv_dir[0], cur_power[0], drv_dir[1], cur_power[1]); 
-  isDriving=true;
-  sta[0] |= 0x01;
+  //isDriving=true;
+  //sta[0] |= 0x01;
+  ST_SET_DRIVE_ON();
   pid_cnt=0;
   lastPidTime=millis(); 
 }
 
 void stopDrive() {
-  if(!isDriving) return;
+  if(!ST_IS_DRINING()) return;
   Drive(0, 0, 0, 0);
   cur_power[0]=cur_power[1]=0;
-  isDriving=0;
-  sta[0] &= ~0x01;
+  //isDriving=0;
+  //sta[0] &= ~0x01;
+  ST_SET_DRIVE_OFF();
   pid_cnt=0;
   Serial.println("Stop drive"); 
 }
@@ -291,18 +298,10 @@ void readEnc(uint16_t ctime)
 {
   int16_t s[2];
   for(int i=0; i<2; i++) {
-    /*
-    enc_cnt[i]=v_enc_cnt[i];
-    v_enc_cnt[i] = 0;
-    if(drv_dir[i]==2) s[i]=-enc_cnt[i];
-    else s[i]=enc_cnt[i];
-    */
     s[i]=v_enc_cnt[i];
     v_enc_cnt[i] = 0;
-    
-    
+       
     if(ctime>0) {
-      //act_rot_rate[i]=CHGST_TO_RPS_NORM(enc_cnt[i], ctime); 
       act_rot_rate[i]=CHGST_TO_RPS_NORM(s[i], ctime); 
       /*
 #ifdef _SIMULATION_
@@ -333,7 +332,6 @@ void readEnc(uint16_t ctime)
         sta[1] |= 4<<i;
         Serial.print("ALR2"); Serial.print("\t "); Serial.print("\t "); Serial.println(act_adv_accu_mm[i]);
       }
-      //act_adv_accu_mm[i]+=(int16_t)(CHGST_TO_MM(s[i]));
     } else { // ctime==0 
       act_rot_rate[i]=0;      
     }
@@ -450,7 +448,6 @@ void readUSDist() {
   digitalWrite(out_port, LOW);
   
   // actual constant should be 58.138
-  //int16_t tmp =(int16_t)(pulseIn(US_IN, HIGH, 18000)/58);  //58.138
   int16_t tmp =(int16_t)(pulseIn(in_port, HIGH, 40000)/58);  //play with timing ?
   
   if(ignore) {
@@ -546,8 +543,6 @@ void requestEvent()
       Wire.write((uint8_t)M_OWN_ID);
       break;
     case REG_STATUS:  
-      //Wire.write((uint8_t)status);
-      //Wire.write((uint8_t)alarms);
       Wire.write(sta, 2);
       sta[1]=0;
       break;
@@ -558,13 +553,7 @@ void requestEvent()
       writeInt16_2(act_rot_rate);
       break;      
     case REG_ACT_ADV_ACC:
-      //int16_t tmp[2];
-      //tmp[0]=act_adv_accu_mm[0];
-      //tmp[1]=act_adv_accu_mm[1];
-      //writeInt16_2(tmp);
-      
-      //writeInt16_2(act_adv_accu_mm);
-      
+      //writeInt16_2(act_adv_accu_mm);      
       writeInt16_2_v(act_adv_accu_mm[0], act_adv_accu_mm[1]);
       act_adv_accu_mm[0]=act_adv_accu_mm[1]=0;
       break;            

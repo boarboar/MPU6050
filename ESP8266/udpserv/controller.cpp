@@ -66,25 +66,14 @@ bool Controller::process(float yaw) {
 
  Serial.print(F("CTRL STAT: ")); Serial.print(sta[0]); Serial.print(F(" \t ")); Serial.println(sta[1]);
 
-/*
-  if(sta[1]) {
-    raiseFail(CTL_FAIL_ALR, sta[0], sta[1]);
-    return false;
-  }
-*/
-
-  //if(!getActAdvance(act_advance)) return false;
   if(!getActAdvance()) return false;
 
-/*
-  if(sta[1]) {
+  if(sta[1]) { // experimental
     raiseFail(CTL_FAIL_ALR, sta[0], sta[1]);
     return false;
   }
-*/
 
   if(abs(act_advance[0])>128 || abs(act_advance[1])>128) {
-    //fail_reason=CTL_FAIL_OVF;
     raiseFail(CTL_FAIL_OVF, act_advance[0], act_advance[1]);
     return false;
   }
@@ -175,7 +164,6 @@ bool Controller::stopDrive() {
 }
 
 bool Controller::getActRotRate(/*int16_t *d*/) {
-  //bool res = readInt16_2(REG_ACT_ROT_RATE, d, d+1); 
   int16_t tmp[2];
   bool res = readInt16_2(REG_ACT_ROT_RATE, tmp, tmp+1);
   act_rot_rate[0]=(float)tmp[0]/V_NORM;
@@ -185,21 +173,18 @@ bool Controller::getActRotRate(/*int16_t *d*/) {
 }
 
 bool Controller::getActAdvance(/*int16_t *d*/) {
-  //bool res = readInt16_2(REG_ACT_ADV_ACC, d, d+1); 
   bool res = readInt16_2(REG_ACT_ADV_ACC, act_advance, act_advance+1);  
   if(!res) raiseFail(CTL_FAIL_RD, REG_ACT_ADV_ACC);
   return res;
 }
 
 bool Controller::getActPower(/*int16_t *d*/) {
-  //bool res = readInt16_2(REG_ACT_POW, d, d+1);
   bool res = readInt16_2(REG_ACT_POW, act_power, act_power+1); 
   if(!res) raiseFail(CTL_FAIL_RD, REG_ACT_POW);
   return res;
 }
 
 bool Controller::getSensors(/*int16_t *sens*/) {
-  //bool res = readInt16_N(REG_SENSORS_ALL, 8, sens); 
   bool res = readInt16_N(REG_SENSORS_ALL, 8, sensors); 
   if(!res) raiseFail(CTL_FAIL_RD, REG_SENSORS_ALL);
   return res;
@@ -212,31 +197,20 @@ bool Controller::writeInt16_2(uint16_t reg, int16_t left, int16_t right) {
     buf[2] = (uint8_t)(right>>8);
     buf[3] = (uint8_t)(right&0xFF);   
     bool res = I2Cdev::writeBytes(DEV_ID, reg, 4, buf);
-    //Serial.print(res); Serial.print(" "); Serial.print(dt); Serial.println("ms");
     return res;
 }
 
 bool Controller::readInt16_2(uint16_t reg, int16_t *left, int16_t *right) {
-    //Serial.print("Requesting...\t ");
-    //t=millis();  
     bool res = I2Cdev::readBytes(DEV_ID, reg, 4, buf);
-    //dt=millis()-t;
-    //Serial.print(res); Serial.print(" "); Serial.print(dt); Serial.print("ms\t ");
     *left = (((int16_t)buf[0]) << 8) | buf[1];
     *right = (((int16_t)buf[2]) << 8) | buf[3];
-    //Serial.print(*left); Serial.print("\t "); Serial.println(*right);
     return res;
 }
 
 bool Controller::readInt16_N(uint16_t reg, uint16_t n, int16_t *d) {
-    //Serial.print("Requesting...\t ");
-    //t=millis();  
     bool res = I2Cdev::readBytes(DEV_ID, reg, n*2, buf);
-    //dt=millis()-t;
-    //Serial.print(res); Serial.print(" "); Serial.print(dt); Serial.print("ms\t ");
     for(uint16_t i=0, j=0; i<n; i++) {
       *(d+i) = (((int16_t)buf[j++]) << 8) | buf[j++];
-      //Serial.print(d[i]); Serial.print("\t ");
     }
     return res;
 }

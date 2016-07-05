@@ -162,7 +162,7 @@ class SimulationThread(threading.Thread):
     def stop(self) : self.__stop=True
     def run (self):
 
-        self.__controller.log().LogString("Starting simulation")
+        self.__controller.log().LogString("Start tracking")
 
         #self.__controller.reqResetMPU()
 
@@ -170,7 +170,7 @@ class SimulationThread(threading.Thread):
             time.sleep(1)
             self.__controller.reqPosition()
 
-        self.__controller.log().LogString("Simulation thread stopped")
+        self.__controller.log().LogString("Stop tracking")
 
 
 class PathThread(threading.Thread):
@@ -189,8 +189,8 @@ class PathThread(threading.Thread):
     def run (self):
         self.__controller.log().LogString("Starting path running")
         move_var=[0.25, 0.25]
-        move_var_lim=0.25
-        base_move=0.25
+        move_var_lim=0.5
+        base_move=0.5
         gain_p, gain_d, gain_i, gain_f = 0.5, 2.0, 0.01, 0.05
         degain_i=0.5
         err_p_0=0
@@ -202,7 +202,10 @@ class PathThread(threading.Thread):
             try:
                 if resp_json is not None and resp_json["C"]=="POS":
                     time.sleep(0.5) # bad design... wait until map object perform unit location procedure....
-                    self.__planner.RePlanOnMove((self.__unit.x_mean,self.__unit.y_mean), False)
+                    #x, y, a = self.__unit.x_mean, self.__unit.y_mean, self.__unit.a_mean # by localization
+                    x, y, a =self.__unit.GetSim() #by dead reckoning
+
+                    self.__planner.RePlanOnMove((x,y), False)
 
                     if len(self.__planner.spath)<2 :
                         self.__controller.log().LogString("Got there!")
@@ -213,10 +216,9 @@ class PathThread(threading.Thread):
                                         self.__planner.spath[1][1]-self.__planner.spath[0][1])
 
                     self.__controller.log().LogString("After move CRD=(%s %s), A=%s, AP=%s"
-                                                      % (round(self.__unit.x_mean,2), round(self.__unit.y_mean, 2),
-                                                         round(self.__unit.a_mean*180/math.pi,2),
-                                                      round(plan_a*180/math.pi,2)))
-                    err_p=(self.__unit.a_mean-plan_a)
+                                                      % (round(x,2), round(y, 2),
+                                                         round(a*180/math.pi,2), round(plan_a*180/math.pi,2)))
+                    err_p=(a-plan_a)
                     if err_p < -math.pi :
                         err_p += 2*math.pi
                     if err_p > math.pi :

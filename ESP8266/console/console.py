@@ -326,7 +326,7 @@ class MyForm(wx.Frame):
 
     def onUpdEvent(self, evt):
         #self.statusbar.SetStatusText(str(self.model["FHS"]), 0)
-        self.statusbar.SetStatusText("%(YPR)s" % self.model, 1)
+        #self.statusbar.SetStatusText("%(YPR)s" % self.model, 1)
         if evt.reset==True :
             self.chart.Reset()
             self.map.Reset()

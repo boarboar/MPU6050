@@ -61,6 +61,9 @@ class Unit:
         print("Unit Mov: Rot %s Dist %s in %s s" %
               (str(move_rot*180.0/math.pi), move_dist, str(round(timeit.default_timer() - start_time, 2))))
 
+    def GetSim(self):
+        return self.__r_x+self.start[0], self.__r_y+self.start[1], self.__angle
+
     def UnitToMapSim(self, x, y):
         x1=x*self.__r_cos+y*self.__r_sin+self.__r_x+self.start[0]
         y1=-x*self.__r_sin+y*self.__r_cos+self.__r_y+self.start[1]
