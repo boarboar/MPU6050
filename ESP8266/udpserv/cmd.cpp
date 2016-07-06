@@ -105,7 +105,7 @@ boolean CmdProc::sendSysLogStatus() {
   return true;
 }
 
-boolean CmdProc::sendAlarm(uint8_t alr, uint8_t param, int16_t p1, int16_t p2) {
+boolean CmdProc::sendAlarm(uint8_t alr, uint8_t param, int16_t dt, int16_t p1, int16_t p2) {
   //{"C": "A", "T":12345, "R":1123, "P":1123, "PA":[]} 
   if(CfgDrv::Cfg.log_on<SL_LEVEL_ALARM) return false;
   StaticJsonBuffer<200> jsonBufferOut;
@@ -116,6 +116,7 @@ boolean CmdProc::sendAlarm(uint8_t alr, uint8_t param, int16_t p1, int16_t p2) {
   rootOut["P"] = param;
   if(p1 || p2) {
     JsonArray& pa = rootOut.createNestedArray("PA");
+    pa.add(dt);
     pa.add(p1);
     if(p2) pa.add(p2);
   }

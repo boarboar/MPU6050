@@ -21,7 +21,7 @@ public:
   int16_t getSysLogLevel();
   boolean sendSysLog(const char *buf);
   boolean sendSysLogStatus();
-  boolean sendAlarm(uint8_t alr, uint8_t param, int16_t p1=0, int16_t p2=0);
+  boolean sendAlarm(uint8_t alr, uint8_t param, int16_t dt=0, int16_t p1=0, int16_t p2=0);
 protected:
   CmdProc() : isConnected(false) {;}
   void _sendToSysLog(JsonObject& rootOut);

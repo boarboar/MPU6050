@@ -35,11 +35,9 @@ bool Controller::init() {
   resetIntegrator();
   pready=testConnection();
   if(pready) {
-    //fail_reason=CTL_FAIL_NONE;
     raiseFail(CTL_FAIL_NONE);
     nsens=_getNumSensors();      
   } else {
-    //fail_reason=CTL_FAIL_INIT;
     raiseFail(CTL_FAIL_INIT);
     need_reset=true;
   }
@@ -59,12 +57,12 @@ uint8_t Controller::testConnection() {
 
 bool Controller::process(float yaw) {
   if(!pready) return false;
-  boolean alr=false;
+  //boolean alr=false;
   //int16_t tmp[2];
 
   if(!getControllerStatus()) return false;
 
- Serial.print(F("CTRL STAT: ")); Serial.print(sta[0]); Serial.print(F(" \t ")); Serial.println(sta[1]);
+ //Serial.print(F("CTRL STAT: ")); Serial.print(sta[0]); Serial.print(F(" \t ")); Serial.println(sta[1]);
 
   if(!getActAdvance()) return false;
 
@@ -210,7 +208,10 @@ bool Controller::readInt16_2(uint16_t reg, int16_t *left, int16_t *right) {
 bool Controller::readInt16_N(uint16_t reg, uint16_t n, int16_t *d) {
     bool res = I2Cdev::readBytes(DEV_ID, reg, n*2, buf);
     for(uint16_t i=0, j=0; i<n; i++) {
-      *(d+i) = (((int16_t)buf[j++]) << 8) | buf[j++];
+      //*(d+i) = (((int16_t)buf[j++]) << 8) | buf[j++]; 
+      int16_t t=((int16_t)buf[j++]) << 8;
+      t |=  buf[j++];
+      *(d+i) = t;      
     }
     return res;
 }

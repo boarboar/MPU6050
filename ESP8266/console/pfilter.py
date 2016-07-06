@@ -29,11 +29,12 @@ class PFilter:
         self.sense_noise=20
 
     def InitParticles(self):
-        N_D=20
+        #N_D=20
+        N_D=16
         W=1.0/(N_D*N_D)
         LOC_VAR=150
-        #ANG_VAR=math.pi/2
-        ANG_VAR=math.pi
+        ANG_VAR=math.pi/2
+        #ANG_VAR=math.pi
         self.particles = [] #clean
         for i in range(N_D) :
             for j in range(N_D) :

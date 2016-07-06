@@ -142,7 +142,7 @@ void doCycle() {
   if(Controller::ControllerProc.getFailReason()) {
     Serial.print(F("CTL FAILURE ")); Serial.println(Controller::ControllerProc.getFailReason());
     int16_t *pa=Controller::ControllerProc.getFailParams();
-    cmd.sendAlarm(CmdProc::ALR_CTL_FAILURE, Controller::ControllerProc.getFailReason(), pa[0], pa[1]);
+    cmd.sendAlarm(CmdProc::ALR_CTL_FAILURE, Controller::ControllerProc.getFailReason(), dt, pa[0], pa[1]);
     Controller::ControllerProc.clearFailReason();
   }
   

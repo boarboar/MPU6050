@@ -243,7 +243,8 @@ class PathThread(threading.Thread):
 
             except KeyError: pass
 
-            time.sleep(2)
+            #time.sleep(2)
+            time.sleep(0.5)
 
         self.__controller.reqMove(0,0)
         self.__controller.log().LogString("Path running thread stopped")

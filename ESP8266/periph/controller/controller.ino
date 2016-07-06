@@ -60,19 +60,24 @@
 
 // RPS 0.5 -> 50-70 POW
 
-//#define M_PID_NORM 1000
+/*
 #define M_PID_NORM 500
 #define M_PID_KP_0   12
 #define M_PID_KD_0  200
-//#define M_PID_KD_0  100
 #define M_PID_KI_0    1
 #define M_PID_DIV   25
+*/
+
+#define M_PID_KP_0   25
+#define M_PID_KD_0  140
+#define M_PID_KI_0    2
+#define M_PID_DIV   50
 
 #define M_PID_KP M_PID_KP_0
 #define M_PID_KD M_PID_KD_0
 #define M_PID_KI M_PID_KI_0
 
-#define M_WUP_PID_CNT 3
+#define M_WUP_PID_CNT 1
 
 #define M_SENS_N       3 // number of sensors 
 #define M_SENS_CYCLE   1 // number of sensors to read at cycle
@@ -106,9 +111,10 @@ int16_t targ_new_rot_rate[2]={0, 0}; // RPS, 10000 = 1 RPS  (use DRV_RPS_NORM), 
 int16_t targ_old_rot_rate[2]={0, 0}; // prev
 int16_t act_rot_rate[2]={0,0}; // OUT - actual rate, 10000 = 1 RPS  (use DRV_RPS_NORM)
 volatile int16_t act_adv_accu_mm[2]={0,0};  // OUT - in mm, after last request. Should be zeored after get request
-
+uint8_t targ_enc_cnt[2]={0,0}; 
 uint8_t  drv_dir[2]={0,0}; // (0,1,2) - NO, FWD, REV
-uint16_t enc_cnt[2]={0,0}; 
+//uint16_t enc_cnt[2]={0,0}; 
+uint8_t enc_cnt[2]={0,0}; 
 
 // PID section
 uint16_t pid_cnt=0;
@@ -117,8 +123,8 @@ int16_t  prev_err[2]={0,0};
 uint8_t cur_power[2]={0,0};
 
 // 
-volatile uint8_t setEvent = 0, getEvent = 0, eventRegister = 0;
-//uint8_t isDriving=0;
+volatile uint8_t setEvent = 0, getEvent = 0;
+volatile uint8_t eventRegister = 0;
 uint8_t sta[2]={0,0};
 
 uint8_t current_sens=0;
@@ -126,7 +132,8 @@ uint8_t current_sens=0;
 uint8_t buffer[16];
 
 // volatile encoder section
-volatile uint16_t v_enc_cnt[2]={0,0}; 
+//volatile uint16_t v_enc_cnt[2]={0,0}; 
+volatile uint8_t v_enc_cnt[2]={0,0}; 
 volatile uint8_t v_es[2]={0,0};
 
 void setup()
@@ -258,31 +265,33 @@ void startDrive() {
     if(targ_rot_rate[i]>V_NORM_MAX) targ_rot_rate[i]=V_NORM_MAX;
     
     if(drv_dir[i]) {
-       if(changeDir) {         
+       //if(changeDir) {         
+       if(targ_old_rot_rate[i]!=targ_new_rot_rate[i])  {     
          cur_power[i]=map(targ_rot_rate[i], 0, V_NORM_MAX, 0, 255); // temp
        }
+       /*
        else {
          // let PID do the job
          // todo - PID cycle for i-motor here
-       }  
+       } 
+      */ 
      } else cur_power[i]=0;
     
     targ_old_rot_rate[i]=targ_new_rot_rate[i];     
     prev_err[i]=0;
     int_err[i]=0;   
-    uint8_t chgst=RPS_TO_CHGST_NORM(targ_rot_rate[i], PID_TIMEOUT);
-    if(targ_rot_rate[i]>0 && chgst==0) chgst=1;
+    //uint8_t chgst=RPS_TO_CHGST_NORM(targ_rot_rate[i], PID_TIMEOUT);
+    targ_enc_cnt[i]=RPS_TO_CHGST_NORM(targ_rot_rate[i], PID_TIMEOUT);
+    if(targ_rot_rate[i]>0 && targ_enc_cnt[i]==0) targ_enc_cnt[i]=1;
     Serial.print(i);
     Serial.print(changeDir ? " RST" : " PID"); Serial.print(", ");
     Serial.print(drv_dir[i]); Serial.print(", "); Serial.print(targ_rot_rate[i]); Serial.print(", "); Serial.print(cur_power[i]);
-    Serial.print("\t "); Serial.println(chgst);
+    Serial.print("\t "); Serial.println(targ_enc_cnt[i]);
   }
   //Serial.println();
    
   readEnc(0);
   Drive(drv_dir[0], cur_power[0], drv_dir[1], cur_power[1]); 
-  //isDriving=true;
-  //sta[0] |= 0x01;
   ST_SET_DRIVE_ON();
   pid_cnt=0;
   lastPidTime=millis(); 
@@ -292,8 +301,6 @@ void stopDrive() {
   if(!ST_IS_DRIVING()) return;
   Drive(0, 0, 0, 0);
   cur_power[0]=cur_power[1]=0;
-  //isDriving=0;
-  //sta[0] &= ~0x01;
   ST_SET_DRIVE_OFF();
   pid_cnt=0;
   Serial.println("Stop drive"); 
@@ -301,15 +308,10 @@ void stopDrive() {
 
 void readEnc(uint16_t ctime)
 {
-  //uint16_t s[2];
   for(int i=0; i<2; i++) {
-    //s[i]=v_enc_cnt[i];
     enc_cnt[i]=v_enc_cnt[i]; 
-    v_enc_cnt[i] = 0;
-       
-   
+    v_enc_cnt[i] = 0;          
     if(ctime>0) {
-      //act_rot_rate[i]=CHGST_TO_RPS_NORM(s[i], ctime); 
       act_rot_rate[i]=CHGST_TO_RPS_NORM(enc_cnt[i], ctime); 
       /*
 #ifdef _SIMULATION_
@@ -329,7 +331,6 @@ void readEnc(uint16_t ctime)
 #endif      
 #endif
 */
-      //int16_t mov=(int16_t)(CHGST_TO_MM(s[i]));
       int16_t mov=(int16_t)(CHGST_TO_MM(enc_cnt[i]));
       if(drv_dir[i]==2) mov=-mov;      
       act_adv_accu_mm[i]+=mov;
@@ -362,10 +363,11 @@ void doPID(uint16_t ctime)
       Serial.print(act_rot_rate[i]);
       Serial.print("\t, "); Serial.print(enc_cnt[i]);
 #endif      
-      if(pid_cnt>=M_WUP_PID_CNT) { // do not correct for the first cycles - ca 100-200ms(warmup)
-        p_err = (int32_t)(targ_rot_rate[i]-act_rot_rate[i])/M_PID_NORM;
+      if(pid_cnt>=M_WUP_PID_CNT) { // do not correct for the first cycles - ca 100-200ms(warmup)      
+        //p_err = (int32_t)(targ_rot_rate[i]-act_rot_rate[i])/M_PID_NORM;
+        p_err = (int16_t)targ_enc_cnt[i]-(int16_t)enc_cnt[i];
         d_err = p_err-prev_err[i];
-        int_err[i]=int_err[i]+p_err;
+        int_err[i]=int_err[i]+p_err;        
         int16_t pow=cur_power[i]+((int16_t)p_err*M_PID_KP+(int16_t)int_err[i]*M_PID_KI+(int16_t)d_err*M_PID_KD)/M_PID_DIV;
         if(pow<0) pow=0;
         if(drv_dir[i] && pow<M_POW_MIN) pow=M_POW_MIN;
