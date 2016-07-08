@@ -113,7 +113,6 @@ int16_t act_rot_rate[2]={0,0}; // OUT - actual rate, 10000 = 1 RPS  (use DRV_RPS
 volatile int16_t act_adv_accu_mm[2]={0,0};  // OUT - in mm, after last request. Should be zeored after get request
 uint8_t targ_enc_cnt[2]={0,0}; 
 uint8_t  drv_dir[2]={0,0}; // (0,1,2) - NO, FWD, REV
-//uint16_t enc_cnt[2]={0,0}; 
 uint8_t enc_cnt[2]={0,0}; 
 
 // PID section
@@ -132,7 +131,6 @@ uint8_t current_sens=0;
 uint8_t buffer[16];
 
 // volatile encoder section
-//volatile uint16_t v_enc_cnt[2]={0,0}; 
 volatile uint8_t v_enc_cnt[2]={0,0}; 
 volatile uint8_t v_es[2]={0,0};
 
@@ -248,17 +246,17 @@ void startDrive() {
   Serial.print("Start drive: "); 
    
   for(int i=0; i<2; i++) {
-    boolean changeDir=false; 
+    //boolean changeDir=false; 
     if(targ_new_rot_rate[i]==0) {
-      changeDir=true;
+      //changeDir=true;
       drv_dir[i]=0;
       targ_rot_rate[i]=0;
     } else if(targ_new_rot_rate[i]>0) {
-      changeDir=drv_dir[i]!=1;
+      //changeDir=drv_dir[i]!=1;
       drv_dir[i]=1;
       targ_rot_rate[i]=(uint16_t)(targ_new_rot_rate[i]);
     } else {
-      changeDir=drv_dir[i]!=2;
+      //changeDir=drv_dir[i]!=2;
       drv_dir[i]=2;
       targ_rot_rate[i]=(uint16_t)(-targ_new_rot_rate[i]);
     }
@@ -269,12 +267,6 @@ void startDrive() {
        if(targ_old_rot_rate[i]!=targ_new_rot_rate[i])  {     
          cur_power[i]=map(targ_rot_rate[i], 0, V_NORM_MAX, 0, 255); // temp
        }
-       /*
-       else {
-         // let PID do the job
-         // todo - PID cycle for i-motor here
-       } 
-      */ 
      } else cur_power[i]=0;
     
     targ_old_rot_rate[i]=targ_new_rot_rate[i];     
@@ -284,7 +276,7 @@ void startDrive() {
     targ_enc_cnt[i]=RPS_TO_CHGST_NORM(targ_rot_rate[i], PID_TIMEOUT);
     if(targ_rot_rate[i]>0 && targ_enc_cnt[i]==0) targ_enc_cnt[i]=1;
     Serial.print(i);
-    Serial.print(changeDir ? " RST" : " PID"); Serial.print(", ");
+    //Serial.print(changeDir ? " RST" : " PID"); Serial.print(", ");
     Serial.print(drv_dir[i]); Serial.print(", "); Serial.print(targ_rot_rate[i]); Serial.print(", "); Serial.print(cur_power[i]);
     Serial.print("\t "); Serial.println(targ_enc_cnt[i]);
   }
@@ -340,7 +332,7 @@ void readEnc(uint16_t ctime)
       }
       if(abs(act_adv_accu_mm[i])>256) {
         sta[1] |= 4<<i;
-        Serial.print("ALR2"); Serial.print("\t "); Serial.print("\t "); Serial.println(act_adv_accu_mm[i]);
+        Serial.print("ALR2"); Serial.print("\t "); Serial.print(i); Serial.print("\t "); Serial.println(act_adv_accu_mm[i]);
       }
     } else { // ctime==0 
       act_rot_rate[i]=0;      

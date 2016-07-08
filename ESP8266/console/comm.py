@@ -189,9 +189,9 @@ class PathThread(threading.Thread):
     def run (self):
         self.__controller.log().LogString("Starting path running")
         move_var=[0.25, 0.25]
-        move_var_lim=0.5
-        base_move=0.5
-        gain_p, gain_d, gain_i, gain_f = 0.5, 2.0, 0.01, 0.05
+        move_var_lim=0.25
+        base_move=0.25
+        gain_p, gain_d, gain_i, gain_f = 0.5, 4.0, 0.01, 0.05
         degain_i=0.5
         err_p_0=0
         err_i=0
@@ -215,9 +215,10 @@ class PathThread(threading.Thread):
                     plan_a=math.atan2( self.__planner.spath[1][0]-self.__planner.spath[0][0],
                                         self.__planner.spath[1][1]-self.__planner.spath[0][1])
 
-                    self.__controller.log().LogString("After move CRD=(%s %s), A=%s, AP=%s"
-                                                      % (round(x,2), round(y, 2),
-                                                         round(a*180/math.pi,2), round(plan_a*180/math.pi,2)))
+                    #self.__controller.log().LogString("After move CRD=(%s %s), A=%s, AP=%s"
+                    #                                  % (round(x,2), round(y, 2),
+                    #                                     round(a*180/math.pi,2), round(plan_a*180/math.pi,2)))
+
                     err_p=(a-plan_a)
                     if err_p < -math.pi :
                         err_p += 2*math.pi
@@ -229,15 +230,17 @@ class PathThread(threading.Thread):
                     err_d=err_p-err_p_0
                     err_p_0=err_p
                     feedback=-(gain_p*err_p+gain_d*err_d+gain_i*err_i)*gain_f
-
-                    self.__controller.log().LogString("PID: %s %s %s => %s" %
-                                                      (round(err_p,2), round(err_d,2), round(err_i,2), round(feedback,2)))
-
+                    feedback=round(feedback,2)
                     dmove=[feedback, -feedback]
                     for im in range(2):
                         move_var[im]+=dmove[im]
                         if move_var[im]>move_var_lim: move_var[im]=move_var_lim
                         if move_var[im]<-move_var_lim: move_var[im]=-move_var_lim
+
+                    self.__controller.log().LogString("PID: %s %s %s => L %s => (%s, %s)" %
+                                                      (round(err_p,2), round(err_d,2), round(err_i,2), round(feedback,2),
+                                                       base_move+move_var[0], base_move+move_var[1]))
+
 
                     self.__controller.reqMove(base_move+move_var[0], base_move+move_var[1])
 
