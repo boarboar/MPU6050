@@ -190,8 +190,8 @@ class PathThread(threading.Thread):
         self.__controller.log().LogString("Starting path running")
         move_var=[0.25, 0.25]
         move_var_lim=0.25
-        base_move=0.25
-        gain_p, gain_d, gain_i, gain_f = 0.5, 4.0, 0.01, 0.05
+        base_move=0.5
+        gain_p, gain_d, gain_i, gain_f = 0.5, 5.0, 0.0, 0.02
         degain_i=0.5
         err_p_0=0
         err_i=0
@@ -201,7 +201,7 @@ class PathThread(threading.Thread):
             resp_json = self.__controller.reqPositionSync()
             try:
                 if resp_json is not None and resp_json["C"]=="POS":
-                    time.sleep(0.5) # bad design... wait until map object perform unit location procedure....
+                    time.sleep(0.25) # bad design... wait until map object perform unit location procedure....
                     #x, y, a = self.__unit.x_mean, self.__unit.y_mean, self.__unit.a_mean # by localization
                     x, y, a =self.__unit.GetSim() #by dead reckoning
 
@@ -247,7 +247,7 @@ class PathThread(threading.Thread):
             except KeyError: pass
 
             #time.sleep(2)
-            time.sleep(0.5)
+            time.sleep(0.25)
 
         self.__controller.reqMove(0,0)
         self.__controller.log().LogString("Path running thread stopped")

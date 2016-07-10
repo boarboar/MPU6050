@@ -71,7 +71,7 @@ bool Controller::process(float yaw) {
     return false;
   }
 
-  if(abs(act_advance[0])>128 || abs(act_advance[1])>128) {
+  if(abs(act_advance[0])>512 || abs(act_advance[1])>512) {
     raiseFail(CTL_FAIL_OVF, act_advance[0], act_advance[1]);
     return false;
   }
