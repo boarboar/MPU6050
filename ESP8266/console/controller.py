@@ -2,14 +2,21 @@ import json
 import socket
 import Queue
 import threading
+import math
 import comm
+from planner import Planner
+from pfilter import PFilter
+from unit import Unit
+
 import model
 
 class Controller():
     # device controller
-    def __init__(self,form,model):
+    def __init__(self,form,model, map, LogString, LogErrorString):
         self.__form = form
         self.__model = model
+        self.__LogString=LogString
+        self.__LogErrorString=LogErrorString
         self.__cmdid=0
         self.__resp_q = Queue.Queue()
         self.__lock=threading.Lock()
@@ -18,6 +25,11 @@ class Controller():
         self.__comm_scan_thread = None
         self.__comm_sim_thread = None
         self.__comm_path_thread = None
+
+        self.planner=Planner(map, LogString, LogErrorString)
+        self.pfilter=PFilter(map)
+        self.unit=Unit(map, self.pfilter)
+
         self.__tstart()
 
     def __tstart(self):
@@ -99,6 +111,9 @@ class Controller():
     def reqMove(self, l, r):
         self.__req({"C":"D", "RPS":[round(l,2), round(r,2)]})
 
+    def reqMoveSync(self, l, r):
+        return self.__req_sync({"C":"D", "RPS":[round(l,2), round(r,2)]})
+
     def reqUpload(self):
         # config upload
         # {"I":1,"C":"SYSL", "ON":1, "ADDR":"192.168.1.141", "PORT":4444}
@@ -164,6 +179,12 @@ class Controller():
             model_reset = True
 
         if self.__model.update(resp_json, model_reset) :
+            try:
+                yaw, pitch, roll = [a*math.pi/180.0 for a in self.__model["YPR"]]
+                x, y, z = [int(a) for a in self.__model["CRD"]] # for simulation
+                self.unit.MoveUnit(yaw, self.__model["D"], self.__model["S"], x, y)
+            except KeyError : pass
+            except IndexError : pass
             self.__form.UpdatePos(reset=model_reset)
         else :
             self.__form.UpdateStatus(reset=model_reset)
@@ -181,8 +202,8 @@ class Controller():
     def isPathRunning(self):
         return self.__comm_path_thread!=None and self.__comm_path_thread.complete!=True
 
-    def startPathRunning(self, planner, unit):
-        self.__comm_path_thread=comm.PathThread(self, planner, unit)
+    def startPathRunning(self):
+        self.__comm_path_thread=comm.PathThread(self, self.planner, self.unit)
         self.__comm_path_thread.start()
 
     def movePathRunning(self):

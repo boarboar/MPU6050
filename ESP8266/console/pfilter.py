@@ -125,7 +125,7 @@ class PFilter:
 
     def updateParticleProbabilities(self, p, meas, scan_angles, scan_max_dist):
         scan_dist=[]
-        prob = 1.0;
+        prob = 1.0
         p0=(p.x, p.y)
         for i in range(len(scan_angles)) :
             a=scan_angles[i]

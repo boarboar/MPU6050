@@ -20,6 +20,8 @@ class MyForm(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
         self.model=model.Model("ROBO")
+        self.config=config.Config(self, self.model)
+
         menuBar = wx.MenuBar()
         menu = wx.Menu()
         menuBar.Append(menu, "&File")
@@ -70,6 +72,8 @@ class MyForm(wx.Frame):
         self.unitPan = draw.UnitPanel(panel)
         self.chart = draw.ChartPanel(panel)
         self.map = map.MapPanel(panel, self.model, "map.json", self.LogString, self.LogErrorString)
+        self.controller=controller.Controller(self, self.model, self.map, self.LogString, self.LogErrorString)
+        self.map.AddController(self.controller)
 
         self.log_bg=self.log.GetBackgroundColour()
         self.log_a.SetDefaultStyle(wx.TextAttr('RED',self.log_bg))
@@ -115,8 +119,6 @@ class MyForm(wx.Frame):
         self.Bind(wx.EVT_BUTTON, lambda evt, move=(-rps, -rps): self.controller.reqMove(move[0], move[1]), self.btn_mov_dn)
         self.Bind(wx.EVT_BUTTON, lambda evt, move=(0.0, 0.0): self.controller.reqMove(move[0], move[1]), self.btn_mov_stop)
 
-        self.config=config.Config(self, self.model)
-        self.controller=controller.Controller(self, self.model)
         self.LogString("Local address is %s" % socket.gethostbyname(socket.gethostname()))
         self.map.Reset() # init particles filter and position
         self.history = self.model["CMD_HIST"]
@@ -288,10 +290,10 @@ class MyForm(wx.Frame):
         if self.controller.isPathRunning() :
             self.controller.stopPathRunning()
         else :
-            if len(self.map.planner.spath)<2 :
+            if len(self.controller.planner.spath)<2 :
                 self.LogErrorString('No path')
                 return
-            self.controller.startPathRunning(self.map.planner, self.map.unit)
+            self.controller.startPathRunning()
 
     def onDumpModel(self, event):
         self.LogString(str(self.model.dump()))
@@ -335,7 +337,7 @@ class MyForm(wx.Frame):
             #if self.controller.isPathRunning() :
             #    self.controller.updatePathRunning()
 
-        self.unitPan.UpdateData(self.model["T_ATT"], self.model["YPR"], self.model["V"], self.map.unit.a_mean)
+        self.unitPan.UpdateData(self.model["T_ATT"], self.model["YPR"], self.model["V"], self.controller.unit.a_mean)
         self.chart.UpdateData(self.model["T_ATT"], self.model["YPR"], self.model["V"])
 
 
