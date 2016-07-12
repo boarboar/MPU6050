@@ -92,11 +92,20 @@
 #define REG_SENSORS_ALL      0x28  // 8 unsigned ints
 
 #define ST_DRIVE             0x01 
+#define ST_SETEV             0x02 
+#define ST_GETEV             0x04
 
 #define ST_SET_DRIVE_ON()       (sta[0] |= ST_DRIVE)
-#define ST_SET_DRIVE_OFF()       (sta[0] &= ~ST_DRIVE)
+#define ST_SET_DRIVE_OFF()      (sta[0] &= ~ST_DRIVE)
 #define ST_IS_DRIVING()         (sta[0]&ST_DRIVE)  
 
+#define ST_SET_SETEV_ON()       (sta[0] |= ST_SETEV)
+#define ST_SET_SETEV_OFF()      (sta[0] &= ~ST_SETEV)
+#define ST_IS_SETEV()           (sta[0]&ST_SETEV)  
+
+#define ST_SET_GETEV_ON()       (sta[0] |= ST_GETEV)
+#define ST_SET_GETEV_OFF()      (sta[0] &= ~ST_GETEV)
+#define ST_IS_GETEV()           (sta[0]&ST_GETEV)  
 
 #define CHGST_TO_MM(CNT)  ((uint32_t)(CNT)*V_NORM_PI2*WHEEL_RAD_MM/WHEEL_CHGSTATES/V_NORM)
 #define CHGST_TO_ANG_NORM(CNT)  ((uint32_t)(CNT)*V_NORM_PI2/WHEEL_CHGSTATES)
@@ -122,9 +131,9 @@ int16_t  prev_err[2]={0,0};
 uint8_t cur_power[2]={0,0};
 
 // 
-volatile uint8_t setEvent = 0, getEvent = 0;
-volatile uint8_t eventRegister = 0;
+//volatile uint8_t setEvent = 0, getEvent = 0;
 uint8_t sta[2]={0,0};
+volatile uint8_t eventRegister = 0;
 
 uint8_t current_sens=0;
 
@@ -212,7 +221,8 @@ void loop()
     lastPidTime=cycleTime;
   } // PID cycle 
           
-  if(setEvent) {
+  //if(setEvent) {
+  if(ST_IS_SETEV()){   
     Serial.print("SetReg ");
     Serial.print(eventRegister);
     Serial.print(" : ");
@@ -226,13 +236,16 @@ void loop()
         stopDrive();    
     }
     Serial.println();
-    setEvent=0;
+    //setEvent=0;
+    ST_SET_SETEV_OFF();
   } 
-  if(getEvent) {
+  //if(getEvent) {
+  if(ST_IS_GETEV()){     
     //Serial.print("GetReg ");
     //Serial.println(eventRegister);
     //if(eventRegister==REG_STATUS) Serial.println("===STAT requested"); 
-    getEvent=0;
+    //getEvent=0;
+    ST_SET_GETEV_OFF();
   } 
 }
 
@@ -265,7 +278,8 @@ void startDrive() {
     if(drv_dir[i]) {
        //if(changeDir) {         
        if(targ_old_rot_rate[i]!=targ_new_rot_rate[i])  {     
-         cur_power[i]=map(targ_rot_rate[i], 0, V_NORM_MAX, 0, 255); // temp
+         //cur_power[i]=map(targ_rot_rate[i], 0, V_NORM_MAX, 0, 255); // temp
+         cur_power[i]=map(targ_rot_rate[i], 0, V_NORM_MAX, M_POW_MIN, 255); // temp
        }
      } else cur_power[i]=0;
     
@@ -534,7 +548,8 @@ void receiveEvent(int howMany)
     default:;
   }  
   while(Wire.available()) Wire.read(); // consume whatever left  
-  setEvent=1;  
+  //setEvent=1;  
+  ST_SET_SETEV_ON();
   lastEvTime = millis();
 }
   
@@ -557,9 +572,13 @@ void requestEvent()
       writeInt16_2(act_rot_rate);
       break;      
     case REG_ACT_ADV_ACC:
-      //writeInt16_2(act_adv_accu_mm);      
-      writeInt16_2_v(act_adv_accu_mm[0], act_adv_accu_mm[1]);
-      act_adv_accu_mm[0]=act_adv_accu_mm[1]=0;
+      //writeInt16_2(act_adv_accu_mm);    
+      uint16_t t1, t2;
+      t1=act_adv_accu_mm[0]; t2=act_adv_accu_mm[1]=0;    
+      act_adv_accu_mm[0]=0; act_adv_accu_mm[1]=0;
+      writeInt16_2_v(t1, t2);
+      //writeInt16_2_v(act_adv_accu_mm[0], act_adv_accu_mm[1]);
+      //act_adv_accu_mm[0]=act_adv_accu_mm[1]=0;
       break;            
     case REG_ACT_POW:
       int16_t tmp[2];
@@ -574,7 +593,8 @@ void requestEvent()
       break;  
     default:;
   }
-  getEvent=1;
+  //getEvent=1;
+  ST_SET_GETEV_ON();
   lastEvTime = millis();
 }
 
