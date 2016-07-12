@@ -278,8 +278,8 @@ void startDrive() {
     if(drv_dir[i]) {
        //if(changeDir) {         
        if(targ_old_rot_rate[i]!=targ_new_rot_rate[i])  {     
-         //cur_power[i]=map(targ_rot_rate[i], 0, V_NORM_MAX, 0, 255); // temp
-         cur_power[i]=map(targ_rot_rate[i], 0, V_NORM_MAX, M_POW_MIN, 255); // temp
+         cur_power[i]=map(targ_rot_rate[i], 0, V_NORM_MAX, 0, 255); // temp
+         //cur_power[i]=map(targ_rot_rate[i], 0, V_NORM_MAX, M_POW_MIN, 255); // temp
        }
      } else cur_power[i]=0;
     
@@ -574,7 +574,7 @@ void requestEvent()
     case REG_ACT_ADV_ACC:
       //writeInt16_2(act_adv_accu_mm);    
       uint16_t t1, t2;
-      t1=act_adv_accu_mm[0]; t2=act_adv_accu_mm[1]=0;    
+      t1=act_adv_accu_mm[0]; t2=act_adv_accu_mm[1];    
       act_adv_accu_mm[0]=0; act_adv_accu_mm[1]=0;
       writeInt16_2_v(t1, t2);
       //writeInt16_2_v(act_adv_accu_mm[0], act_adv_accu_mm[1]);
