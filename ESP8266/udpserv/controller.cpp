@@ -67,6 +67,7 @@ bool Controller::process(float yaw) {
   if(!getActAdvance()) return false;
 
   if(sta[1]) { // experimental
+    Serial.print(F("CTRL STAT ALR: ")); Serial.print(sta[0]); Serial.print(F(" \t ")); Serial.println(sta[1]);
     raiseFail(CTL_FAIL_ALR, sta[0], sta[1]);
     return false;
   }

@@ -337,16 +337,17 @@ void readEnc(uint16_t ctime)
 #endif      
 #endif
 */
+      if(enc_cnt[i]>128) {
+        sta[1] |= 1<<i;
+        Serial.print("!!!!!!ALR1"); Serial.print("\t "); Serial.print(i); Serial.print("\t "); Serial.println(enc_cnt[i]); 
+      }
+
       int16_t mov=(int16_t)(CHGST_TO_MM(enc_cnt[i]));
       if(drv_dir[i]==2) mov=-mov;      
       act_adv_accu_mm[i]+=mov;
-      if(abs(mov)>256) {
-        sta[1] |= 1<<i;
-        Serial.print("ALR1"); Serial.print("\t "); Serial.print(i); Serial.print("\t "); Serial.println(mov); 
-      }
-      if(abs(act_adv_accu_mm[i])>256) {
+      if(abs(act_adv_accu_mm[i])>512) {
         sta[1] |= 4<<i;
-        Serial.print("ALR2"); Serial.print("\t "); Serial.print(i); Serial.print("\t "); Serial.println(act_adv_accu_mm[i]);
+        Serial.print("!!!!!!ALR2"); Serial.print("\t "); Serial.print(i); Serial.print("\t "); Serial.println(act_adv_accu_mm[i]);
       }
     } else { // ctime==0 
       act_rot_rate[i]=0;      

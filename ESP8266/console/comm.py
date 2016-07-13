@@ -8,13 +8,12 @@ import math
 
 class CommandThread(threading.Thread):
     # device command-resp communication
-    def __init__(self, controller, addr, port, mockup=False):
+    def __init__(self, controller, addr, port):
         threading.Thread.__init__(self)
         self.__controller = controller
         self.__q = Queue.Queue()
         self.__addr=addr
         self.__port=int(port)
-        self.__mockup=mockup
         self.__stop = False
         self.setDaemon(1)
 
@@ -33,50 +32,41 @@ class CommandThread(threading.Thread):
 
         self.__controller.log().LogString("Cmd thread starting: dev=%s:%s" % (self.__addr, str(self.__port)))
         while not self.__stop:
+            resp_q=None
             try:
                 req_json, resp_q = self.__q.get(timeout=1)
             except Queue.Empty: req_json = None
             if req_json is not None:
                 self.__controller.log().LogString("REQ: %s" % json.dumps(req_json))
-                if self.__mockup :
-                    try:
-                        if req_json["C"]=="INFO" : rsp_js = json.dumps({"C": "INFO", "FHS": int(random.random()*40000), "FSS": (int)(random.random()*200000)})
-                        elif req_json["C"]=="POS" : rsp_js = json.dumps({"C": "POS", "X": int(random.random()*100), "Y": int(random.random()*100)})
-                        else : rsp_js = ""
-                        self.__controller.resp(rsp_js)
-                    except KeyError: continue
-                    except ValueError: continue
-                else :
-                    try :
-                        self.__s.sendto(json.dumps(req_json), (self.__addr, self.__port))
-                        retr=0
-                        while retr<3 :
-                            d = self.__s.recvfrom(1024)
-                            #self.__controller.log().LogString("From %s rsp %s" % (d[1], d[0]), 'GREY')
-                            resp_json=json.loads(d[0])
-                            if int(req_json["I"]) != int(resp_json["I"]) :
-                                self.__controller.log().LogErrorString("UNMATCHED: "+d[0])
+                try :
+                    self.__s.sendto(json.dumps(req_json), (self.__addr, self.__port))
+                    retr=0
+                    while retr<3 :
+                        d = self.__s.recvfrom(1024)
+                        #self.__controller.log().LogString("From %s rsp %s" % (d[1], d[0]), 'GREY')
+                        resp_json=json.loads(d[0])
+                        if int(req_json["I"]) != int(resp_json["I"]) :
+                            self.__controller.log().LogErrorString("UNMATCHED: "+d[0])
+                        else:
+                            if resp_q is not None:
+                                resp_q.put_nowait(d[0])
                             else:
-                                if resp_q is not None:
-                                    resp_q.put_nowait(d[0])
-                                else:
-                                    self.__controller.resp(d[0], req_json)
-                                break
-                    except socket.timeout as msg:
-                        self.__controller.log().LogErrorString("Timeout")
-                    except socket.error as msg:
-                        self.__controller.log().LogErrorString("Sock error : %s" % msg)
+                                self.__controller.resp(d[0], req_json)
+                            break
+                except socket.timeout as msg:
+                    self.__controller.log().LogErrorString("Timeout")
+                except socket.error as msg:
+                    self.__controller.log().LogErrorString("Sock error : %s" % msg)
 
         self.__s.close()
         self.__controller.log().LogString("Cmd thread stopped")
 
 class ListenerThread(threading.Thread):
     # device command-resp communication
-    def __init__(self, controller, bindport, mockup=False):
+    def __init__(self, controller, bindport):
         threading.Thread.__init__(self)
         self.__controller = controller
         self.__bindport=bindport
-        self.__mockup=mockup
         self.__stop = False
         self.setDaemon(1)
     def stop(self) : self.__stop=True
@@ -109,10 +99,9 @@ class ListenerThread(threading.Thread):
 
 class ScanThread(threading.Thread):
     # device command-resp communication
-    def __init__(self, controller, mockup=False):
+    def __init__(self, controller):
         threading.Thread.__init__(self)
         self.__controller = controller
-        self.__mockup=mockup
         self.__stop = False
         self.setDaemon(1)
     def stop(self) : self.__stop=True
@@ -190,7 +179,7 @@ class PathThread(threading.Thread):
         self.__controller.log().LogString("Starting path running")
         move_var=[0.25, 0.25]
         move_var_lim=0.25
-        base_move=0.5
+        base_move=0.25
         gain_p, gain_d, gain_i, gain_f = 0.5, 5.0, 0.0, 0.02
         degain_i=0.5
         err_p_0=0
@@ -249,5 +238,5 @@ class PathThread(threading.Thread):
             #time.sleep(2)
             time.sleep(0.25) # let it move a bit
 
-        self.__controller.reqMove(0,0)
+        self.__controller.reqMoveSync(0,0)
         self.__controller.log().LogString("Path running thread stopped")

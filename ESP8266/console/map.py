@@ -4,9 +4,6 @@ import json
 import sys
 import timeit
 from unitmap import UnitMap
-from planner import Planner
-from pfilter import PFilter
-from unit import Unit
 import model
 import controller
 
@@ -47,9 +44,6 @@ class MapPanel(wx.Window, UnitMap):
                     ]
         self.start=self.init_start    # unit start point
         self.target=None  # target point
-        #self.planner=Planner(self, LogString, LogErrorString)
-        #self.pfilter=PFilter(self)
-        #self.unit=Unit(self, self.pfilter)
         self.Reset()
         self.OnSize(None)
 

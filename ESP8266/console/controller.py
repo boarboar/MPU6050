@@ -3,6 +3,8 @@ import socket
 import Queue
 import threading
 import math
+import time
+
 import comm
 from planner import Planner
 from pfilter import PFilter
@@ -34,10 +36,10 @@ class Controller():
 
     def __tstart(self):
         try:
-            self.__comm_thread=comm.CommandThread(self, self.__model["DEVADDR"], self.__model["DEVPORT"], self.__model["MOCKUP"])
+            self.__comm_thread=comm.CommandThread(self, self.__model["DEVADDR"], self.__model["DEVPORT"])
             self.__comm_thread.start()
             if self.__model["SYSLOGENABLE"] :
-                self.__comm_listener_thread=comm.ListenerThread(self, self.__model["LISTENPORT"], self.__model["MOCKUP"])
+                self.__comm_listener_thread=comm.ListenerThread(self, self.__model["LISTENPORT"])
                 self.__comm_listener_thread.start()
             else :
                 self.__comm_listener_thread=None
@@ -61,7 +63,7 @@ class Controller():
         self.__tstart()
 
     def startScan(self):
-        self.__comm_scan_thread=comm.ScanThread(self, self.__model["MOCKUP"])
+        self.__comm_scan_thread=comm.ScanThread(self)
         self.__comm_scan_thread.start()
 
     def stopScan(self):
@@ -132,13 +134,19 @@ class Controller():
     def __req_sync(self, js):
         js["I"]=self.__genId()
         resp_json=None
+        #clean response queue first
+        try:
+            while True:
+                self.__resp_q.get_nowait()()
+        except Queue.Empty: pass
         self.__comm_thread.put((js, self.__resp_q))
         try:
             resp = self.__resp_q.get(timeout=1)
             resp_json=json.loads(resp)
             self.__form.LogString("SYNC RSP: "+resp, 'FOREST GREEN')
             self.onResp(resp_json)
-        except Queue.Empty: resp_json = None
+        except Queue.Empty:
+            self.__form.LogError("SYNC RSP MISSING")
         return resp_json
 
     def resp(self, js, req_json=None):
@@ -176,7 +184,7 @@ class Controller():
         #if "I" in resp_json and resp_json["T"] < self.__model["T"] : # command resp has time less saved one...
         if "T" in resp_json and resp_json["T"] < self.__model["T"] : # command resp has time less saved one...
             self.__form.LogErrorString("Device time is less than old one, Device is likely to reboot")
-            model_reset = True
+            #model_reset = True #this cause too much probs
 
         if self.__model.update(resp_json, model_reset) :
             try:
@@ -208,5 +216,4 @@ class Controller():
 
     def movePathRunning(self):
         pass
-
 
