@@ -58,7 +58,7 @@ protected:
   bool getActAdvance(/*int16_t *d*/); // in MMs
   bool getActPower(/*int16_t *d*/); 
   bool getSensors(/*int16_t *sens*/); 
-  void raiseFail(uint8_t reason, int16_t p1=0, int16_t p2=0);  
+  void raiseFail(uint8_t reason, int16_t p1=0, int16_t p2=0, int16_t p3=0, int16_t p4=0);  
   bool writeInt16_2(uint16_t reg, int16_t left, int16_t right);
   bool readInt16_2(uint16_t reg, int16_t *left, int16_t *right);  
   bool readInt16_2(uint16_t reg, int16_t *d);
@@ -67,7 +67,7 @@ private:
   uint8_t data_ready;
   uint8_t need_reset;
   uint8_t fail_reason;
-  int16_t fail_p[2]; 
+  int16_t fail_p[4]; 
   
   uint8_t buf[16];  
   uint8_t sta[2];

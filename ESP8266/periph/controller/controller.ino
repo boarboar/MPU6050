@@ -578,6 +578,7 @@ void requestEvent()
       t1=act_adv_accu_mm[0]; t2=act_adv_accu_mm[1];    
       act_adv_accu_mm[0]=0; act_adv_accu_mm[1]=0;
       writeInt16_2_v(t1, t2);
+      //writeInt16_2_v_x(t1, t2);
       //writeInt16_2_v(act_adv_accu_mm[0], act_adv_accu_mm[1]);
       //act_adv_accu_mm[0]=act_adv_accu_mm[1]=0;
       break;            
@@ -628,6 +629,14 @@ void writeInt16_2_v(int16_t v1, int16_t v2) {
   Wire.write(buffer, 4);
 }
 
+void writeInt16_2_v_x(int16_t v1, int16_t v2) {
+  buffer[0] = (uint8_t)((v1)>>8);
+  buffer[1] = (uint8_t)((v1)&0xFF);
+  buffer[2] = (uint8_t)((v2)>>8);
+  buffer[3] = (uint8_t)((v2)&0xFF);  
+  buffer[4] = ~M_OWN_ID;
+  Wire.write(buffer, 5);
+}
 void writeInt16_N_M(uint16_t act, uint16_t tot, int16_t *reg) {
   for(uint16_t i=0, j=0; i<tot; i++) {
     if(i<act) {

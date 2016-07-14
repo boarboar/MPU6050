@@ -105,6 +105,7 @@ boolean CmdProc::sendSysLogStatus() {
   return true;
 }
 
+/*
 boolean CmdProc::sendAlarm(uint8_t alr, uint8_t param, int16_t dt, int16_t p1, int16_t p2) {
   //{"C": "A", "T":12345, "R":1123, "P":1123, "PA":[]} 
   if(CfgDrv::Cfg.log_on<SL_LEVEL_ALARM) return false;
@@ -119,6 +120,25 @@ boolean CmdProc::sendAlarm(uint8_t alr, uint8_t param, int16_t dt, int16_t p1, i
     pa.add(dt);
     pa.add(p1);
     if(p2) pa.add(p2);
+  }
+  _sendToSysLog(rootOut);
+  return true;
+}
+*/
+
+boolean CmdProc::sendAlarm(uint8_t alr, uint8_t param, int16_t dt, int8_t npa, int16_t* pa) {
+  //{"C": "A", "T":12345, "R":1123, "P":1123, "PA":[]} 
+  if(CfgDrv::Cfg.log_on<SL_LEVEL_ALARM) return false;
+  StaticJsonBuffer<200> jsonBufferOut;
+  JsonObject& rootOut = jsonBufferOut.createObject();
+  rootOut["C"] = "A";
+  rootOut["T"] = millis();
+  rootOut["R"] = alr;
+  rootOut["P"] = param;
+  if(pa && npa) {
+    JsonArray& pa = rootOut.createNestedArray("PA");
+    pa.add(dt);
+    for(uint8_t i=0; i<npa; i++) pa.add(pa[i]);    
   }
   _sendToSysLog(rootOut);
   return true;

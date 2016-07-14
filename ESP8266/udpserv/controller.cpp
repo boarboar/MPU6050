@@ -17,10 +17,12 @@ uint8_t Controller::getFailReason() { return fail_reason; }
 int16_t* Controller::getFailParams() { return fail_p; } 
 void  Controller::clearFailReason() { fail_reason=CTL_FAIL_NONE; }
 
-void Controller::raiseFail(uint8_t reason, int16_t p1, int16_t p2) {
+void Controller::raiseFail(uint8_t reason, int16_t p1, int16_t p2, int16_t p3, int16_t p4) {
   fail_reason=reason;
   fail_p[0]=p1;
   fail_p[1]=p2;
+  fail_p[2]=p3;
+  fail_p[3]=p4;
 }
 
 bool Controller::init() {
@@ -73,7 +75,8 @@ bool Controller::process(float yaw) {
   }
 
   if(abs(act_advance[0])>512 || abs(act_advance[1])>512) {
-    raiseFail(CTL_FAIL_OVF, act_advance[0], act_advance[1]);
+    //raiseFail(CTL_FAIL_OVF, act_advance[0], act_advance[1]);
+    raiseFail(CTL_FAIL_OVF, buf[0], buf[1], buf[2], buf[3]);
     return false;
   }
   
@@ -162,12 +165,15 @@ bool Controller::stopDrive() {
   return res;
 }
 
-bool Controller::getActRotRate(/*int16_t *d*/) {
+bool Controller::getActRotRate() {
   int16_t tmp[2];
   bool res = readInt16_2(REG_ACT_ROT_RATE, tmp, tmp+1);
+  if(!res) {
+    raiseFail(CTL_FAIL_RD, REG_ACT_ROT_RATE);
+    return false;
+  }
   act_rot_rate[0]=(float)tmp[0]/V_NORM;
   act_rot_rate[1]=(float)tmp[1]/V_NORM;
-  if(!res) raiseFail(CTL_FAIL_RD, REG_ACT_ROT_RATE);
   return res;
 }
 
@@ -201,13 +207,25 @@ bool Controller::writeInt16_2(uint16_t reg, int16_t left, int16_t right) {
 
 bool Controller::readInt16_2(uint16_t reg, int16_t *left, int16_t *right) {
     bool res = I2Cdev::readBytes(DEV_ID, reg, 4, buf);
+    if(!res) return false;
     *left = (((int16_t)buf[0]) << 8) | buf[1];
     *right = (((int16_t)buf[2]) << 8) | buf[3];
     return res;
 }
 
+/*
+bool Controller::readInt16_2_x(uint16_t reg, int16_t *left, int16_t *right) {
+    bool res = I2Cdev::readBytes(DEV_ID, reg, 5, buf);
+    if(buf[4] != ~M_OWN_ID) return false;
+    *left = (((int16_t)buf[0]) << 8) | buf[1];
+    *right = (((int16_t)buf[2]) << 8) | buf[3];
+    return res;
+}
+*/
+
 bool Controller::readInt16_N(uint16_t reg, uint16_t n, int16_t *d) {
     bool res = I2Cdev::readBytes(DEV_ID, reg, n*2, buf);
+    if(!res) return false;    
     for(uint16_t i=0, j=0; i<n; i++) {
       //*(d+i) = (((int16_t)buf[j++]) << 8) | buf[j++]; 
       int16_t t=((int16_t)buf[j++]) << 8;
