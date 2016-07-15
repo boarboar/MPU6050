@@ -55,6 +55,7 @@ class CommandThread(threading.Thread):
                             break
                 except socket.timeout as msg:
                     self.__controller.log().LogErrorString("Timeout")
+                    #if resp_q is not None: resp_q.put_nowait(None)
                 except socket.error as msg:
                     self.__controller.log().LogErrorString("Sock error : %s" % msg)
 
@@ -179,7 +180,7 @@ class PathThread(threading.Thread):
         self.__controller.log().LogString("Starting path running")
         move_var=[0.25, 0.25]
         move_var_lim=0.25
-        base_move=0.25
+        base_move=0.3
         gain_p, gain_d, gain_i, gain_f = 0.5, 5.0, 0.0, 0.02
         degain_i=0.5
         err_p_0=0

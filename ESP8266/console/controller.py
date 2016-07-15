@@ -146,7 +146,7 @@ class Controller():
             self.__form.LogString("SYNC RSP: "+resp, 'FOREST GREEN')
             self.onResp(resp_json)
         except Queue.Empty:
-            self.__form.LogError("SYNC RSP MISSING")
+            self.__form.LogErrorString("SYNC RSP MISSING")
         return resp_json
 
     def resp(self, js, req_json=None):
