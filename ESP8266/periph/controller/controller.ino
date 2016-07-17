@@ -48,7 +48,7 @@
 #define V_NORM_PI2 62832L
 
 #define  PID_TIMEOUT 200
-#define  CMD_TIMEOUT 6000 // !!!! 
+#define  CMD_TIMEOUT 1000 // !!!! 
 #define  WHEEL_CHGSTATES 40
 #define  WHEEL_RAD_MM   33 // measured 32
 
@@ -56,8 +56,8 @@
 //#define M_POW_LOWEST_LIM   10
 //#define M_POW_HIGH_LIM 100
 //#define M_POW_MAX  120
-#define M_POW_MIN_0  25 // left calibration
-#define M_POW_MIN_1  35 // right calibration
+#define M_POW_MIN_0  28 // left calibration
+#define M_POW_MIN_1  32 // right calibration
 #define M_POW_MAX  240
 #define M_POW_STEP 2
 
@@ -137,7 +137,7 @@ uint8_t cur_power[2]={0,0};
 
 // 
 //volatile uint8_t setEvent = 0, getEvent = 0;
-uint8_t sta[2]={0,0};
+volatile uint8_t sta[2]={0,0};
 volatile uint8_t eventRegister = 0;
 
 uint8_t current_sens=0;
@@ -147,6 +147,8 @@ uint8_t buffer[16];
 // volatile encoder section
 volatile uint8_t v_enc_cnt[2]={0,0}; 
 volatile uint8_t v_es[2]={0,0};
+
+volatile uint8_t updating=0;
 
 void setup()
 {
@@ -283,7 +285,9 @@ void startDrive() {
     if(drv_dir[i]) {
        //if(changeDir) {         
        if(targ_old_rot_rate[i]!=targ_new_rot_rate[i])  {     
-         cur_power[i]=map(targ_rot_rate[i], 0, V_NORM_MAX, 0, 255); // temp
+         cur_power[i]=map(targ_rot_rate[i], 0, V_NORM_MAX, 0, 255); 
+         if(cur_power[i]<M_POW_MIN[i]) cur_power[i]=M_POW_MIN[i];
+         
          //cur_power[i]=map(targ_rot_rate[i], 0, V_NORM_MAX, M_POW_MIN[i], 255); // temp
        }
      } else cur_power[i]=0;
@@ -343,15 +347,24 @@ void readEnc(uint16_t ctime)
 #endif
 */
       if(enc_cnt[i]>128) {
+        while(updating);
+        updating=1; 
         sta[1] |= 1<<i;
+        updating=0;
         Serial.print("!!!!!!ALR1"); Serial.print("\t "); Serial.print(i); Serial.print("\t "); Serial.println(enc_cnt[i]); 
       }
 
       int16_t mov=(int16_t)(CHGST_TO_MM(enc_cnt[i]));
-      if(drv_dir[i]==2) mov=-mov;      
+      if(drv_dir[i]==2) mov=-mov;
+      while(updating);     
+      updating=1; 
       act_adv_accu_mm[i]+=mov;
+      updating=0;
       if(abs(act_adv_accu_mm[i])>512) {
+        while(updating);
+        updating=1;
         sta[1] |= 4<<i;
+        updating=0;
         Serial.print("!!!!!!ALR2"); Serial.print("\t "); Serial.print(i); Serial.print("\t "); Serial.println(act_adv_accu_mm[i]);
       }
     } else { // ctime==0 
@@ -382,7 +395,7 @@ void doPID(uint16_t ctime)
         int_err[i]=int_err[i]+p_err;        
         int16_t pow=cur_power[i]+((int16_t)p_err*M_PID_KP+(int16_t)int_err[i]*M_PID_KI+(int16_t)d_err*M_PID_KD)/M_PID_DIV;
         if(pow<0) pow=0;
-        //if(drv_dir[i] && pow<M_POW_MIN[i]) pow=M_POW_MIN[i];
+        if(drv_dir[i] && pow<M_POW_MIN[i]) pow=M_POW_MIN[i];
         if(pow>M_POW_MAX) pow=M_POW_MAX;
         if(cur_power[i]!=pow) analogWrite(i==0 ? M1_EN : M2_EN , pow); 
         cur_power[i]=pow;
@@ -584,9 +597,14 @@ void requestEvent()
     case REG_WHO_AM_I:  
       Wire.write((uint8_t)M_OWN_ID);
       break;
-    case REG_STATUS:  
-      Wire.write(sta, 2);
+    case REG_STATUS:
+      while(updating);
+      updating=1;
+      buffer[0]=sta[0];
+      buffer[1]=sta[1];
       sta[1]=0;
+      updating=0;            
+      Wire.write(buffer, 2);     
       break;
     case REG_TARG_ROT_RATE:
       writeInt16_2(targ_new_rot_rate);
@@ -597,8 +615,11 @@ void requestEvent()
     case REG_ACT_ADV_ACC:
       //writeInt16_2(act_adv_accu_mm);    
       uint16_t t1, t2;
+      while(updating);
+      updating=1;
       t1=act_adv_accu_mm[0]; t2=act_adv_accu_mm[1];    
       act_adv_accu_mm[0]=0; act_adv_accu_mm[1]=0;
+      updating=0;
       //writeInt16_2_v(t1, t2);
       writeInt16_2_v_x(t1, t2);
       //writeInt16_2_v(act_adv_accu_mm[0], act_adv_accu_mm[1]);
