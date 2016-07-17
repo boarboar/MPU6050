@@ -115,6 +115,9 @@
 #define CHGST_TO_RPS_NORM(CNT, MSEC)  ((uint32_t)(CNT)*V_NORM*1000/WHEEL_CHGSTATES/(MSEC))
 #define RPS_TO_CHGST_NORM(RPS, MSEC)  ((uint32_t)(RPS)*WHEEL_CHGSTATES*(MSEC)/V_NORM/1000)
 
+#define NPOW_CHART_N     6
+#define NPOW_CHART_MULT  2
+
 uint8_t M_POW_MIN[2]={M_POW_MIN_0, M_POW_MIN_1}; 
 
 uint32_t lastEvTime, lastPidTime;
@@ -134,6 +137,7 @@ uint16_t pid_cnt=0;
 int16_t int_err[2]={0,0};
 int16_t  prev_err[2]={0,0};
 uint8_t cur_power[2]={0,0};
+uint8_t pow_chart[2][NPOW_CHART_N];
 
 // 
 //volatile uint8_t setEvent = 0, getEvent = 0;
@@ -204,6 +208,9 @@ void setup()
   analogFrequency(32); 
   for(int i=0; i<M_SENS_N; i++) { sens[i]=0; sens_fail_cnt[i]=0; }
   
+  for(int i=0; i<2; i++) 
+    for(int j=0; j<NPOW_CHART_N; j++) pow_chart[i][j]=0;
+  
   Serial.println("Ready");
   
   lastEvTime = lastPidTime = millis();  
@@ -266,28 +273,42 @@ void startDrive() {
   Serial.print("Start drive: "); 
    
   for(int i=0; i<2; i++) {
-    //boolean changeDir=false; 
+    uint8_t jt=0;
     if(targ_new_rot_rate[i]==0) {
-      //changeDir=true;
       drv_dir[i]=0;
       targ_rot_rate[i]=0;
     } else if(targ_new_rot_rate[i]>0) {
-      //changeDir=drv_dir[i]!=1;
       drv_dir[i]=1;
       targ_rot_rate[i]=(uint16_t)(targ_new_rot_rate[i]);
     } else {
-      //changeDir=drv_dir[i]!=2;
       drv_dir[i]=2;
       targ_rot_rate[i]=(uint16_t)(-targ_new_rot_rate[i]);
     }
     if(targ_rot_rate[i]>V_NORM_MAX) targ_rot_rate[i]=V_NORM_MAX;
+    targ_enc_cnt[i]=RPS_TO_CHGST_NORM(targ_rot_rate[i], PID_TIMEOUT);
+    if(targ_rot_rate[i]>0 && targ_enc_cnt[i]==0) targ_enc_cnt[i]=1;
     
     if(drv_dir[i]) {
-       //if(changeDir) {         
-       if(targ_old_rot_rate[i]!=targ_new_rot_rate[i])  {     
-         cur_power[i]=map(targ_rot_rate[i], 0, V_NORM_MAX, 0, 255); 
-         if(cur_power[i]<M_POW_MIN[i]) cur_power[i]=M_POW_MIN[i];
-         
+       if(targ_old_rot_rate[i]!=targ_new_rot_rate[i])  {      
+         uint8_t j=targ_enc_cnt[i]/NPOW_CHART_MULT;
+         Serial.print("Tsting chart for ");
+         Serial.print(targ_enc_cnt[i]);
+         Serial.print(" => ");
+         Serial.print(j);
+         jt=0;
+         if(j<NPOW_CHART_N) {
+           Serial.print(" in ");
+           Serial.print(pow_chart[i][j]);
+           if(pow_chart[i][j]) { jt=j; Serial.print(" hit; "); }
+           else  if(j-1>=0 && pow_chart[i][j-1]) jt=j-1;
+           else  if(j+1<NPOW_CHART_N && pow_chart[i][j+1]) jt=j+1;
+         }
+         if(jt) {
+           cur_power[i]=pow_chart[i][jt];
+         }  else {  
+           cur_power[i]=map(targ_rot_rate[i], 0, V_NORM_MAX, 0, 255); 
+           if(cur_power[i]<M_POW_MIN[i]) cur_power[i]=M_POW_MIN[i];
+         }           
          //cur_power[i]=map(targ_rot_rate[i], 0, V_NORM_MAX, M_POW_MIN[i], 255); // temp
        }
      } else cur_power[i]=0;
@@ -296,14 +317,13 @@ void startDrive() {
     prev_err[i]=0;
     int_err[i]=0;   
     //uint8_t chgst=RPS_TO_CHGST_NORM(targ_rot_rate[i], PID_TIMEOUT);
-    targ_enc_cnt[i]=RPS_TO_CHGST_NORM(targ_rot_rate[i], PID_TIMEOUT);
-    if(targ_rot_rate[i]>0 && targ_enc_cnt[i]==0) targ_enc_cnt[i]=1;
-    Serial.print(i);
+    Serial.print(i==0 ? "\t L: " : "\t R: ");
     //Serial.print(changeDir ? " RST" : " PID"); Serial.print(", ");
-    Serial.print(drv_dir[i]); Serial.print(", "); Serial.print(targ_rot_rate[i]); Serial.print(", "); Serial.print(cur_power[i]);
-    Serial.print("\t "); Serial.println(targ_enc_cnt[i]);
+    Serial.print(drv_dir[i]); Serial.print("\t "); Serial.print(targ_rot_rate[i]); Serial.print("\t "); Serial.print(cur_power[i]);
+    Serial.print("\t "); Serial.print(targ_enc_cnt[i]); Serial.print("\t ");
+    Serial.print(jt); Serial.print("\t ;"); 
   }
-  //Serial.println();
+  Serial.println();
    
   readEnc(0);
   Drive(drv_dir[0], cur_power[0], drv_dir[1], cur_power[1]); 
@@ -316,9 +336,22 @@ void stopDrive() {
   if(!ST_IS_DRIVING()) return;
   Drive(0, 0, 0, 0);
   cur_power[0]=cur_power[1]=0;
+  targ_old_rot_rate[0]=targ_new_rot_rate[0]=0;     
+  targ_old_rot_rate[1]=targ_new_rot_rate[1]=0;
   ST_SET_DRIVE_OFF();
   pid_cnt=0;
   Serial.println("Stop drive"); 
+  Serial.println("Chart:");
+  for(int j=0; j<NPOW_CHART_N; j++) {
+    Serial.print(j*NPOW_CHART_MULT); Serial.print("\t ");
+  }
+  Serial.println();
+  for(int i=0; i<2; i++) {
+    for(int j=0; j<NPOW_CHART_N; j++) {
+      Serial.print(pow_chart[i][j]); Serial.print("\t ");
+    }
+    Serial.println();
+  }
 }
 
 void readEnc(uint16_t ctime)
@@ -346,27 +379,36 @@ void readEnc(uint16_t ctime)
 #endif      
 #endif
 */
+      uint8_t alr=0;
+      uint16_t alrp=0;
+      
+      //while(updating);
+      //updating=1;
+      
       if(enc_cnt[i]>128) {
-        while(updating);
-        updating=1; 
-        sta[1] |= 1<<i;
-        updating=0;
-        Serial.print("!!!!!!ALR1"); Serial.print("\t "); Serial.print(i); Serial.print("\t "); Serial.println(enc_cnt[i]); 
+        alr = 1<<i;
+        alrp = enc_cnt[i];
       }
 
       int16_t mov=(int16_t)(CHGST_TO_MM(enc_cnt[i]));
       if(drv_dir[i]==2) mov=-mov;
-      while(updating);     
-      updating=1; 
+      
+      while(updating);
+      updating=1;
       act_adv_accu_mm[i]+=mov;
       updating=0;
+
       if(abs(act_adv_accu_mm[i])>512) {
-        while(updating);
-        updating=1;
-        sta[1] |= 4<<i;
-        updating=0;
-        Serial.print("!!!!!!ALR2"); Serial.print("\t "); Serial.print(i); Serial.print("\t "); Serial.println(act_adv_accu_mm[i]);
+        alr = 4<<i;
+        alrp = act_adv_accu_mm[i];
       }
+      if(alr) sta[1]=alr;
+      //updating=0;
+      
+      if(alr) {
+          Serial.print("!!!!!!ALR-"); Serial.print(i); Serial.print("\t on "); Serial.print(i); Serial.print("\t : "); Serial.println(alrp);      
+      }
+      
     } else { // ctime==0 
       act_rot_rate[i]=0;      
     }
@@ -389,7 +431,13 @@ void doPID(uint16_t ctime)
       Serial.print("\t, "); Serial.print(enc_cnt[i]);
 #endif      
       if(pid_cnt>=M_WUP_PID_CNT) { // do not correct for the first cycles - ca 100-200ms(warmup)      
-        //p_err = (int32_t)(targ_rot_rate[i]-act_rot_rate[i])/M_PID_NORM;
+        // fill chart
+        uint8_t j=enc_cnt[i]/NPOW_CHART_MULT;
+        if(j<NPOW_CHART_N) {          
+          if(pow_chart[i][j]) pow_chart[i][j]=(uint8_t)(((uint16_t)pow_chart[i][j]+cur_power[i])/2);
+          else pow_chart[i][j]=cur_power[i];
+        }
+        
         p_err = (int16_t)targ_enc_cnt[i]-(int16_t)enc_cnt[i];
         d_err = p_err-prev_err[i];
         int_err[i]=int_err[i]+p_err;        
@@ -598,12 +646,12 @@ void requestEvent()
       Wire.write((uint8_t)M_OWN_ID);
       break;
     case REG_STATUS:
-      while(updating);
-      updating=1;
+      //while(updating);
+      //updating=1;
       buffer[0]=sta[0];
       buffer[1]=sta[1];
       sta[1]=0;
-      updating=0;            
+      //updating=0;            
       Wire.write(buffer, 2);     
       break;
     case REG_TARG_ROT_RATE:

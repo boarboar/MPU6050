@@ -142,9 +142,10 @@ class Controller():
         self.__comm_thread.put((js, self.__resp_q))
         try:
             resp = self.__resp_q.get(timeout=1)
-            resp_json=json.loads(resp)
-            self.__form.LogString("SYNC RSP: "+resp, 'FOREST GREEN')
-            self.onResp(resp_json)
+            if resp is not None:
+                resp_json=json.loads(resp)
+                self.__form.LogString("SYNC RSP: "+resp, 'FOREST GREEN')
+                self.onResp(resp_json)
         except Queue.Empty:
             self.__form.LogErrorString("SYNC RSP MISSING")
         return resp_json
