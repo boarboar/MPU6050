@@ -180,7 +180,7 @@ class PathThread(threading.Thread):
         self.__controller.log().LogString("Starting path running")
         move_var=[0.25, 0.25]
         move_var_lim=0.25
-        base_move=0.3
+        base_move=0.4
         gain_p, gain_d, gain_i, gain_f = 0.5, 5.0, 0.0, 0.02
         degain_i=0.5
         err_p_0=0
@@ -238,6 +238,10 @@ class PathThread(threading.Thread):
 
             #time.sleep(2)
             time.sleep(0.25) # let it move a bit
-
-        self.__controller.reqMoveSync(0,0)
+        
+        retries=10
+        while self.__controller.reqMoveSync(0,0) is None and retries>0 :
+            time.sleep(0.25)
+            retries-=1
+            
         self.__controller.log().LogString("Path running thread stopped")

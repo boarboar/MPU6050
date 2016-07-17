@@ -24,6 +24,10 @@
 #endif  
 #define M2_EN     P2_5 // analog write
 
+// ENC IN
+#define ENC2_IN   P1_5
+#define ENC1_IN   P2_0
+
 #ifdef _US_M_WIRE_
   #define US_1_IN      P2_2 
   #define US_2_IN      P1_3
@@ -32,9 +36,7 @@
   #define US_IN      P2_2 // try to tie all of them to one echo pin
 #endif
 
-// ENC IN
-#define ENC2_IN   P1_5
-#define ENC1_IN   P2_0
+
 
 // USSENS
 #define US_1_OUT   P1_0
@@ -54,7 +56,8 @@
 //#define M_POW_LOWEST_LIM   10
 //#define M_POW_HIGH_LIM 100
 //#define M_POW_MAX  120
-#define M_POW_MIN  40
+#define M_POW_MIN_0  25 // left calibration
+#define M_POW_MIN_1  35 // right calibration
 #define M_POW_MAX  240
 #define M_POW_STEP 2
 
@@ -111,6 +114,8 @@
 #define CHGST_TO_ANG_NORM(CNT)  ((uint32_t)(CNT)*V_NORM_PI2/WHEEL_CHGSTATES)
 #define CHGST_TO_RPS_NORM(CNT, MSEC)  ((uint32_t)(CNT)*V_NORM*1000/WHEEL_CHGSTATES/(MSEC))
 #define RPS_TO_CHGST_NORM(RPS, MSEC)  ((uint32_t)(RPS)*WHEEL_CHGSTATES*(MSEC)/V_NORM/1000)
+
+uint8_t M_POW_MIN[2]={M_POW_MIN_0, M_POW_MIN_1}; 
 
 uint32_t lastEvTime, lastPidTime;
 int16_t sens[M_SENS_N];
@@ -279,7 +284,7 @@ void startDrive() {
        //if(changeDir) {         
        if(targ_old_rot_rate[i]!=targ_new_rot_rate[i])  {     
          cur_power[i]=map(targ_rot_rate[i], 0, V_NORM_MAX, 0, 255); // temp
-         //cur_power[i]=map(targ_rot_rate[i], 0, V_NORM_MAX, M_POW_MIN, 255); // temp
+         //cur_power[i]=map(targ_rot_rate[i], 0, V_NORM_MAX, M_POW_MIN[i], 255); // temp
        }
      } else cur_power[i]=0;
     
@@ -377,7 +382,7 @@ void doPID(uint16_t ctime)
         int_err[i]=int_err[i]+p_err;        
         int16_t pow=cur_power[i]+((int16_t)p_err*M_PID_KP+(int16_t)int_err[i]*M_PID_KI+(int16_t)d_err*M_PID_KD)/M_PID_DIV;
         if(pow<0) pow=0;
-        if(drv_dir[i] && pow<M_POW_MIN) pow=M_POW_MIN;
+        //if(drv_dir[i] && pow<M_POW_MIN[i]) pow=M_POW_MIN[i];
         if(pow>M_POW_MAX) pow=M_POW_MAX;
         if(cur_power[i]!=pow) analogWrite(i==0 ? M1_EN : M2_EN , pow); 
         cur_power[i]=pow;
@@ -425,6 +430,7 @@ void Drive_s(uint8_t dir, uint8_t pow, int16_t p_en, uint8_t p1, uint8_t p2)
   analogWrite(p_en, pow);
 }
 
+/*
 void Drive_s1(uint8_t dir, uint8_t pow, int16_t p_en, uint8_t p1) 
 {
   if(dir==0 || pow==0) {
@@ -439,7 +445,23 @@ void Drive_s1(uint8_t dir, uint8_t pow, int16_t p_en, uint8_t p1)
   } 
   analogWrite(p_en, pow);
 }
+*/
 
+// ORIN2
+void Drive_s1(uint8_t dir, uint8_t pow, int16_t p_en, uint8_t p1) 
+{
+  if(dir==0 || pow==0) {
+    digitalWrite(p_en, LOW); 
+    return;
+  }
+  else if(dir==1) {
+    digitalWrite(p1, HIGH); 
+  }
+  else {
+    digitalWrite(p1, LOW); 
+  } 
+  analogWrite(p_en, pow);
+}
 
 void readUSDist() {
 #ifdef _US_M_WIRE_
@@ -577,8 +599,8 @@ void requestEvent()
       uint16_t t1, t2;
       t1=act_adv_accu_mm[0]; t2=act_adv_accu_mm[1];    
       act_adv_accu_mm[0]=0; act_adv_accu_mm[1]=0;
-      writeInt16_2_v(t1, t2);
-      //writeInt16_2_v_x(t1, t2);
+      //writeInt16_2_v(t1, t2);
+      writeInt16_2_v_x(t1, t2);
       //writeInt16_2_v(act_adv_accu_mm[0], act_adv_accu_mm[1]);
       //act_adv_accu_mm[0]=act_adv_accu_mm[1]=0;
       break;            
@@ -622,10 +644,12 @@ void writeInt16_2(int16_t *reg) {
 }
 
 void writeInt16_2_v(int16_t v1, int16_t v2) {
-  buffer[0] = (uint8_t)((v1)>>8);
-  buffer[1] = (uint8_t)((v1)&0xFF);
-  buffer[2] = (uint8_t)((v2)>>8);
-  buffer[3] = (uint8_t)((v2)&0xFF);  
+  uint16_t v1u=(uint16_t)v1;
+  uint16_t v2u=(uint16_t)v2;
+  buffer[0] = (uint8_t)((v1u)>>8);
+  buffer[1] = (uint8_t)((v1u)&0xFF);
+  buffer[2] = (uint8_t)((v2u)>>8);
+  buffer[3] = (uint8_t)((v2u)&0xFF);  
   Wire.write(buffer, 4);
 }
 

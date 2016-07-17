@@ -28,7 +28,7 @@ public:
   uint8_t isNeedReset();
   void needReset();
   uint8_t getFailReason();
-  int16_t* getFailParams();
+  void getFailParams(int16_t npa, int16_t *pa);
   void clearFailReason();
   void resetIntegrator();
   bool process(float yaw);  
@@ -61,6 +61,7 @@ protected:
   void raiseFail(uint8_t reason, int16_t p1=0, int16_t p2=0, int16_t p3=0, int16_t p4=0);  
   bool writeInt16_2(uint16_t reg, int16_t left, int16_t right);
   bool readInt16_2(uint16_t reg, int16_t *left, int16_t *right);  
+  bool readInt16_2_x(uint16_t reg, int16_t *left, int16_t *right);  
   bool readInt16_2(uint16_t reg, int16_t *d);
   bool readInt16_N(uint16_t reg, uint16_t n, int16_t *d);
 private:  
