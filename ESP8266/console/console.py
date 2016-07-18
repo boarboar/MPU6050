@@ -14,7 +14,6 @@ UpdEvent, EVT_UPD_EVENT = wx.lib.newevent.NewEvent()
 UpdStatusEvent, EVT_UPD_STAT_EVENT = wx.lib.newevent.NewEvent()
 
 class MyForm(wx.Frame):
-    LOG_LINES = 36
     def __init__(self):
         wx.Frame.__init__(self, None, title="Console", size=(800,720))
         self.Bind(wx.EVT_CLOSE, self.OnClose)
@@ -37,8 +36,8 @@ class MyForm(wx.Frame):
         self.statusbar.SetStatusText("none", 2)
         # Add a panel so it looks the correct on all platforms
         panel = wx.Panel(self, wx.ID_ANY)
-        self.log = wx.TextCtrl(panel, wx.ID_ANY, size=(600,200), style=wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.TE_RICH)
-        self.log_a = wx.TextCtrl(panel, wx.ID_ANY, size=(400,200), style=wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.TE_RICH)
+        self.log = LogControl(panel, sz=(600,200))
+        self.log_a = LogControl(panel, sz=(400,200))
         self.btn_st = wx.Button(panel, wx.ID_ANY, 'Status')
         self.btn_pos = wx.Button(panel, wx.ID_ANY, 'Pos')
         self.btn_upl = wx.Button(panel, wx.ID_ANY, 'Upload')
@@ -75,14 +74,10 @@ class MyForm(wx.Frame):
         self.controller=controller.Controller(self, self.model, self.map, self.LogString, self.LogErrorString)
         self.map.AddController(self.controller)
 
-        self.log_bg=self.log.GetBackgroundColour()
-        self.log_a.SetDefaultStyle(wx.TextAttr('RED',self.log_bg))
-
         self.layout(panel)
         # redirect text here
         #sys.stdout=self.log
         #sys.stderr=self.log
-        self.logcnt=0
         self.Bind(EVT_LOG_EVENT, self.onLogEvent)
         self.Bind(EVT_UPD_EVENT, self.onUpdEvent)
         self.Bind(EVT_UPD_STAT_EVENT, self.onUpdStatEvent)
@@ -198,22 +193,9 @@ class MyForm(wx.Frame):
 
     def AddLine(self, msg, color=None) :
         logging.info(msg)
-        while self.log.GetNumberOfLines()>self.LOG_LINES:
-            self.log.Remove(0, self.log.GetLineLength(0)+1)
-        if color is None : color= wx.BLACK
-
-        self.log.SetDefaultStyle(wx.TextAttr(color,self.log_bg))
-
-        self.log.AppendText(msg)
-        if not msg.endswith('\n'):
-            self.log.AppendText('\n')
-        self.logcnt=self.logcnt+1
-        
-        # temp!!!
+        self.log.AddLine(msg, color)
         if color=='RED' :
-            self.log_a.AppendText(msg)
-            if not msg.endswith('\n'):
-                self.log_a.AppendText('\n')
+            self.log_a.AddLine(msg, color)
 
     def LogString(self, message, color='BLACK') :
         event = LogEvent(msg=message, color=color)
@@ -447,6 +429,22 @@ class SettingsDialog(wx.Dialog):
         self.SetReturnCode(True)
         self.Destroy()
 
+class LogControl(wx.TextCtrl):
+    LOG_LINES = 36
+    def __init__(self, parent, sz):
+        wx.TextCtrl.__init__(self, parent, wx.ID_ANY, size=sz, style=wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.TE_RICH)
+        self.bg=self.GetBackgroundColour()
+        self.logcnt=0
+    def AddLine(self, msg, color=None) :
+        while self.GetNumberOfLines()>self.LOG_LINES:
+            self.Remove(0, self.GetLineLength(0)+1)
+        if color is None : color= wx.BLACK
+        self.SetDefaultStyle(wx.TextAttr(color,self.bg))
+        self.AppendText(msg)
+        if not msg.endswith('\n'):
+            self.AppendText('\n')
+        self.logcnt=self.logcnt+1
+
 
 # Run the program
 if __name__ == "__main__":
@@ -454,3 +452,4 @@ if __name__ == "__main__":
     app = wx.App(False)
     frame = MyForm().Show()
     app.MainLoop()
+

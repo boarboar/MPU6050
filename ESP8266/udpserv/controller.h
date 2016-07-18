@@ -7,10 +7,12 @@
 #define REG_ACT_ROT_RATE     0x06  // 2 signed ints (4 bytes)
 #define REG_ACT_ADV_ACC      0x09  // 2 signed ints (4 bytes)
 #define REG_ACT_POW          0x0A  // 2 signed ints (4 bytes)
+#define REG_STEERING         0x0C  // 1 signed int (2 bytes)
 #define REG_SENSORS_CNT      0x20  // 8 unsigned ints
 #define REG_SENSORS_ALL      0x28  // 8 unsigned ints
 
 #define M_OWN_ID 0x53
+#define M_MAGIC_ID 0x4C
 
 #define SENS_SIZE 8
 
@@ -37,6 +39,7 @@ public:
   bool setTargRotRate(int16_t *d);
   bool getTargRotRate(int16_t *d);
   bool stopDrive();
+  bool setSteering(int16_t s);
   uint8_t getNumSensors();
   float *getStoredRotRate();
   int16_t *getStoredAdvance();
@@ -54,11 +57,12 @@ protected:
   uint8_t testConnection();
   uint8_t _getNumSensors();
   bool getControllerStatus();
-  bool getActRotRate(/*int16_t *d*/); // in RPS
-  bool getActAdvance(/*int16_t *d*/); // in MMs
-  bool getActPower(/*int16_t *d*/); 
-  bool getSensors(/*int16_t *sens*/); 
+  bool getActRotRate(); // in RPS
+  bool getActAdvance(); // in MMs
+  bool getActPower(); 
+  bool getSensors(); 
   void raiseFail(uint8_t reason, int16_t p1=0, int16_t p2=0, int16_t p3=0, int16_t p4=0);  
+  bool writeInt16(uint16_t reg, int16_t val);
   bool writeInt16_2(uint16_t reg, int16_t left, int16_t right);
   bool readInt16_2(uint16_t reg, int16_t *left, int16_t *right);  
   bool readInt16_2_x(uint16_t reg, int16_t *left, int16_t *right);  
@@ -72,15 +76,14 @@ private:
   
   uint8_t buf[16];  
   uint8_t sta[2];
-  //int16_t act_rot_rate[2];
-  float act_rot_rate[2];
   float mov, rot;
+  uint8_t pready;
+  uint8_t nsens;
+  float act_rot_rate[2];
   int16_t act_advance[2];
   int16_t act_power[2];
   int16_t sensors[SENS_SIZE];
-  uint8_t pready;
-  uint8_t nsens;
-
+  
   float dist;
   float angle;
   float r[2];

@@ -20,17 +20,19 @@ int16_t c_setsyslog(JsonObject&,JsonObject&);
 int16_t c_getpos(JsonObject&,JsonObject&);
 int16_t c_resetMPU(JsonObject&,JsonObject&);
 int16_t c_drive(JsonObject&,JsonObject&);
+int16_t c_steer(JsonObject&,JsonObject&);
 
-VFP cmd_imp[6]={c_info, c_reset, c_setsyslog, c_getpos, c_resetMPU, c_drive};
+VFP cmd_imp[7]={c_info, c_reset, c_setsyslog, c_getpos, c_resetMPU, c_drive, c_steer};
 
-const char *CMDS="INFO\0RST\0SYSL\0POS\0RSTMPU\0D\0";
-enum CMDS_ID {CMD_INFO=0, CMD_RESET=1, CMD_SETSYSLOG=2, CMD_POS=3, CMD_RESET_MPU=4, CMD_DRIVE=5, CMD_NOCMD=6};
+const char *CMDS="INFO\0RST\0SYSL\0POS\0RSTMPU\0D\0S\0";
+enum CMDS_ID {CMD_INFO=0, CMD_RESET=1, CMD_SETSYSLOG=2, CMD_POS=3, CMD_RESET_MPU=4, CMD_DRIVE=5, CMD_STEER=6, CMD_NOCMD=7};
 // {"I":1,"C":"INFO"}
 // {"I":1,"C":"RST"}
 // {"I":1,"C":"SYSL", "ON":1, "ADDR":"192.168.1.141", "PORT":4444}
 // {"I":1,"C":"POS"}
 // {"I":1,"C":"RSTMPU"}
 // {"I":1,"C":"D","RPS":[0.1, -0.1]}
+// {"I":1,"C":"S","S":-10}
 
 int16_t CmdProc::init(uint16_t port) {
   if(udp_rcv.begin(port)) {
@@ -186,7 +188,7 @@ int16_t _doCmd(JsonObject& root, JsonObject& rootOut) {
   return 0;
 }
 
-int16_t c_info(JsonObject& root, JsonObject& rootOut) {
+int16_t c_info(JsonObject& /*root*/, JsonObject& rootOut) {
   //Serial.println("INFO"); 
   rootOut["MST"]=MpuDrv::Mpu.getStatus();
   rootOut["MDR"]=MpuDrv::Mpu.isDataReady();
@@ -203,14 +205,14 @@ int16_t c_info(JsonObject& root, JsonObject& rootOut) {
   return 0;
 }
 
-int16_t c_reset(JsonObject& root, JsonObject& rootOut) {
+int16_t c_reset(JsonObject& /*root*/, JsonObject& /*rootOut*/) {
   Serial.println(F("Resetting...")); 
   delay(1000);
   ESP.restart();
   return 0;
 }
 
-int16_t c_resetMPU(JsonObject& root, JsonObject& rootOut) {
+int16_t c_resetMPU(JsonObject& root, JsonObject& /*rootOut*/) {
   const char *action=root["A"];
   if(!action || !*action) return -3;
   if(!strcmp(action, "MPU")) {
@@ -226,11 +228,11 @@ int16_t c_resetMPU(JsonObject& root, JsonObject& rootOut) {
   return 0;
 }
 
-int16_t c_setsyslog(JsonObject& root, JsonObject& rootOut) {
+int16_t c_setsyslog(JsonObject& root, JsonObject& /*rootOut*/) {
   return CfgDrv::Cfg.setSysLog(root) ? 0 : -3;
 }
 
-int16_t c_getpos(JsonObject& root, JsonObject& rootOut) {
+int16_t c_getpos(JsonObject& /*root*/, JsonObject& rootOut) {
   //{"C": "I", "T":12345, "R":0, "C": "POS", "YPR": [59, 12, 13], "A": [0.01, 0.02, -0.03], "P": [100.01, 200.44, 0.445]}
   rootOut["MST"]=MpuDrv::Mpu.getStatus();
   if(!MpuDrv::Mpu.isDataReady()) return -5;
@@ -258,7 +260,7 @@ int16_t c_getpos(JsonObject& root, JsonObject& rootOut) {
 
   uint8_t ns=Controller::ControllerProc.getNumSensors();
   JsonArray& s = rootOut.createNestedArray("S");
-  for(i=0; i<3; i++) s.add((int)Controller::ControllerProc.getStoredSensors()[i]);
+  for(i=0; i<ns; i++) s.add((int)Controller::ControllerProc.getStoredSensors()[i]);
   
   rootOut["D"]=Controller::ControllerProc.getDistance();
   return 0;
@@ -278,9 +280,24 @@ int16_t c_drive(JsonObject& root, JsonObject& rootOut) {
   JsonArray& r = rootOut.createNestedArray("ARPS");
   float *arps=Controller::ControllerProc.getStoredRotRate();
   r.add(arps[0]), r.add(arps[1]);
-  rootOut["AA"]=Controller::ControllerProc.getAngle();
+  //rootOut["AA"]=Controller::ControllerProc.getAngle();
   Serial.print("\tAR: "); Serial.print(arps[0]); Serial.print(", "); Serial.print(arps[1]); 
-  Serial.print("\tAA: "); Serial.println(Controller::ControllerProc.getAngle());
+  //Serial.print("\tAA: "); Serial.println(Controller::ControllerProc.getAngle());
+  Serial.println();
+  return 0;
+}
+
+int16_t c_steer(JsonObject& root, JsonObject& rootOut) {
+  if(!Controller::ControllerProc.getStatus()) return -5;
+  Serial.print(F("Steer req "));
+  int16_t steer_val=root["S"];
+  Serial.print(steer_val);
+  if(!Controller::ControllerProc.setSteering(steer_val)) return -5;    
+  JsonArray& r = rootOut.createNestedArray("ARPS");
+  float *arps=Controller::ControllerProc.getStoredRotRate();
+  r.add(arps[0]), r.add(arps[1]);
+  Serial.print("\tAR: "); Serial.print(arps[0]); Serial.print(", "); Serial.print(arps[1]); 
+  Serial.println();
   return 0;
 }
 

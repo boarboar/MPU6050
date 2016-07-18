@@ -25,7 +25,7 @@ class CommandThread(threading.Thread):
     def run (self):
         try:
             self.__s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            self.__s.settimeout(1)
+            self.__s.settimeout(0.5)
         except socket.error:
             self.__controller.log().LogErrorString("Failed to create socket!")
             return
@@ -238,10 +238,7 @@ class PathThread(threading.Thread):
 
             #time.sleep(2)
             time.sleep(0.25) # let it move a bit
-        
-        retries=10
-        while self.__controller.reqMoveSync(0,0) is None and retries>0 :
-            time.sleep(0.25)
-            retries-=1
-            
+
+        self.__controller.reqMoveSync(0,0)
+
         self.__controller.log().LogString("Path running thread stopped")

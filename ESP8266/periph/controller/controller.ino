@@ -9,6 +9,7 @@
 #define _MOTOR_ONE_WIRE_ 
 
 #define M_OWN_ID 0x53
+#define M_MAGIC_ID 0x4C
 
 // MOTOR OUT
 
@@ -91,6 +92,7 @@
 #define REG_ACT_ROT_RATE     0x06  // 2 signed ints (4 bytes)
 #define REG_ACT_ADV_ACC      0x09  // 2 signed ints (4 bytes)
 #define REG_ACT_POW          0x0A  // 2 signed ints (4 bytes)
+#define REG_STEERING         0x0C  // 1 signed int (2 bytes)
 #define REG_SENSORS_CNT      0x20  // 1 unsigned byte
 #define REG_SENSORS_ALL      0x28  // 8 unsigned ints
 
@@ -101,7 +103,7 @@
 #define ST_SET_DRIVE_ON()       (sta[0] |= ST_DRIVE)
 #define ST_SET_DRIVE_OFF()      (sta[0] &= ~ST_DRIVE)
 #define ST_IS_DRIVING()         (sta[0]&ST_DRIVE)  
-
+/*
 #define ST_SET_SETEV_ON()       (sta[0] |= ST_SETEV)
 #define ST_SET_SETEV_OFF()      (sta[0] &= ~ST_SETEV)
 #define ST_IS_SETEV()           (sta[0]&ST_SETEV)  
@@ -109,7 +111,7 @@
 #define ST_SET_GETEV_ON()       (sta[0] |= ST_GETEV)
 #define ST_SET_GETEV_OFF()      (sta[0] &= ~ST_GETEV)
 #define ST_IS_GETEV()           (sta[0]&ST_GETEV)  
-
+*/
 #define CHGST_TO_MM(CNT)  ((uint32_t)(CNT)*V_NORM_PI2*WHEEL_RAD_MM/WHEEL_CHGSTATES/V_NORM)
 #define CHGST_TO_ANG_NORM(CNT)  ((uint32_t)(CNT)*V_NORM_PI2/WHEEL_CHGSTATES)
 #define CHGST_TO_RPS_NORM(CNT, MSEC)  ((uint32_t)(CNT)*V_NORM*1000/WHEEL_CHGSTATES/(MSEC))
@@ -131,6 +133,7 @@ volatile int16_t act_adv_accu_mm[2]={0,0};  // OUT - in mm, after last request. 
 uint8_t targ_enc_cnt[2]={0,0}; 
 uint8_t  drv_dir[2]={0,0}; // (0,1,2) - NO, FWD, REV
 uint8_t enc_cnt[2]={0,0}; 
+int16_t steering=0;
 
 // PID section
 uint16_t pid_cnt=0;
@@ -142,7 +145,8 @@ uint8_t pow_chart[2][NPOW_CHART_N];
 // 
 //volatile uint8_t setEvent = 0, getEvent = 0;
 volatile uint8_t sta[2]={0,0};
-volatile uint8_t eventRegister = 0;
+volatile uint8_t setRegister = 0;
+volatile uint8_t getRegister = 0;
 
 uint8_t current_sens=0;
 
@@ -152,7 +156,7 @@ uint8_t buffer[16];
 volatile uint8_t v_enc_cnt[2]={0,0}; 
 volatile uint8_t v_es[2]={0,0};
 
-volatile uint8_t updating=0;
+//volatile uint8_t updating=0;
 
 void setup()
 {
@@ -235,32 +239,36 @@ void loop()
     lastPidTime=cycleTime;
   } // PID cycle 
           
-  //if(setEvent) {
-  if(ST_IS_SETEV()){   
+  //if(ST_IS_SETEV()){   
+  if(setRegister) {    
     Serial.print("SetReg ");
-    Serial.print(eventRegister);
+    Serial.print(setRegister);
     Serial.print(" : ");
-    if(eventRegister==REG_TARG_ROT_RATE) {
-      Serial.print(targ_new_rot_rate[0]);
-      Serial.print(", ");
-      Serial.println(targ_new_rot_rate[1]);
-      if(targ_new_rot_rate[0] || targ_new_rot_rate[1])
-        startDrive();    
-      else   
-        stopDrive();    
+    switch(setRegister) {
+      case REG_TARG_ROT_RATE: 
+        Serial.print(targ_new_rot_rate[0]); Serial.print(", "); Serial.print(targ_new_rot_rate[1]);
+        if(targ_new_rot_rate[0] || targ_new_rot_rate[1])
+          startDrive();    
+        else   
+          stopDrive();    
+        break;  
+      case REG_STEERING: 
+        Serial.print(steering);    
+      default:;    
     }
     Serial.println();
-    //setEvent=0;
-    ST_SET_SETEV_OFF();
+    setRegister=0;   
+    //ST_SET_SETEV_OFF();
   } 
-  //if(getEvent) {
+/*
   if(ST_IS_GETEV()){     
     //Serial.print("GetReg ");
     //Serial.println(eventRegister);
     //if(eventRegister==REG_STATUS) Serial.println("===STAT requested"); 
     //getEvent=0;
     ST_SET_GETEV_OFF();
-  } 
+  }
+ */ 
 }
 
 
@@ -393,10 +401,10 @@ void readEnc(uint16_t ctime)
       int16_t mov=(int16_t)(CHGST_TO_MM(enc_cnt[i]));
       if(drv_dir[i]==2) mov=-mov;
       
-      while(updating);
-      updating=1;
+      //while(updating);
+      //updating=1;
       act_adv_accu_mm[i]+=mov;
-      updating=0;
+      //updating=0;
 
       if(abs(act_adv_accu_mm[i])>512) {
         alr = 4<<i;
@@ -622,26 +630,30 @@ void baseInterrupt(uint8_t i) {
 void receiveEvent(int howMany)
 {
   if(Wire.available()==0) return;
-  eventRegister=Wire.read();
+  getRegister=Wire.read();
   if(Wire.available()==0) return; 
-  switch(eventRegister) {
+  setRegister=getRegister;
+  getRegister=0;
+  switch(setRegister) {
     case REG_TARG_ROT_RATE:
       readInt16(targ_new_rot_rate);
       readInt16(targ_new_rot_rate+1);
       break;
+    case REG_STEERING:
+      readInt16(&steering);
+      break;  
     default:;
   }  
   while(Wire.available()) Wire.read(); // consume whatever left  
-  //setEvent=1;  
-  ST_SET_SETEV_ON();
+  //ST_SET_SETEV_ON();
   lastEvTime = millis();
 }
   
 void requestEvent()
 {
-  if(!eventRegister) return;
+  if(!getRegister) return;
   
-  switch(eventRegister) {
+  switch(getRegister) {
     case REG_WHO_AM_I:  
       Wire.write((uint8_t)M_OWN_ID);
       break;
@@ -663,11 +675,11 @@ void requestEvent()
     case REG_ACT_ADV_ACC:
       //writeInt16_2(act_adv_accu_mm);    
       uint16_t t1, t2;
-      while(updating);
-      updating=1;
+      //while(updating);
+      //updating=1;
       t1=act_adv_accu_mm[0]; t2=act_adv_accu_mm[1];    
       act_adv_accu_mm[0]=0; act_adv_accu_mm[1]=0;
-      updating=0;
+      //updating=0;
       //writeInt16_2_v(t1, t2);
       writeInt16_2_v_x(t1, t2);
       //writeInt16_2_v(act_adv_accu_mm[0], act_adv_accu_mm[1]);
@@ -686,8 +698,8 @@ void requestEvent()
       break;  
     default:;
   }
-  //getEvent=1;
-  ST_SET_GETEV_ON();
+  //ST_SET_GETEV_ON();
+  getRegister=0;
   lastEvTime = millis();
 }
 
@@ -727,7 +739,7 @@ void writeInt16_2_v_x(int16_t v1, int16_t v2) {
   buffer[1] = (uint8_t)((v1)&0xFF);
   buffer[2] = (uint8_t)((v2)>>8);
   buffer[3] = (uint8_t)((v2)&0xFF);  
-  buffer[4] = ~M_OWN_ID;
+  buffer[4] = M_MAGIC_ID;
   Wire.write(buffer, 5);
 }
 void writeInt16_N_M(uint16_t act, uint16_t tot, int16_t *reg) {

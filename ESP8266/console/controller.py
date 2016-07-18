@@ -131,23 +131,28 @@ class Controller():
         js["I"]=self.__genId()
         self.__comm_thread.put((js, None))
 
-    def __req_sync(self, js):
+    def __req_sync(self, js, retries=3, timeout_net=0.5):
         js["I"]=self.__genId()
         resp_json=None
-        #clean response queue first
-        try:
-            while True:
-                self.__resp_q.get_nowait()()
-        except Queue.Empty: pass
-        self.__comm_thread.put((js, self.__resp_q))
-        try:
-            resp = self.__resp_q.get(timeout=1)
-            if resp is not None:
-                resp_json=json.loads(resp)
-                self.__form.LogString("SYNC RSP: "+resp, 'FOREST GREEN')
-                self.onResp(resp_json)
-        except Queue.Empty:
-            self.__form.LogErrorString("SYNC RSP MISSING")
+
+        while  resp_json is None and retries>0 :
+            #clean response queue first
+            try:
+                while True:
+                    self.__resp_q.get_nowait()()
+            except Queue.Empty: pass
+            self.__comm_thread.put((js, self.__resp_q))
+            try:
+                resp = self.__resp_q.get(timeout=timeout_net)
+                if resp is not None:
+                    resp_json=json.loads(resp)
+                    self.__form.LogString("SYNC RSP: "+resp, 'FOREST GREEN')
+                    self.onResp(resp_json)
+            except Queue.Empty:
+                self.__form.LogErrorString("SYNC RSP MISSING")
+            retries-=1
+            if resp_json is None: time.sleep(0.25)
+
         return resp_json
 
     def resp(self, js, req_json=None):

@@ -6,7 +6,7 @@ const int DEV_ID=4;
 
 Controller Controller::ControllerProc ; // singleton
 
-Controller::Controller() : pready(false), nsens(0), act_rot_rate{0},act_advance{0},sensors{0} {
+Controller::Controller() : pready(false), nsens(0), act_rot_rate{0},act_advance{0},act_power{0},sensors{0} {
   }
 
 uint8_t Controller::getStatus() { return pready; }
@@ -175,6 +175,12 @@ bool Controller::stopDrive() {
   return res;
 }
 
+bool Controller::setSteering(int16_t s) {
+  bool res = writeInt16(REG_STEERING, s); 
+  if(!res) raiseFail(CTL_FAIL_WRT, REG_STEERING);
+  return res;
+}
+
 bool Controller::getActRotRate() {
   int16_t tmp[2];
   bool res = readInt16_2(REG_ACT_ROT_RATE, tmp, tmp+1);
@@ -205,6 +211,13 @@ bool Controller::getSensors(/*int16_t *sens*/) {
   return res;
 }
 
+bool Controller::writeInt16(uint16_t reg, int16_t v) {
+    buf[0] = (uint8_t)(v>>8);
+    buf[1] = (uint8_t)(v&0xFF);   
+    bool res = I2Cdev::writeBytes(DEV_ID, reg, 2, buf);
+    return res;
+}
+
 
 bool Controller::writeInt16_2(uint16_t reg, int16_t left, int16_t right) {
     buf[0] = (uint8_t)(left>>8);
@@ -233,7 +246,7 @@ bool Controller::readInt16_2(uint16_t reg, int16_t *left, int16_t *right) {
 
 bool Controller::readInt16_2_x(uint16_t reg, int16_t *left, int16_t *right) {
     bool res = I2Cdev::readBytes(DEV_ID, reg, 5, buf);
-    if(buf[4] != ~M_OWN_ID) return false;
+    if(buf[4] != M_MAGIC_ID) return false;
     *left = (((int16_t)buf[0]) << 8) | buf[1];
     *right = (((int16_t)buf[2]) << 8) | buf[3];
     return res;
