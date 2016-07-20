@@ -142,7 +142,7 @@ class Controller():
             #clean response queue first
             try:
                 while True:
-                    self.__resp_q.get_nowait()()
+                    self.__resp_q.get_nowait()
             except Queue.Empty: pass
             self.__comm_thread.put((js, self.__resp_q))
             try:
