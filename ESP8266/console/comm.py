@@ -181,11 +181,15 @@ class PathThread(threading.Thread):
         move_var=[0.25, 0.25]
         move_var_lim=0.25
         base_move=0.4
-        gain_p, gain_d, gain_i, gain_f = 0.5, 5.0, 0.0, 0.02
+        #gain_p, gain_d, gain_i, gain_f = 0.5, 5.0, 0.0, 0.02
+        gain_p, gain_d, gain_i, gain_f = 2.0, 8.0, 0.05, 5.0
         degain_i=0.5
         err_p_0=0
         err_i=0
         self.complete=False
+        s0=0
+
+        self.__controller.reqMoveSync(base_move,base_move)
 
         while not self.__stop:  #and not within target ....
             resp_json = self.__controller.reqPositionSync()
@@ -215,12 +219,15 @@ class PathThread(threading.Thread):
                     if err_p > math.pi :
                         err_p -= 2*math.pi
 
-                    #err_p=(self.__unit.a_mean-plan_a)%math.pi   # mod 180deg
+
                     err_i=err_p+degain_i*err_i
                     err_d=err_p-err_p_0
                     err_p_0=err_p
                     feedback=-(gain_p*err_p+gain_d*err_d+gain_i*err_i)*gain_f
                     feedback=round(feedback,2)
+
+
+                    """
                     dmove=[feedback, -feedback]
                     for im in range(2):
                         move_var[im]+=dmove[im]
@@ -233,6 +240,27 @@ class PathThread(threading.Thread):
 
 
                     self.__controller.reqMoveSync(base_move+move_var[0], base_move+move_var[1])
+                    """
+                    s=-err_p*180/math.pi
+                    if(s<-180) : s=-180
+                    if(s>180) : s=180
+
+                    s=s0-(s0-s)*0.5 #LPM
+                    s0=s
+
+                    self.__controller.log().LogString("PID:  %s" % s)
+
+                    """
+                    s=feedback
+                    if(s<-100) : s=-100
+                    if(s>100) : s=100
+
+                    self.__controller.log().LogString("PID: %s %s %s => %s  => %s" %
+                                                      (round(err_p,2), round(err_d,2), round(err_i,2),
+                                                       round(feedback,2), round(s,2)))
+                    """
+
+                    self.__controller.reqSteerSync(s)
 
             except KeyError: pass
 

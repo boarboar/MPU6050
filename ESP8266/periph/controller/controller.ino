@@ -75,7 +75,8 @@
 #define M_PID_KP_0   25
 #define M_PID_KD_0  140
 #define M_PID_KI_0    2
-#define M_PID_DIV   50
+#define M_PID_DIV    50
+#define M_STEER_DIV  10
 
 #define M_PID_KP M_PID_KP_0
 #define M_PID_KD M_PID_KD_0
@@ -426,11 +427,12 @@ void readEnc(uint16_t ctime)
 void doPID(uint16_t ctime)
 {
   if(ctime>0) {
-    int i;  
+    int8_t i;  
 #ifdef _PID_DEBUG_
     Serial.print(pid_cnt); Serial.print("\t"); Serial.print(ctime);
 #endif
-    for(i=0; i<2; i++) {      
+    for(i=0; i<2; i++) {            
+      int8_t steer_g;
       int16_t p_err=0, d_err;
 #ifdef _PID_DEBUG_
       Serial.print(i==0 ? "\t L: " : "\t R: ");
@@ -445,20 +447,24 @@ void doPID(uint16_t ctime)
           if(pow_chart[i][j]) pow_chart[i][j]=(uint8_t)(((uint16_t)pow_chart[i][j]+cur_power[i])/2);
           else pow_chart[i][j]=cur_power[i];
         }
-        
-        p_err = (int16_t)targ_enc_cnt[i]-(int16_t)enc_cnt[i];
+        steer_g=steering/M_STEER_DIV;
+        if(i) steer_g=-steer_g;        
+        p_err = (int16_t)targ_enc_cnt[i]-(int16_t)enc_cnt[i]+steer_g;
         d_err = p_err-prev_err[i];
         int_err[i]=int_err[i]+p_err;        
-        int16_t pow=cur_power[i]+((int16_t)p_err*M_PID_KP+(int16_t)int_err[i]*M_PID_KI+(int16_t)d_err*M_PID_KD)/M_PID_DIV;
+        int16_t pow=cur_power[i]+((int16_t)p_err*M_PID_KP+(int16_t)int_err[i]*M_PID_KI+(int16_t)d_err*M_PID_KD)/M_PID_DIV;        
         if(pow<0) pow=0;
         if(drv_dir[i] && pow<M_POW_MIN[i]) pow=M_POW_MIN[i];
         if(pow>M_POW_MAX) pow=M_POW_MAX;
+        
         if(cur_power[i]!=pow) analogWrite(i==0 ? M1_EN : M2_EN , pow); 
         cur_power[i]=pow;
+                
 #ifdef _PID_DEBUG_        
         Serial.print("\t, "); Serial.print(p_err);
         Serial.print("\t, "); Serial.print(d_err);
         Serial.print("\t, "); Serial.print(int_err[i]);        
+        Serial.print("\t, "); Serial.print(steer_g);        
         Serial.print("\t > "); Serial.print(pow);
 #endif        
       }
