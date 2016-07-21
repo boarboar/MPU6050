@@ -265,7 +265,7 @@ class PathThread(threading.Thread):
             except KeyError: pass
 
             #time.sleep(2)
-            time.sleep(0.25) # let it move a bit
+            #time.sleep(0.25) # let it move a bit
 
         self.__controller.reqMoveSync(0,0)
 
