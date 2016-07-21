@@ -448,6 +448,8 @@ void doPID(uint16_t ctime)
           else pow_chart[i][j]=cur_power[i];
         }
         steer_g=steering/M_STEER_DIV;
+        if(steer_g>0 && steer_g>targ_enc_cnt[i]/2) steer_g=targ_enc_cnt[i]/2;
+        if(steer_g<0 && steer_g<-targ_enc_cnt[i]/2) steer_g=-targ_enc_cnt[i]/2; 
         if(i) steer_g=-steer_g;        
         p_err = (int16_t)targ_enc_cnt[i]-(int16_t)enc_cnt[i]+steer_g;
         d_err = p_err-prev_err[i];
