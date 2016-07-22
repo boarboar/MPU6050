@@ -41,6 +41,7 @@ bool Controller::init() {
   fail_reason=0;
   need_reset=false; 
   nsens=0;
+  targ_rot_rate[0]=targ_rot_rate[1]=0;
   act_rot_rate[0]=act_rot_rate[1]=0;
   act_advance[0]=act_advance[1]=0;
   for(int i=0; i<SENS_SIZE; i++) sensors[i]=0;
@@ -59,6 +60,8 @@ bool Controller::init() {
 void Controller::resetIntegrator() {
   dist=angle=0.0f;
   r[0]=r[1]=0.0f;
+  curr_yaw=0;
+  targ_bearing=0;  
 }
 
 uint8_t Controller::testConnection() {
@@ -72,6 +75,8 @@ bool Controller::process(float yaw) {
   //boolean alr=false;
   //int16_t tmp[2];
 
+  curr_yaw=yaw;
+  
   if(!getControllerStatus()) return false;
 
  //Serial.print(F("CTRL STAT: ")); Serial.print(sta[0]); Serial.print(F(" \t ")); Serial.println(sta[1]);
@@ -102,14 +107,25 @@ bool Controller::process(float yaw) {
   r[0]+=mov*sin(yaw);
   r[1]+=mov*cos(yaw);
 
-  if(!getActRotRate(/*tmp*/)) return false;
-   
-  //act_rot_rate[0]=(float)tmp[0]/V_NORM;
-  //act_rot_rate[1]=(float)tmp[1]/V_NORM;
+/*
+  if(!getActRotRate()) return false;  
+  if(!getActPower()) return false;
+  if(!getSensors()) return false; 
+  */
 
-  if(!getActPower(/*act_power*/)) return false;
+  getActRotRate();
+  getActPower();
+  getSensors();
 
-  return getSensors(/*sensors*/);
+  if(targ_rot_rate[0] && targ_rot_rate[1]) {
+    // simple proortional
+    float err_bearing_p = yaw-targ_bearing;
+    if(err_bearing_p>PI) err_bearing_p-=PI*2.0f;
+    else if(err_bearing_p<-PI) err_bearing_p+=PI*2.0f;
+    int16_t s=-err_bearing_p*180.0/PI;
+    Serial.print(F("Bearing error: ")); Serial.print(err_bearing_p); Serial.print(F("\t => ")); Serial.println(s);    
+    setSteering(s);  
+  }
    
 /*
   Serial.print(F("CTRL: ")); Serial.print(mov/10.0f); Serial.print(F(" \t ")); Serial.print(yaw);
@@ -117,7 +133,7 @@ bool Controller::process(float yaw) {
   Serial.println();
 */
 
-
+  return true;
 }
 
 uint8_t Controller::getNumSensors() { return nsens;}
@@ -137,7 +153,18 @@ bool Controller::setTargRotRate(float l, float r) {
   int16_t d[2];
   d[0]=(int16_t)(l*V_NORM);
   d[1]=(int16_t)(r*V_NORM);
-  return setTargRotRate(d);
+  if(targ_rot_rate[0]==d[0] && targ_rot_rate[1]==d[1]) return true;
+  if(!setTargRotRate(d)) return false;
+  targ_rot_rate[0]=d[0];
+  targ_rot_rate[1]=d[1];
+  return true;
+}
+
+bool Controller::setTargSteering(int16_t s) {
+  targ_bearing = curr_yaw+(float)s/180.0*PI;
+  if(targ_bearing>PI) targ_bearing-=PI*2.0f;
+  else if(targ_bearing<-PI) targ_bearing+=PI*2.0f;  
+  return true;
 }
 
 bool Controller::getControllerStatus() { 

@@ -38,6 +38,7 @@ public:
   bool setTargRotRate(float l, float r);
   bool setTargRotRate(int16_t *d);
   bool getTargRotRate(int16_t *d);
+  bool setTargSteering(int16_t s);
   bool stopDrive();
   bool setSteering(int16_t s);
   uint8_t getNumSensors();
@@ -80,13 +81,16 @@ private:
   uint8_t pready;
   uint8_t nsens;
   float act_rot_rate[2];
+  int16_t targ_rot_rate[2];
   int16_t act_advance[2];
   int16_t act_power[2];
   int16_t sensors[SENS_SIZE];
   
   float dist;
   float angle;
+  float curr_yaw;
   float r[2];
+  float targ_bearing;
 };
 
 #endif //_UMP_CONTROLLER_H_

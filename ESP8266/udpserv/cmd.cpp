@@ -292,7 +292,7 @@ int16_t c_steer(JsonObject& root, JsonObject& rootOut) {
   Serial.print(F("Steer req "));
   int16_t steer_val=root["S"];
   Serial.print(steer_val);
-  if(!Controller::ControllerProc.setSteering(steer_val)) return -5;    
+  if(!Controller::ControllerProc.setTargSteering(steer_val)) return -5;    
   JsonArray& r = rootOut.createNestedArray("ARPS");
   float *arps=Controller::ControllerProc.getStoredRotRate();
   r.add(arps[0]), r.add(arps[1]);
