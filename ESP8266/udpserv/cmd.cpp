@@ -133,19 +133,19 @@ boolean CmdProc::sendAlarm(uint8_t alr, uint8_t param, int16_t dt, int8_t npa, i
   if(CfgDrv::Cfg.log_on<SL_LEVEL_ALARM) return false;
   StaticJsonBuffer<400> jsonBufferOut;
   JsonObject& rootOut = jsonBufferOut.createObject();
-  rootOut["C"] = "A";
+  rootOut["C"] = alr>=ALR_CTL_LOG ? "L" : "A";
   rootOut["T"] = millis();
   rootOut["R"] = alr;
   rootOut["P"] = param;
   rootOut["P0"] = dt;
   if(pa && npa) {
-    Serial.print("ALRPRM: ");
+    //Serial.print("ALRPRM: ");
     JsonArray& par = rootOut.createNestedArray("PA");
     for(uint8_t i=0; i<npa; i++) {
       par.add(pa[i]);
-      Serial.print(F(" \t ")); Serial.print(pa[i]);     
+      //Serial.print(F(" \t ")); Serial.print(pa[i]);     
     }
-    Serial.println();
+    //Serial.println();
   }
   _sendToSysLog(rootOut);
   return true;

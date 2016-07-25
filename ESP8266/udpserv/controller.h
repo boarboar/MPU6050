@@ -22,7 +22,7 @@
 
 class Controller {
 public:
-  enum FailReason {CTL_FAIL_NONE=0, CTL_FAIL_INIT=1, CTL_FAIL_WRT=2, CTL_FAIL_RD=3, CTL_FAIL_OVF=4, CTL_FAIL_ALR=5};
+  enum FailReason {CTL_FAIL_NONE=0, CTL_FAIL_INIT=1, CTL_FAIL_WRT=2, CTL_FAIL_RD=3, CTL_FAIL_OVF=4, CTL_FAIL_ALR=5, CTL_LOG_PID=100};
   static Controller ControllerProc; // singleton  
   bool init();
   uint8_t getStatus();
@@ -34,7 +34,6 @@ public:
   void clearFailReason();
   void resetIntegrator();
   bool process(float yaw);  
-
   bool setTargRotRate(float l, float r);
   bool setTargRotRate(int16_t *d);
   bool getTargRotRate(int16_t *d);
@@ -91,6 +90,9 @@ private:
   float curr_yaw;
   float r[2];
   float targ_bearing;
+  //float err_bearing_p_0, err_bearing_i;
+  int16_t err_bearing_p_0, err_bearing_i;
+  
 };
 
 #endif //_UMP_CONTROLLER_H_
