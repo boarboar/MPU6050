@@ -22,12 +22,13 @@ void Controller::raiseFail(uint8_t reason, int16_t p1, int16_t p2, int16_t p3, i
   fail_p[1]=p2;
   fail_p[2]=p3;
   fail_p[3]=p4;
-
+/*
   Serial.print(F("CTRL ALR: ")); Serial.print(reason); 
   for(int i=0; i<4; i++) {
     Serial.print(F(" \t ")); Serial.print(fail_p[i]); 
   }   
   Serial.println();
+  */
 }
 
 void Controller::getFailParams(int16_t npa, int16_t *pa) {
@@ -145,11 +146,11 @@ bool Controller::process(float yaw) {
     err_bearing_i=err_bearing_i/2+err_bearing_p;
     err_bearing_p_0=err_bearing_p;
     const int gain_p=20;
-    const int gain_d=80;
+    const int gain_d=160;
     const int gain_i=1;
-    const int gain_div=10;
+    const int gain_div=20;
     
-    int16_t s=-(int16_t)((int32_t)gain_p*err_bearing_p+(int32_t)gain_d*err_bearing_p+(int32_t)gain_i*err_bearing_p)/gain_div;
+    int16_t s=-(int16_t)((int32_t)gain_p*err_bearing_p+(int32_t)gain_d*err_bearing_d+(int32_t)gain_i*err_bearing_i)/gain_div;
 
     raiseFail(CTL_LOG_PID, err_bearing_p, err_bearing_d, err_bearing_i, s);
     
