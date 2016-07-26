@@ -93,6 +93,7 @@
 #define REG_ACT_ROT_RATE     0x06  // 2 signed ints (4 bytes)
 #define REG_ACT_ADV_ACC      0x09  // 2 signed ints (4 bytes)
 #define REG_ACT_POW          0x0A  // 2 signed ints (4 bytes)
+#define REG_TARG_POW         0x0B  // 2 signed ints (4 bytes)
 #define REG_STEERING         0x0C  // 1 signed int (2 bytes)
 #define REG_SENSORS_CNT      0x20  // 1 unsigned byte
 #define REG_SENSORS_ALL      0x28  // 8 unsigned ints
@@ -127,7 +128,7 @@ uint32_t lastEvTime, lastPidTime;
 int16_t sens[M_SENS_N];
 uint8_t sens_fail_cnt[M_SENS_N];
 int16_t targ_rot_rate[2]={0,0}; // RPS, 10000 = 1 RPS  (use DRV_RPS_NORM)
-int16_t targ_new_rot_rate[2]={0, 0}; // RPS, 10000 = 1 RPS  (use DRV_RPS_NORM), +/-
+int16_t targ_new_param[2]={0, 0}; // RPS, 10000 = 1 RPS  (use DRV_RPS_NORM), +/-
 int16_t targ_old_rot_rate[2]={0, 0}; // prev
 int16_t act_rot_rate[2]={0,0}; // OUT - actual rate, 10000 = 1 RPS  (use DRV_RPS_NORM)
 volatile int16_t act_adv_accu_mm[2]={0,0};  // OUT - in mm, after last request. Should be zeored after get request
@@ -240,16 +241,18 @@ void loop()
     lastPidTime=cycleTime;
   } // PID cycle 
           
-  //if(ST_IS_SETEV()){   
   if(setRegister) {    
     Serial.print("SetReg ");
     Serial.print(setRegister);
     Serial.print(" : ");
     switch(setRegister) {
       case REG_TARG_ROT_RATE: 
-        Serial.print(targ_new_rot_rate[0]); Serial.print(", "); Serial.print(targ_new_rot_rate[1]);
-        if(targ_new_rot_rate[0] || targ_new_rot_rate[1])
-          startDrive();    
+      case REG_TARG_POW: 
+        Serial.print(targ_new_param[0]); Serial.print(", "); Serial.print(targ_new_param[1]);
+        if(targ_new_param[0] || targ_new_param[1]) {
+          if(setRegister==REG_TARG_ROT_RATE) startDrive();    
+          else startDrivePow();  
+        }
         else   
           stopDrive();    
         break;  
@@ -259,7 +262,6 @@ void loop()
     }
     Serial.println();
     setRegister=0;   
-    //ST_SET_SETEV_OFF();
   } 
 /*
   if(ST_IS_GETEV()){     
@@ -272,9 +274,58 @@ void loop()
  */ 
 }
 
+void startDrivePow() {
+  /*
+  if(ST_IS_DRIVING() && cur_power[0]==targ_new_param[0] && targ_old_rot_rate[1]==targ_new_param[1]) {
+    Serial.print("Continue drive"); 
+    return;
+  }
+  */
+  
+  uint8_t chg=0;
+  uint8_t new_dir;
+  Serial.print("St drv pow: "); 
+   
+  for(int i=0; i<2; i++) {
+    if(targ_new_param[i]==0) {
+      //drv_dir[i]=0;
+      //targ_rot_rate[i]=0;
+      new_dir=0;
+    } else if(targ_new_param[i]>0) {
+      new_dir=1;
+      //drv_dir[i]=1;
+      //targ_rot_rate[i]=(uint16_t)(targ_new_param[i]);
+    } else {
+      //drv_dir[i]=2;
+      new_dir=2;
+      targ_new_param[i]=-targ_new_param[i];
+      //targ_rot_rate[i]=(uint16_t)(-targ_new_param[i]);
+    }
+    
+    if(drv_dir[i] != new_dir || cur_power[i] != targ_new_param[i]) {
+      drv_dir[i] = new_dir;
+      cur_power[i]=targ_new_param[i];
+      chg++;
+    }     
+    
+    Serial.print(i==0 ? "\t L: " : "\t R: ");
+    //Serial.print(changeDir ? " RST" : " PID"); Serial.print(", ");
+    Serial.print(drv_dir[i]); Serial.print("\t "); Serial.print(cur_power[i]);
+    Serial.print("\t ;"); 
+  }
+  
+  if(chg) Serial.print(" >>RST"); 
+  Serial.println();
+   
+  readEnc(0);
+  Drive(drv_dir[0], cur_power[0], drv_dir[1], cur_power[1]); 
+  ST_SET_DRIVE_ON();
+  pid_cnt=0;
+  lastPidTime=millis(); 
+}
 
 void startDrive() {
-  if(ST_IS_DRIVING() && targ_old_rot_rate[0]==targ_new_rot_rate[0] && targ_old_rot_rate[1]==targ_new_rot_rate[1]) {
+  if(ST_IS_DRIVING() && targ_old_rot_rate[0]==targ_new_param[0] && targ_old_rot_rate[1]==targ_new_param[1]) {
     Serial.print("Continue drive"); 
     return;
   }
@@ -283,22 +334,22 @@ void startDrive() {
    
   for(int i=0; i<2; i++) {
     uint8_t jt=0;
-    if(targ_new_rot_rate[i]==0) {
+    if(targ_new_param[i]==0) {
       drv_dir[i]=0;
       targ_rot_rate[i]=0;
-    } else if(targ_new_rot_rate[i]>0) {
+    } else if(targ_new_param[i]>0) {
       drv_dir[i]=1;
-      targ_rot_rate[i]=(uint16_t)(targ_new_rot_rate[i]);
+      targ_rot_rate[i]=(uint16_t)(targ_new_param[i]);
     } else {
       drv_dir[i]=2;
-      targ_rot_rate[i]=(uint16_t)(-targ_new_rot_rate[i]);
+      targ_rot_rate[i]=(uint16_t)(-targ_new_param[i]);
     }
     if(targ_rot_rate[i]>V_NORM_MAX) targ_rot_rate[i]=V_NORM_MAX;
     targ_enc_cnt[i]=RPS_TO_CHGST_NORM(targ_rot_rate[i], PID_TIMEOUT);
     if(targ_rot_rate[i]>0 && targ_enc_cnt[i]==0) targ_enc_cnt[i]=1;
     
     if(drv_dir[i]) {
-       if(targ_old_rot_rate[i]!=targ_new_rot_rate[i])  {      
+       if(targ_old_rot_rate[i]!=targ_new_param[i])  {      
          uint8_t j=targ_enc_cnt[i]/NPOW_CHART_MULT;
          Serial.print("Tsting chart for ");
          Serial.print(targ_enc_cnt[i]);
@@ -322,7 +373,7 @@ void startDrive() {
        }
      } else cur_power[i]=0;
     
-    targ_old_rot_rate[i]=targ_new_rot_rate[i];     
+    targ_old_rot_rate[i]=targ_new_param[i];     
     prev_err[i]=0;
     int_err[i]=0;   
     //uint8_t chgst=RPS_TO_CHGST_NORM(targ_rot_rate[i], PID_TIMEOUT);
@@ -345,8 +396,8 @@ void stopDrive() {
   if(!ST_IS_DRIVING()) return;
   Drive(0, 0, 0, 0);
   cur_power[0]=cur_power[1]=0;
-  targ_old_rot_rate[0]=targ_new_rot_rate[0]=0;     
-  targ_old_rot_rate[1]=targ_new_rot_rate[1]=0;
+  targ_old_rot_rate[0]=targ_rot_rate[0]=0;     
+  targ_old_rot_rate[1]=targ_rot_rate[1]=0;
   ST_SET_DRIVE_OFF();
   pid_cnt=0;
   Serial.println("Stop drive"); 
@@ -426,6 +477,7 @@ void readEnc(uint16_t ctime)
 
 void doPID(uint16_t ctime)
 {
+  /*
   if(ctime>0) {
     int8_t i;  
 #ifdef _PID_DEBUG_
@@ -478,6 +530,7 @@ void doPID(uint16_t ctime)
     Serial.println();
 #endif    
   }
+  */
 }
 
 void Drive(uint8_t ldir, uint8_t lpow, uint8_t rdir, uint8_t rpow) 
@@ -644,9 +697,9 @@ void receiveEvent(int howMany)
   getRegister=0;
   switch(setRegister) {
     case REG_TARG_ROT_RATE:
-      readInt16(targ_new_rot_rate);
-      readInt16(targ_new_rot_rate+1);
-      break;
+    case REG_TARG_POW:
+      readInt16(targ_new_param);
+      readInt16(targ_new_param+1);
     case REG_STEERING:
       readInt16(&steering);
       break;  
@@ -675,7 +728,7 @@ void requestEvent()
       Wire.write(buffer, 2);     
       break;
     case REG_TARG_ROT_RATE:
-      writeInt16_2(targ_new_rot_rate);
+      writeInt16_2(targ_rot_rate);
       break;
     case REG_ACT_ROT_RATE:
       writeInt16_2(act_rot_rate);

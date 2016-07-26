@@ -7,6 +7,7 @@
 #define REG_ACT_ROT_RATE     0x06  // 2 signed ints (4 bytes)
 #define REG_ACT_ADV_ACC      0x09  // 2 signed ints (4 bytes)
 #define REG_ACT_POW          0x0A  // 2 signed ints (4 bytes)
+#define REG_TARG_POW         0x0B  // 2 signed ints (4 bytes)
 #define REG_STEERING         0x0C  // 1 signed int (2 bytes)
 #define REG_SENSORS_CNT      0x20  // 8 unsigned ints
 #define REG_SENSORS_ALL      0x28  // 8 unsigned ints
@@ -39,6 +40,7 @@ public:
   bool getTargRotRate(int16_t *d);
   bool setTargSteering(int16_t s);
   bool stopDrive();
+  bool setPower(int16_t *p);
   bool setSteering(int16_t s);
   uint8_t getNumSensors();
   float *getStoredRotRate();
@@ -84,6 +86,7 @@ private:
   int16_t act_advance[2];
   int16_t act_power[2];
   int16_t sensors[SENS_SIZE];
+  int16_t targ_pow[2];
   
   float dist;
   float angle;

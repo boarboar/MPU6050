@@ -45,6 +45,7 @@ bool Controller::init() {
   targ_rot_rate[0]=targ_rot_rate[1]=0;
   act_rot_rate[0]=act_rot_rate[1]=0;
   act_advance[0]=act_advance[1]=0;
+  targ_pow[0]=targ_pow[1]=0;
   for(int i=0; i<SENS_SIZE; i++) sensors[i]=0;
   resetIntegrator();
   pready=testConnection();
@@ -153,10 +154,15 @@ bool Controller::process(float yaw) {
     int16_t s=-(int16_t)((int32_t)gain_p*err_bearing_p+(int32_t)gain_d*err_bearing_d+(int32_t)gain_i*err_bearing_i)/gain_div;
 
     raiseFail(CTL_LOG_PID, err_bearing_p, err_bearing_d, err_bearing_i, s);
+
+    int16_t cur_pow[2];
+    cur_pow[0]=targ_pow[0]+s;
+    cur_pow[1]=targ_pow[1]-s;
     
     Serial.print(F("Bearing error: ")); Serial.print(err_bearing_p); Serial.print(F("\t ")); Serial.print(err_bearing_d);  Serial.print(F("\t ")); Serial.print(err_bearing_i);
-    Serial.print(F("\t => ")); Serial.println(s);    
-    setSteering(s);  
+    Serial.print(F("\t => ")); Serial.print(s); Serial.print(F("\t : ")); Serial.print(cur_pow[0]); Serial.print(F("\t : ")); Serial.println(cur_pow[1]);     
+    //setSteering(s);  
+    setPower(cur_pow);  
   }
    
 /*
@@ -191,7 +197,9 @@ bool Controller::setTargRotRate(float l, float r) {
   //err_bearing_i=0.0f;
   err_bearing_p_0=err_bearing_i=0;  
   if(targ_rot_rate[0]==d[0] && targ_rot_rate[1]==d[1]) return true;
-  if(!setTargRotRate(d)) return false;
+  //if(!setTargRotRate(d)) return false;
+  targ_pow[0]=l*120; targ_pow[0]=r*120; // temp  
+  if(!setPower(targ_pow)) return false;
   targ_rot_rate[0]=d[0];
   targ_rot_rate[1]=d[1];
   return true;
@@ -234,8 +242,16 @@ bool Controller::setTargRotRate(int16_t *d) {
 }
 
 bool Controller::stopDrive() {
-  bool res = writeInt16_2(REG_TARG_ROT_RATE, 0, 0); 
-  if(!res) raiseFail(CTL_FAIL_WRT, REG_TARG_ROT_RATE);
+  //bool res = writeInt16_2(REG_TARG_ROT_RATE, 0, 0); 
+  //if(!res) raiseFail(CTL_FAIL_WRT, REG_TARG_ROT_RATE);
+  bool res = writeInt16_2(REG_TARG_POW, 0, 0); 
+  if(!res) raiseFail(CTL_FAIL_WRT, REG_TARG_POW);  
+  return res;
+}
+
+bool Controller::setPower(int16_t *p) {
+  bool res = writeInt16_2(REG_TARG_POW, p[0], p[1]); 
+  if(!res) raiseFail(CTL_FAIL_WRT, REG_TARG_POW);
   return res;
 }
 
