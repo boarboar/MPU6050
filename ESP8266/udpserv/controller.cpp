@@ -146,9 +146,9 @@ bool Controller::process(float yaw) {
     else if(err_bearing_d<-180) err_bearing_d+=360;
     err_bearing_i=err_bearing_i/2+err_bearing_p;
     err_bearing_p_0=err_bearing_p;
-    const int gain_p=20;
+    const int gain_p=40;
     const int gain_d=160;
-    const int gain_i=1;
+    const int gain_i=5;
     const int gain_div=20;
     
     int16_t s=-(int16_t)((int32_t)gain_p*err_bearing_p+(int32_t)gain_d*err_bearing_d+(int32_t)gain_i*err_bearing_i)/gain_div;
@@ -198,7 +198,7 @@ bool Controller::setTargRotRate(float l, float r) {
   err_bearing_p_0=err_bearing_i=0;  
   if(targ_rot_rate[0]==d[0] && targ_rot_rate[1]==d[1]) return true;
   //if(!setTargRotRate(d)) return false;
-  targ_pow[0]=l*120; targ_pow[0]=r*120; // temp  
+  targ_pow[0]=l*120; targ_pow[1]=r*120; // temp  
   if(!setPower(targ_pow)) return false;
   targ_rot_rate[0]=d[0];
   targ_rot_rate[1]=d[1];
