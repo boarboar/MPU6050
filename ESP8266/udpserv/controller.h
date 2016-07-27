@@ -35,9 +35,12 @@ public:
   void clearFailReason();
   void resetIntegrator();
   bool process(float yaw);  
+  /*
   bool setTargRotRate(float l, float r);
   bool setTargRotRate(int16_t *d);
   bool getTargRotRate(int16_t *d);
+  */
+  bool setTargPower(float l, float r);
   bool setTargSteering(int16_t s);
   bool stopDrive();
   bool setPower(int16_t *p);
@@ -63,7 +66,7 @@ protected:
   bool getActAdvance(); // in MMs
   bool getActPower(); 
   bool getSensors(); 
-  void raiseFail(uint8_t reason, int16_t p1=0, int16_t p2=0, int16_t p3=0, int16_t p4=0);  
+  void raiseFail(uint8_t reason, int16_t p1=0, int16_t p2=0, int16_t p3=0, int16_t p4=0, int16_t p5=0, int16_t p6=0);  
   bool writeInt16(uint16_t reg, int16_t val);
   bool writeInt16_2(uint16_t reg, int16_t left, int16_t right);
   bool readInt16_2(uint16_t reg, int16_t *left, int16_t *right);  
@@ -74,7 +77,7 @@ private:
   uint8_t data_ready;
   uint8_t need_reset;
   uint8_t fail_reason;
-  int16_t fail_p[4]; 
+  int16_t fail_p[6]; 
   
   uint8_t buf[16];  
   uint8_t sta[2];
@@ -82,7 +85,7 @@ private:
   uint8_t pready;
   uint8_t nsens;
   float act_rot_rate[2];
-  int16_t targ_rot_rate[2];
+  //int16_t targ_rot_rate[2];
   int16_t act_advance[2];
   int16_t act_power[2];
   int16_t sensors[SENS_SIZE];

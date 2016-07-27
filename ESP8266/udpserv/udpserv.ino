@@ -143,9 +143,9 @@ void doCycle() {
     uint8_t alr=Controller::ControllerProc.getFailReason();
     boolean isalr=alr<100;
     if(isalr) { Serial.print(F("CTL FAILURE ")); Serial.println(alr);}
-    int16_t pa[4];
-    Controller::ControllerProc.getFailParams(4, pa);
-    cmd.sendAlarm(isalr ? CmdProc::ALR_CTL_FAILURE : CmdProc::ALR_CTL_LOG, alr, dt, 4, pa);
+    int16_t pa[6];
+    Controller::ControllerProc.getFailParams(6, pa);
+    cmd.sendAlarm(isalr ? CmdProc::ALR_CTL_FAILURE : CmdProc::ALR_CTL_LOG, alr, dt, 6, pa);
     Controller::ControllerProc.clearFailReason();
   }
   

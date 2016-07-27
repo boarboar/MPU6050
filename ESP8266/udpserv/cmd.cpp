@@ -273,7 +273,8 @@ int16_t c_drive(JsonObject& root, JsonObject& rootOut) {
     JsonArray& rps=root["RPS"].asArray();
     float r0=rps[0], r1=rps[1];
     Serial.print("TR: "); Serial.print(r0); Serial.print(", "); Serial.print(r1);
-    if(!Controller::ControllerProc.setTargRotRate(r0, r1)) return -5;    
+    //if(!Controller::ControllerProc.setTargRotRate(r0, r1)) return -5;    
+    if(!Controller::ControllerProc.setTargPower(r0, r1)) return -5;    
   } else {
     ; // get
   }

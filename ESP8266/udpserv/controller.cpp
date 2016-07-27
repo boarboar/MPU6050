@@ -3,7 +3,15 @@
 #include "controller.h"
 
 const int DEV_ID=4;
+const int M_POW_MIN=30; 
+const int M_POW_MAX=240;
+const int M_POW_NORM=120;
 
+const int gain_p=40;
+const int gain_d=160;
+const int gain_i=10;
+const int gain_div=20;
+    
 Controller Controller::ControllerProc ; // singleton
 
 Controller::Controller() : pready(false), nsens(0), act_rot_rate{0},act_advance{0},act_power{0},sensors{0} {
@@ -16,12 +24,14 @@ void    Controller::needReset() {  need_reset=true; }
 uint8_t Controller::getFailReason() { return fail_reason; }
 void  Controller::clearFailReason() { fail_reason=CTL_FAIL_NONE; }
 
-void Controller::raiseFail(uint8_t reason, int16_t p1, int16_t p2, int16_t p3, int16_t p4) {
+void Controller::raiseFail(uint8_t reason, int16_t p1, int16_t p2, int16_t p3, int16_t p4, int16_t p5, int16_t p6) {
   fail_reason=reason;
   fail_p[0]=p1;
   fail_p[1]=p2;
   fail_p[2]=p3;
   fail_p[3]=p4;
+  fail_p[4]=p5;
+  fail_p[5]=p6;
 /*
   Serial.print(F("CTRL ALR: ")); Serial.print(reason); 
   for(int i=0; i<4; i++) {
@@ -32,7 +42,7 @@ void Controller::raiseFail(uint8_t reason, int16_t p1, int16_t p2, int16_t p3, i
 }
 
 void Controller::getFailParams(int16_t npa, int16_t *pa) {
-  if(npa>4) npa=4;
+  if(npa>6) npa=6;
   for(int i=0; i<npa; i++) pa[i]=fail_p[i]; 
  } 
 
@@ -42,9 +52,10 @@ bool Controller::init() {
   fail_reason=0;
   need_reset=false; 
   nsens=0;
-  targ_rot_rate[0]=targ_rot_rate[1]=0;
+  //targ_rot_rate[0]=targ_rot_rate[1]=0;
   act_rot_rate[0]=act_rot_rate[1]=0;
   act_advance[0]=act_advance[1]=0;
+  act_power[0]=act_power[1]=0;
   targ_pow[0]=targ_pow[1]=0;
   for(int i=0; i<SENS_SIZE; i++) sensors[i]=0;
   resetIntegrator();
@@ -119,11 +130,12 @@ bool Controller::process(float yaw) {
   if(!getSensors()) return false; 
   */
 
-  getActRotRate();
-  getActPower();
+  //getActRotRate();
+  //getActPower();
   getSensors();
 
-  if(targ_rot_rate[0] && targ_rot_rate[1]) {
+  //if(targ_rot_rate[0] && targ_rot_rate[1]) {
+  if(targ_pow[0] && targ_pow[1]) {
     // simple proortional
     /*
     float err_bearing_p = yaw-targ_bearing;
@@ -146,19 +158,22 @@ bool Controller::process(float yaw) {
     else if(err_bearing_d<-180) err_bearing_d+=360;
     err_bearing_i=err_bearing_i/2+err_bearing_p;
     err_bearing_p_0=err_bearing_p;
-    const int gain_p=20;
-    const int gain_d=160;
-    const int gain_i=1;
-    const int gain_div=20;
     
     int16_t s=-(int16_t)((int32_t)gain_p*err_bearing_p+(int32_t)gain_d*err_bearing_d+(int32_t)gain_i*err_bearing_i)/gain_div;
-
-    raiseFail(CTL_LOG_PID, err_bearing_p, err_bearing_d, err_bearing_i, s);
-
+    
     int16_t cur_pow[2];
     cur_pow[0]=targ_pow[0]+s;
     cur_pow[1]=targ_pow[1]-s;
-    
+
+    for(int i=0; i<2; i++) {
+      if(cur_pow[i]<M_POW_MIN) cur_pow[i]=M_POW_MIN; 
+      if(cur_pow[i]>M_POW_MAX) cur_pow[i]=M_POW_MAX; 
+      // maybe a better idea would be to make limits proportional to the target?
+    }
+
+    raiseFail(CTL_LOG_PID, err_bearing_p, err_bearing_d, err_bearing_i, s, cur_pow[0], cur_pow[1]);
+
+
     Serial.print(F("Bearing error: ")); Serial.print(err_bearing_p); Serial.print(F("\t ")); Serial.print(err_bearing_d);  Serial.print(F("\t ")); Serial.print(err_bearing_i);
     Serial.print(F("\t => ")); Serial.print(s); Serial.print(F("\t : ")); Serial.print(cur_pow[0]); Serial.print(F("\t : ")); Serial.println(cur_pow[1]);     
     //setSteering(s);  
@@ -187,6 +202,7 @@ float Controller::getAngle() { return angle;}
 float Controller::getX() { return r[0]*0.1f;}
 float Controller::getY() { return r[1]*0.1f;}
 
+/*
 bool Controller::setTargRotRate(float l, float r) {
   int16_t d[2];
   d[0]=(int16_t)(l*V_NORM);
@@ -202,6 +218,17 @@ bool Controller::setTargRotRate(float l, float r) {
   if(!setPower(targ_pow)) return false;
   targ_rot_rate[0]=d[0];
   targ_rot_rate[1]=d[1];
+  return true;
+}
+*/
+
+bool Controller::setTargPower(float l, float r) {
+  // init steering parameters
+  //if(targ_rot_rate[0]==d[0] && targ_rot_rate[1]==d[1]) return true;
+  setTargSteering(0);
+  err_bearing_p_0=err_bearing_i=0;    
+  targ_pow[0]=l*M_POW_NORM; targ_pow[0]=r*M_POW_NORM; // temp  
+  if(!setPower(targ_pow)) return false;
   return true;
 }
 
@@ -229,6 +256,7 @@ uint8_t Controller::_getNumSensors() {
   return buf[0];
 }
 
+/*
 bool Controller::getTargRotRate(int16_t *d) { 
   bool res = readInt16_2(REG_TARG_ROT_RATE, d, d+1); 
   if(!res) raiseFail(CTL_FAIL_RD, REG_TARG_ROT_RATE);
@@ -240,6 +268,7 @@ bool Controller::setTargRotRate(int16_t *d) {
   if(!res) raiseFail(CTL_FAIL_WRT, REG_TARG_ROT_RATE);
   return res;
 }
+*/
 
 bool Controller::stopDrive() {
   //bool res = writeInt16_2(REG_TARG_ROT_RATE, 0, 0); 

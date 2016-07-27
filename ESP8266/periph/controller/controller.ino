@@ -283,7 +283,7 @@ void startDrivePow() {
   */
   
   uint8_t chg=0;
-  uint8_t new_dir;
+  uint8_t new_dir=0;
   Serial.print("St drv pow: "); 
    
   for(int i=0; i<2; i++) {
@@ -303,11 +303,14 @@ void startDrivePow() {
     }
     
     if(drv_dir[i] != new_dir || cur_power[i] != targ_new_param[i]) {
-      drv_dir[i] = new_dir;
-      cur_power[i]=targ_new_param[i];
+      //drv_dir[i] = new_dir;
+      //cur_power[i]=targ_new_param[i];
       chg++;
     }     
     
+    drv_dir[i] = new_dir;
+    cur_power[i]=targ_new_param[i];
+      
     Serial.print(i==0 ? "\t L: " : "\t R: ");
     //Serial.print(changeDir ? " RST" : " PID"); Serial.print(", ");
     Serial.print(drv_dir[i]); Serial.print("\t "); Serial.print(cur_power[i]);
