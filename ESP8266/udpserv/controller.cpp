@@ -214,7 +214,7 @@ bool Controller::setTargRotRate(float l, float r) {
   err_bearing_p_0=err_bearing_i=0;  
   if(targ_rot_rate[0]==d[0] && targ_rot_rate[1]==d[1]) return true;
   //if(!setTargRotRate(d)) return false;
-  targ_pow[0]=l*120; targ_pow[0]=r*120; // temp  
+  targ_pow[0]=l*120; targ_pow[1]=r*120; // temp  
   if(!setPower(targ_pow)) return false;
   targ_rot_rate[0]=d[0];
   targ_rot_rate[1]=d[1];
