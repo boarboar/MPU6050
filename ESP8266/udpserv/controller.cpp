@@ -227,7 +227,7 @@ bool Controller::setTargPower(float l, float r) {
   //if(targ_rot_rate[0]==d[0] && targ_rot_rate[1]==d[1]) return true;
   setTargSteering(0);
   err_bearing_p_0=err_bearing_i=0;    
-  targ_pow[0]=l*M_POW_NORM; targ_pow[0]=r*M_POW_NORM; // temp  
+  targ_pow[0]=l*M_POW_NORM; targ_pow[1]=r*M_POW_NORM; // temp  
   if(!setPower(targ_pow)) return false;
   return true;
 }
