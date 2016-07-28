@@ -34,7 +34,7 @@ public:
   void getFailParams(int16_t npa, int16_t *pa);
   void clearFailReason();
   void resetIntegrator();
-  bool process(float yaw);  
+  bool process(float yaw, uint32_t dt);  
   /*
   bool setTargRotRate(float l, float r);
   bool setTargRotRate(int16_t *d);
@@ -53,10 +53,11 @@ public:
   float getMovement();
   float getRotation();
   float getDistance();
+  float getSpeed();
   float getAngle();
   float getX();
   float getY();
-  //float *getCoords();
+  bool getActPower();   
 protected:  
   Controller();
   uint8_t testConnection();
@@ -64,7 +65,6 @@ protected:
   bool getControllerStatus();
   bool getActRotRate(); // in RPS
   bool getActAdvance(); // in MMs
-  bool getActPower(); 
   bool getSensors(); 
   void raiseFail(uint8_t reason, int16_t p1=0, int16_t p2=0, int16_t p3=0, int16_t p4=0, int16_t p5=0, int16_t p6=0);  
   bool writeInt16(uint16_t reg, int16_t val);
@@ -96,6 +96,7 @@ private:
   float curr_yaw;
   float r[2];
   float targ_bearing;
+  float speed;
   //float err_bearing_p_0, err_bearing_i;
   int16_t err_bearing_p_0, err_bearing_i;
   

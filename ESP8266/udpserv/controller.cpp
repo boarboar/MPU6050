@@ -5,12 +5,12 @@
 const int DEV_ID=4;
 const int M_POW_MIN=30; 
 const int M_POW_MAX=240;
-const int M_POW_NORM=120;
+const int M_POW_NORM=140;
 
 const int gain_p=40;
 const int gain_d=160;
 const int gain_i=10;
-const int gain_div=20;
+const int gain_div=10;
     
 Controller Controller::ControllerProc ; // singleton
 
@@ -73,6 +73,7 @@ bool Controller::init() {
 void Controller::resetIntegrator() {
   dist=angle=0.0f;
   r[0]=r[1]=0.0f;
+  speed=0.0f;
   curr_yaw=0;
   targ_bearing=0;  
   //err_bearing_p_0=0.0f;
@@ -87,7 +88,7 @@ uint8_t Controller::testConnection() {
   return buf[0]==M_OWN_ID;
 }
 
-bool Controller::process(float yaw) {
+bool Controller::process(float yaw, uint32_t dt) {
   if(!pready) return false;
   //boolean alr=false;
   //int16_t tmp[2];
@@ -123,6 +124,13 @@ bool Controller::process(float yaw) {
   // integrate
   r[0]+=mov*sin(yaw);
   r[1]+=mov*cos(yaw);
+
+  //differnitaite
+  if(dt) {
+    // LPM
+    float raw_speed = mov/(float)dt;
+    speed = speed - (speed - raw_speed)*0.5f;
+  }
 
 /*
   if(!getActRotRate()) return false;  
@@ -175,7 +183,8 @@ bool Controller::process(float yaw) {
 
 
     Serial.print(F("Bearing error: ")); Serial.print(err_bearing_p); Serial.print(F("\t ")); Serial.print(err_bearing_d);  Serial.print(F("\t ")); Serial.print(err_bearing_i);
-    Serial.print(F("\t => ")); Serial.print(s); Serial.print(F("\t : ")); Serial.print(cur_pow[0]); Serial.print(F("\t : ")); Serial.println(cur_pow[1]);     
+    Serial.print(F("\t => ")); Serial.print(s); Serial.print(F("\t : ")); Serial.print(cur_pow[0]); Serial.print(F("\t : ")); Serial.print(cur_pow[1]); 
+    Serial.print(F("\t : V=")); Serial.println(speed);     
     //setSteering(s);  
     setPower(cur_pow);  
   }
@@ -196,7 +205,8 @@ int16_t *Controller::getStoredPower() { return act_power;}
 int16_t *Controller::getStoredSensors() { return sensors;}
 float Controller::getMovement() { return mov;}
 float Controller::getRotation() { return rot;}
-float Controller::getDistance() { return dist*0.1f;}
+float Controller::getDistance() { return dist*0.1f;} //cm
+float Controller::getSpeed() { return speed*0.1f;} // cm/s
 float Controller::getAngle() { return angle;}
 //float *Controller::getCoords() { return r;}
 float Controller::getX() { return r[0]*0.1f;}

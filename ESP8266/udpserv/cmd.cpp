@@ -250,9 +250,11 @@ int16_t c_getpos(JsonObject& /*root*/, JsonObject& rootOut) {
   r.add((int)Controller::ControllerProc.getY());
   r.add(0); // Z-crd
 
+/*
   JsonArray& rs = rootOut.createNestedArray("RS");
   float *arps=Controller::ControllerProc.getStoredRotRate();
   rs.add(arps[0]), rs.add(arps[1]);
+*/
 
   JsonArray& pw = rootOut.createNestedArray("W");
   int16_t *pwrs=Controller::ControllerProc.getStoredPower();
@@ -263,6 +265,7 @@ int16_t c_getpos(JsonObject& /*root*/, JsonObject& rootOut) {
   for(i=0; i<ns; i++) s.add((int)Controller::ControllerProc.getStoredSensors()[i]);
   
   rootOut["D"]=Controller::ControllerProc.getDistance();
+  rootOut["V"]=(int16_t)(Controller::ControllerProc.getSpeed());
   return 0;
 }
 
@@ -278,27 +281,33 @@ int16_t c_drive(JsonObject& root, JsonObject& rootOut) {
   } else {
     ; // get
   }
-  JsonArray& r = rootOut.createNestedArray("ARPS");
-  float *arps=Controller::ControllerProc.getStoredRotRate();
-  r.add(arps[0]), r.add(arps[1]);
+  if(!Controller::ControllerProc.getActPower()) {
+    JsonArray& r = rootOut.createNestedArray("W");
+    int16_t *pwrs=Controller::ControllerProc.getStoredPower();
+    r.add(pwrs[0]), r.add(pwrs[1]);
+  }
+  //float *arps=Controller::ControllerProc.getStoredRotRate();
+  //r.add(arps[0]), r.add(arps[1]);
   //rootOut["AA"]=Controller::ControllerProc.getAngle();
-  Serial.print("\tAR: "); Serial.print(arps[0]); Serial.print(", "); Serial.print(arps[1]); 
+  //Serial.print("\tAR: "); Serial.print(arps[0]); Serial.print(", "); Serial.print(arps[1]); 
   //Serial.print("\tAA: "); Serial.println(Controller::ControllerProc.getAngle());
   Serial.println();
   return 0;
 }
 
-int16_t c_steer(JsonObject& root, JsonObject& rootOut) {
+int16_t c_steer(JsonObject& root, JsonObject& /*rootOut*/) {
   if(!Controller::ControllerProc.getStatus()) return -5;
   Serial.print(F("Steer req "));
   int16_t steer_val=root["S"];
   Serial.print(steer_val);
   if(!Controller::ControllerProc.setTargSteering(steer_val)) return -5;    
+  /*
   JsonArray& r = rootOut.createNestedArray("ARPS");
   float *arps=Controller::ControllerProc.getStoredRotRate();
   r.add(arps[0]), r.add(arps[1]);
   Serial.print("\tAR: "); Serial.print(arps[0]); Serial.print(", "); Serial.print(arps[1]); 
   Serial.println();
+  */
   return 0;
 }
 

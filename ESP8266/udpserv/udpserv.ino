@@ -130,7 +130,7 @@ void doCycle() {
   last_med_cycle = t;
   
   MpuDrv::Mpu.process();  
-  Controller::ControllerProc.process(MpuDrv::Mpu.getYaw()); 
+  Controller::ControllerProc.process(MpuDrv::Mpu.getYaw(), dt); 
   yield();
 
   if(MpuDrv::Mpu.getFailReason()) {
