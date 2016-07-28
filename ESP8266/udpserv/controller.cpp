@@ -10,7 +10,7 @@ const int M_POW_NORM=140;
 const int gain_p=40;
 const int gain_d=160;
 const int gain_i=10;
-const int gain_div=10;
+const int gain_div=40;
     
 Controller Controller::ControllerProc ; // singleton
 
@@ -132,11 +132,11 @@ bool Controller::process(float yaw, uint32_t dt) {
     speed = speed - (speed - raw_speed)*0.5f;
   }
 
-/*
-  if(!getActRotRate()) return false;  
+
+  //if(!getActRotRate()) return false;  
   if(!getActPower()) return false;
   if(!getSensors()) return false; 
-  */
+  
 
   //getActRotRate();
   //getActPower();
