@@ -286,6 +286,11 @@ int16_t c_drive(JsonObject& root, JsonObject& rootOut) {
     int16_t *pwrs=Controller::ControllerProc.getStoredPower();
     r.add(pwrs[0]), r.add(pwrs[1]);
   }
+  {
+  JsonArray& r = rootOut.createNestedArray("TW");
+  int16_t *pwrs=Controller::ControllerProc.getTargPower();
+  r.add(pwrs[0]), r.add(pwrs[1]);
+  }
   //float *arps=Controller::ControllerProc.getStoredRotRate();
   //r.add(arps[0]), r.add(arps[1]);
   //rootOut["AA"]=Controller::ControllerProc.getAngle();

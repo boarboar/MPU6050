@@ -246,12 +246,13 @@ void loop()
     Serial.print(setRegister);
     Serial.print(" : ");
     switch(setRegister) {
-      case REG_TARG_ROT_RATE: 
+      //case REG_TARG_ROT_RATE: 
       case REG_TARG_POW: 
         Serial.print(targ_new_param[0]); Serial.print(", "); Serial.print(targ_new_param[1]);
         if(targ_new_param[0] || targ_new_param[1]) {
-          if(setRegister==REG_TARG_ROT_RATE) startDrive();    
-          else startDrivePow();  
+          //if(setRegister==REG_TARG_ROT_RATE) startDrive();    
+          //else 
+          startDrivePow();  
         }
         else   
           stopDrive();    
@@ -310,6 +311,7 @@ void startDrivePow() {
     
     drv_dir[i] = new_dir;
     cur_power[i]=targ_new_param[i];
+    targ_new_param[i]=0;
       
     Serial.print(i==0 ? "\t L: " : "\t R: ");
     //Serial.print(changeDir ? " RST" : " PID"); Serial.print(", ");
@@ -327,6 +329,7 @@ void startDrivePow() {
   lastPidTime=millis(); 
 }
 
+/*
 void startDrive() {
   if(ST_IS_DRIVING() && targ_old_rot_rate[0]==targ_new_param[0] && targ_old_rot_rate[1]==targ_new_param[1]) {
     Serial.print("Continue drive"); 
@@ -394,6 +397,7 @@ void startDrive() {
   pid_cnt=0;
   lastPidTime=millis(); 
 }
+*/
 
 void stopDrive() {
   if(!ST_IS_DRIVING()) return;

@@ -134,12 +134,11 @@ bool Controller::process(float yaw, uint32_t dt) {
 
 
   //if(!getActRotRate()) return false;  
-  if(!getActPower()) return false;
-  if(!getSensors()) return false; 
-  
-
+  //if(!getActPower()) return false;
+  //if(!getSensors()) return false; 
+ 
   //getActRotRate();
-  //getActPower();
+  getActPower();
   getSensors();
 
   //if(targ_rot_rate[0] && targ_rot_rate[1]) {
@@ -164,7 +163,8 @@ bool Controller::process(float yaw, uint32_t dt) {
     int16_t err_bearing_d=err_bearing_p-err_bearing_p_0;
     if(err_bearing_d>180) err_bearing_d-=360;
     else if(err_bearing_d<-180) err_bearing_d+=360;
-    err_bearing_i=err_bearing_i/2+err_bearing_p;
+    //err_bearing_i=err_bearing_i/2+err_bearing_p;
+    err_bearing_i=err_bearing_i+err_bearing_p;
     err_bearing_p_0=err_bearing_p;
     
     int16_t s=-(int16_t)((int32_t)gain_p*err_bearing_p+(int32_t)gain_d*err_bearing_d+(int32_t)gain_i*err_bearing_i)/gain_div;
@@ -198,6 +198,7 @@ bool Controller::process(float yaw, uint32_t dt) {
   return true;
 }
 
+int16_t *Controller::getTargPower() { return targ_pow;}
 uint8_t Controller::getNumSensors() { return nsens;}
 float *Controller::getStoredRotRate() { return act_rot_rate;}
 int16_t *Controller::getStoredAdvance() { return act_advance;}

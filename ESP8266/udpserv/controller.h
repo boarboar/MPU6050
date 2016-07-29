@@ -49,6 +49,7 @@ public:
   float *getStoredRotRate();
   int16_t *getStoredAdvance();
   int16_t *getStoredPower();
+  int16_t *getTargPower();
   int16_t *getStoredSensors();  
   float getMovement();
   float getRotation();
