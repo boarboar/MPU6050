@@ -55,6 +55,7 @@ bool Controller::init() {
   //targ_rot_rate[0]=targ_rot_rate[1]=0;
   act_rot_rate[0]=act_rot_rate[1]=0;
   act_advance[0]=act_advance[1]=0;
+  act_advance_0[0]=act_advance_0[1]=0;
   act_power[0]=act_power[1]=0;
   targ_pow[0]=targ_pow[1]=0;
   for(int i=0; i<SENS_SIZE; i++) sensors[i]=0;
@@ -79,7 +80,8 @@ void Controller::resetIntegrator() {
   //err_bearing_p_0=0.0f;
   //err_bearing_i=0.0f;
   err_bearing_p_0=err_bearing_i=0;
-  
+  act_advance_0[0]=act_advance[0];
+  act_advance_0[1]=act_advance[1];
 }
 
 uint8_t Controller::testConnection() {
@@ -101,34 +103,51 @@ bool Controller::process(float yaw, uint32_t dt) {
 
   if(!getActAdvance()) return false;
 
+
   if(sta[1]) { // experimental
     // Serial.print(F("CTRL STAT ALR: ")); Serial.print(sta[0]); Serial.print(F(" \t ")); Serial.println(sta[1]);
     raiseFail(CTL_FAIL_ALR, sta[0], sta[1], 0, 0);
     return false;
   }
 
-  if(abs(act_advance[0])>512 || abs(act_advance[1])>512) {
+  float dist0=dist;
+  dist=(float)(act_advance[0]+act_advance[1])*0.5f; // in mm;
+  mov=dist-dist0;
+  
+  
+  if(abs(act_advance[0]-act_advance_0[0])>512 || abs(act_advance[1]-act_advance_0[1])>512) {
     //raiseFail(CTL_FAIL_OVF, act_advance[0], act_advance[1]);
+        Serial.print(F("ADV=")); 
+        Serial.print(act_advance[0]); Serial.print(F("\t ")); Serial.println(act_advance[1]);
+        Serial.print(F("\t ADV0=\t ")); 
+        Serial.print(act_advance_0[0]); Serial.print(F("\t ")); Serial.println(act_advance_0[1]);
+
     raiseFail(CTL_FAIL_OVF, buf[0], buf[1], buf[2], buf[3]);
+    act_advance_0[0]=act_advance[0];
+    act_advance_0[1]=act_advance[1];
     return false;
   }
   
-  mov=(float)(act_advance[0]+act_advance[1])*0.5f; // in mm
-  rot=(float)(act_advance[0]-act_advance[1])/(float)WHEEL_BASE_MM;
-  dist+=mov;
-  angle+=rot;
+  //mov=(float)(act_advance[0]+act_advance[1])*0.5f; // in mm
+  //dist+=mov;
   
+  rot=(float)((act_advance[0]-act_advance_0[0])-(act_advance[1]-act_advance_0[1]))/(float)WHEEL_BASE_MM;  
+  angle+=rot;  
   if(angle>PI) angle-=PI*2.0f;
   else if(angle<-PI) angle+=PI*2.0f;
 
+  act_advance_0[0]=act_advance[0];
+  act_advance_0[1]=act_advance[1];
+  
   // integrate
   r[0]+=mov*sin(yaw);
   r[1]+=mov*cos(yaw);
 
   //differnitaite
+  float raw_speed;
   if(dt) {
     // LPM
-    float raw_speed = mov/(float)dt;
+    raw_speed = mov/(float)dt*1000.0f;
     speed = speed - (speed - raw_speed)*0.5f;
   }
 
@@ -143,6 +162,9 @@ bool Controller::process(float yaw, uint32_t dt) {
 
   //if(targ_rot_rate[0] && targ_rot_rate[1]) {
   if(targ_pow[0] && targ_pow[1]) {
+
+    Serial.print(F("ADV=")); Serial.print(act_advance[0]); Serial.print(F("\t ")); Serial.println(act_advance[1]);
+
     // simple proortional
     /*
     float err_bearing_p = yaw-targ_bearing;
@@ -184,7 +206,9 @@ bool Controller::process(float yaw, uint32_t dt) {
 
     Serial.print(F("Bearing error: ")); Serial.print(err_bearing_p); Serial.print(F("\t ")); Serial.print(err_bearing_d);  Serial.print(F("\t ")); Serial.print(err_bearing_i);
     Serial.print(F("\t => ")); Serial.print(s); Serial.print(F("\t : ")); Serial.print(cur_pow[0]); Serial.print(F("\t : ")); Serial.print(cur_pow[1]); 
-    Serial.print(F("\t : V=")); Serial.println(speed);     
+    Serial.print(F("\t : V=")); Serial.println(speed); 
+    //Serial.print(F("\t : RV=")); Serial.print(raw_speed); 
+    //Serial.print(F("\t : T=")); Serial.print(dt); Serial.print(F("\t : MOV=")); Serial.println(mov);      
     //setSteering(s);  
     setPower(cur_pow);  
   }
@@ -201,7 +225,7 @@ bool Controller::process(float yaw, uint32_t dt) {
 int16_t *Controller::getTargPower() { return targ_pow;}
 uint8_t Controller::getNumSensors() { return nsens;}
 float *Controller::getStoredRotRate() { return act_rot_rate;}
-int16_t *Controller::getStoredAdvance() { return act_advance;}
+int32_t *Controller::getStoredAdvance() { return act_advance;}
 int16_t *Controller::getStoredPower() { return act_power;}
 int16_t *Controller::getStoredSensors() { return sensors;}
 float Controller::getMovement() { return mov;}
@@ -314,7 +338,8 @@ bool Controller::getActRotRate() {
 }
 
 bool Controller::getActAdvance(/*int16_t *d*/) {
-  bool res = readInt16_2(REG_ACT_ADV_ACC, act_advance, act_advance+1);  
+  //bool res = readInt16_2(REG_ACT_ADV_ACC, act_advance, act_advance+1);
+  bool res = readInt32_2(REG_ACT_ADV_ACC, act_advance);  
   if(!res) raiseFail(CTL_FAIL_RD, REG_ACT_ADV_ACC, buf[4]);
   return res;
 }
@@ -363,7 +388,23 @@ bool Controller::readInt16_2(uint16_t reg, int16_t *left, int16_t *right) {
     return res;
 }
 
+bool Controller::readInt32_2(uint16_t reg, int32_t *d) {
+    bool res = I2Cdev::readBytes(DEV_ID, reg, 8, buf);
+    if(!res) return false;
+    d[0] = (int32_t)(
+    (((int32_t)buf[0]) << 24) |
+    (((int32_t)buf[1]) << 16) |
+    (((int32_t)(buf[2])) << 8) |
+    buf[3]);
+    d[1] = (int32_t)(
+    (((int32_t)buf[4]) << 24) |
+    (((int32_t)buf[5]) << 16) |
+    (((int32_t)(buf[6])) << 8) |
+    buf[7]);
+    return res;
+}
 
+/*
 bool Controller::readInt16_2_x(uint16_t reg, int16_t *left, int16_t *right) {
     bool res = I2Cdev::readBytes(DEV_ID, reg, 5, buf);
     if(buf[4] != M_MAGIC_ID) return false;
@@ -371,6 +412,7 @@ bool Controller::readInt16_2_x(uint16_t reg, int16_t *left, int16_t *right) {
     *right = (((int16_t)buf[2]) << 8) | buf[3];
     return res;
 }
+*/
 
 bool Controller::readInt16_N(uint16_t reg, uint16_t n, int16_t *d) {
     bool res = I2Cdev::readBytes(DEV_ID, reg, n*2, buf);

@@ -9,7 +9,7 @@
 #define _MOTOR_ONE_WIRE_ 
 
 #define M_OWN_ID 0x53
-#define M_MAGIC_ID 0x4C
+//#define M_MAGIC_ID 0x4C
 
 // MOTOR OUT
 
@@ -131,7 +131,7 @@ int16_t targ_rot_rate[2]={0,0}; // RPS, 10000 = 1 RPS  (use DRV_RPS_NORM)
 int16_t targ_new_param[2]={0, 0}; // RPS, 10000 = 1 RPS  (use DRV_RPS_NORM), +/-
 int16_t targ_old_rot_rate[2]={0, 0}; // prev
 int16_t act_rot_rate[2]={0,0}; // OUT - actual rate, 10000 = 1 RPS  (use DRV_RPS_NORM)
-volatile int16_t act_adv_accu_mm[2]={0,0};  // OUT - in mm, after last request. Should be zeored after get request
+volatile int32_t act_adv_accu_mm[2]={0,0};  // OUT - in mm, after last request. Should be zeored after get request
 uint8_t targ_enc_cnt[2]={0,0}; 
 uint8_t  drv_dir[2]={0,0}; // (0,1,2) - NO, FWD, REV
 uint8_t enc_cnt[2]={0,0}; 
@@ -149,6 +149,8 @@ uint8_t pow_chart[2][NPOW_CHART_N];
 volatile uint8_t sta[2]={0,0};
 volatile uint8_t setRegister = 0;
 volatile uint8_t getRegister = 0;
+volatile uint8_t getOverflow=0;
+volatile uint8_t setOverflow=0;
 
 uint8_t current_sens=0;
 
@@ -158,7 +160,7 @@ uint8_t buffer[16];
 volatile uint8_t v_enc_cnt[2]={0,0}; 
 volatile uint8_t v_es[2]={0,0};
 
-//volatile uint8_t updating=0;
+volatile uint8_t updating=0;
 
 void setup()
 {
@@ -228,6 +230,7 @@ void loop()
   if ( cycleTime < lastPidTime) lastPidTime=0; // wraparound, not correct   
   uint16_t ctime = cycleTime - lastPidTime;
   if ( ctime >= PID_TIMEOUT) { // PID cycle    
+     //Serial.print("T0:\t "); Serial.println(ctime);
     if(cycleTime < lastEvTime) lastEvTime=0; // wraparound, not correct   
     if(cycleTime - lastEvTime >= CMD_TIMEOUT) {
       // comm lost!
@@ -263,7 +266,10 @@ void loop()
     }
     Serial.println();
     setRegister=0;   
-  } 
+  }
+ 
+ if(getOverflow) {Serial.println("===========Get overflow!"); getOverflow=0;}     
+ if(setOverflow) {Serial.println("===========Set overflow!"); setOverflow=0;}
 /*
   if(ST_IS_GETEV()){     
     //Serial.print("GetReg ");
@@ -322,11 +328,11 @@ void startDrivePow() {
   if(chg) Serial.print(" >>RST"); 
   Serial.println();
    
-  readEnc(0);
+  //readEnc(0);
   Drive(drv_dir[0], cur_power[0], drv_dir[1], cur_power[1]); 
   ST_SET_DRIVE_ON();
-  pid_cnt=0;
-  lastPidTime=millis(); 
+  //pid_cnt=0;
+  //lastPidTime=millis(); 
 }
 
 /*
@@ -423,11 +429,11 @@ void stopDrive() {
 
 void readEnc(uint16_t ctime)
 {
+    //Serial.print("T1:\t ");
+    //Serial.println(ctime);
   for(int i=0; i<2; i++) {
     enc_cnt[i]=v_enc_cnt[i]; 
     v_enc_cnt[i] = 0;          
-    if(ctime>0) {
-      act_rot_rate[i]=CHGST_TO_RPS_NORM(enc_cnt[i], ctime); 
       /*
 #ifdef _SIMULATION_
 #if _SIMULATION_ == 0
@@ -460,26 +466,30 @@ void readEnc(uint16_t ctime)
       int16_t mov=(int16_t)(CHGST_TO_MM(enc_cnt[i]));
       if(drv_dir[i]==2) mov=-mov;
       
-      //while(updating);
-      //updating=1;
+      while(updating);
+      updating=1;
       act_adv_accu_mm[i]+=mov;
-      //updating=0;
-
+      updating=0;
+/*
       if(abs(act_adv_accu_mm[i])>512) {
         alr = 4<<i;
         alrp = act_adv_accu_mm[i];
       }
+      */
       if(alr) sta[1]=alr;
       //updating=0;
       
       if(alr) {
           Serial.print("!!!!!!ALR-"); Serial.print(i); Serial.print("\t on "); Serial.print(i); Serial.print("\t : "); Serial.println(alrp);      
       }
-      
-    } else { // ctime==0 
-      act_rot_rate[i]=0;      
-    }
+    
   } // for i
+  
+  if(ST_IS_DRIVING()) {
+    Serial.print(ctime);
+    Serial.print(" \t"); Serial.print(enc_cnt[0]);Serial.print(" \t");Serial.print(enc_cnt[0]);
+    Serial.print(" \t"); Serial.print(act_adv_accu_mm[0]);Serial.print(" \t");Serial.println(act_adv_accu_mm[1]);      
+  }
 }
 
 void doPID(uint16_t ctime)
@@ -697,6 +707,8 @@ void baseInterrupt(uint8_t i) {
 
 void receiveEvent(int howMany)
 {
+  if(getRegister) getOverflow=1;
+  if(setRegister) setOverflow=1;
   if(Wire.available()==0) return;
   getRegister=Wire.read();
   if(Wire.available()==0) return; 
@@ -741,15 +753,16 @@ void requestEvent()
       writeInt16_2(act_rot_rate);
       break;      
     case REG_ACT_ADV_ACC:
-      //writeInt16_2(act_adv_accu_mm);    
-      uint16_t t1, t2;
-      //while(updating);
-      //updating=1;
-      t1=act_adv_accu_mm[0]; t2=act_adv_accu_mm[1];    
-      act_adv_accu_mm[0]=0; act_adv_accu_mm[1]=0;
-      //updating=0;
+      //writeInt16_2(act_adv_accu_mm);      
+      int32_t t[2];
+      while(updating);
+      updating=1;
+      t[0]=act_adv_accu_mm[0]; t[1]=act_adv_accu_mm[1];    
+      //act_adv_accu_mm[0]=0; act_adv_accu_mm[1]=0;
+      updating=0;
+      writeInt32_2(t);
       //writeInt16_2_v(t1, t2);
-      writeInt16_2_v_x(t1, t2);
+      //writeInt16_2_v_x(t1, t2);
       //writeInt16_2_v(act_adv_accu_mm[0], act_adv_accu_mm[1]);
       //act_adv_accu_mm[0]=act_adv_accu_mm[1]=0;
       break;            
@@ -802,6 +815,7 @@ void writeInt16_2_v(int16_t v1, int16_t v2) {
   Wire.write(buffer, 4);
 }
 
+/*
 void writeInt16_2_v_x(int16_t v1, int16_t v2) {
   buffer[0] = (uint8_t)((v1)>>8);
   buffer[1] = (uint8_t)((v1)&0xFF);
@@ -810,6 +824,35 @@ void writeInt16_2_v_x(int16_t v1, int16_t v2) {
   buffer[4] = M_MAGIC_ID;
   Wire.write(buffer, 5);
 }
+*/
+
+void writeInt32(int32_t v) {
+  buffer[0] = (uint8_t)(v>>24);
+  buffer[1] = (uint8_t)((v>>16)&0xFF);
+  buffer[2] = (uint8_t)((v>>8)&0xFF);
+  buffer[3] = (uint8_t)((v)&0xFF);  
+}
+
+void readInt32(int32_t *reg) {
+  *reg = (int32_t)(
+  (((int32_t)buffer[0]) << 24) |
+  (((int32_t)buffer[1]) << 16) |
+  (((int32_t)(buffer[2])) << 8) |
+  buffer[3]);
+}
+
+void writeInt32_2(int32_t *reg) {
+  buffer[0] = (uint8_t)(reg[0]>>24);
+  buffer[1] = (uint8_t)((reg[0]>>16)&0xFF);
+  buffer[2] = (uint8_t)((reg[0]>>8)&0xFF);
+  buffer[3] = (uint8_t)(reg[0]&0xFF);
+  buffer[4] = (uint8_t)(reg[1]>>24);
+  buffer[5] = (uint8_t)((reg[1]>>16)&0xFF);
+  buffer[6] = (uint8_t)((reg[1]>>8)&0xFF);
+  buffer[7] = (uint8_t)(reg[1]&0xFF);  
+  Wire.write(buffer, 8);
+}
+
 void writeInt16_N_M(uint16_t act, uint16_t tot, int16_t *reg) {
   for(uint16_t i=0, j=0; i<tot; i++) {
     if(i<act) {

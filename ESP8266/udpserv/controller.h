@@ -13,7 +13,7 @@
 #define REG_SENSORS_ALL      0x28  // 8 unsigned ints
 
 #define M_OWN_ID 0x53
-#define M_MAGIC_ID 0x4C
+//#define M_MAGIC_ID 0x4C
 
 #define SENS_SIZE 8
 
@@ -47,7 +47,7 @@ public:
   bool setSteering(int16_t s);
   uint8_t getNumSensors();
   float *getStoredRotRate();
-  int16_t *getStoredAdvance();
+  int32_t *getStoredAdvance();
   int16_t *getStoredPower();
   int16_t *getTargPower();
   int16_t *getStoredSensors();  
@@ -71,8 +71,9 @@ protected:
   bool writeInt16(uint16_t reg, int16_t val);
   bool writeInt16_2(uint16_t reg, int16_t left, int16_t right);
   bool readInt16_2(uint16_t reg, int16_t *left, int16_t *right);  
-  bool readInt16_2_x(uint16_t reg, int16_t *left, int16_t *right);  
+  //bool readInt16_2_x(uint16_t reg, int16_t *left, int16_t *right);  
   bool readInt16_2(uint16_t reg, int16_t *d);
+  bool readInt32_2(uint16_t reg, int32_t *d);
   bool readInt16_N(uint16_t reg, uint16_t n, int16_t *d);
 private:  
   uint8_t data_ready;
@@ -87,7 +88,8 @@ private:
   uint8_t nsens;
   float act_rot_rate[2];
   //int16_t targ_rot_rate[2];
-  int16_t act_advance[2];
+  int32_t act_advance[2];
+  int32_t act_advance_0[2];
   int16_t act_power[2];
   int16_t sensors[SENS_SIZE];
   int16_t targ_pow[2];
