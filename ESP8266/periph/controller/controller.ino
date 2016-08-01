@@ -114,6 +114,9 @@
 #define ST_SET_GETEV_OFF()      (sta[0] &= ~ST_GETEV)
 #define ST_IS_GETEV()           (sta[0]&ST_GETEV)  
 */
+
+#define NSETQ 2
+
 #define CHGST_TO_MM(CNT)  ((uint32_t)(CNT)*V_NORM_PI2*WHEEL_RAD_MM/WHEEL_CHGSTATES/V_NORM)
 #define CHGST_TO_ANG_NORM(CNT)  ((uint32_t)(CNT)*V_NORM_PI2/WHEEL_CHGSTATES)
 #define CHGST_TO_RPS_NORM(CNT, MSEC)  ((uint32_t)(CNT)*V_NORM*1000/WHEEL_CHGSTATES/(MSEC))
@@ -127,27 +130,29 @@ uint8_t M_POW_MIN[2]={M_POW_MIN_0, M_POW_MIN_1};
 uint32_t lastEvTime, lastPidTime;
 int16_t sens[M_SENS_N];
 uint8_t sens_fail_cnt[M_SENS_N];
-int16_t targ_rot_rate[2]={0,0}; // RPS, 10000 = 1 RPS  (use DRV_RPS_NORM)
+//int16_t targ_rot_rate[2]={0,0}; // RPS, 10000 = 1 RPS  (use DRV_RPS_NORM)
 int16_t targ_new_param[2]={0, 0}; // RPS, 10000 = 1 RPS  (use DRV_RPS_NORM), +/-
-int16_t targ_old_rot_rate[2]={0, 0}; // prev
-int16_t act_rot_rate[2]={0,0}; // OUT - actual rate, 10000 = 1 RPS  (use DRV_RPS_NORM)
+//int16_t targ_old_rot_rate[2]={0, 0}; // prev
+//int16_t act_rot_rate[2]={0,0}; // OUT - actual rate, 10000 = 1 RPS  (use DRV_RPS_NORM)
 volatile int32_t act_adv_accu_mm[2]={0,0};  // OUT - in mm, after last request. Should be zeored after get request
 uint8_t targ_enc_cnt[2]={0,0}; 
 uint8_t  drv_dir[2]={0,0}; // (0,1,2) - NO, FWD, REV
 uint8_t enc_cnt[2]={0,0}; 
-int16_t steering=0;
+//int16_t steering=0;
 
 // PID section
+/*
 uint16_t pid_cnt=0;
 int16_t int_err[2]={0,0};
 int16_t  prev_err[2]={0,0};
+*/
 uint8_t cur_power[2]={0,0};
-uint8_t pow_chart[2][NPOW_CHART_N];
+//uint8_t pow_chart[2][NPOW_CHART_N];
 
 // 
 //volatile uint8_t setEvent = 0, getEvent = 0;
 volatile uint8_t sta[2]={0,0};
-volatile uint8_t setRegister = 0;
+//volatile uint8_t setRegister = 0;
 volatile uint8_t getRegister = 0;
 volatile uint8_t getOverflow=0;
 volatile uint8_t setOverflow=0;
@@ -160,7 +165,14 @@ uint8_t buffer[16];
 volatile uint8_t v_enc_cnt[2]={0,0}; 
 volatile uint8_t v_es[2]={0,0};
 
-volatile uint8_t updating=0;
+volatile uint8_t updating=0, qlock=0;
+
+struct set_s {
+  uint8_t r;
+  int16_t p[2];
+};
+
+struct set_s set_q[NSETQ];
 
 void setup()
 {
@@ -216,8 +228,13 @@ void setup()
   analogFrequency(32); 
   for(int i=0; i<M_SENS_N; i++) { sens[i]=0; sens_fail_cnt[i]=0; }
   
+  /*
   for(int i=0; i<2; i++) 
     for(int j=0; j<NPOW_CHART_N; j++) pow_chart[i][j]=0;
+  */
+  
+  // init Q
+  while(i<=NSETQ-1) set_q[i++].r=0;
   
   Serial.println("Ready");
   
@@ -230,7 +247,6 @@ void loop()
   if ( cycleTime < lastPidTime) lastPidTime=0; // wraparound, not correct   
   uint16_t ctime = cycleTime - lastPidTime;
   if ( ctime >= PID_TIMEOUT) { // PID cycle    
-     //Serial.print("T0:\t "); Serial.println(ctime);
     if(cycleTime < lastEvTime) lastEvTime=0; // wraparound, not correct   
     if(cycleTime - lastEvTime >= CMD_TIMEOUT) {
       // comm lost!
@@ -239,15 +255,16 @@ void loop()
       if(ST_IS_DRIVING()) stopDrive();
     }    
     readEnc(ctime);
-    if (ST_IS_DRIVING()) doPID(ctime);       
+    //if (ST_IS_DRIVING()) doPID(ctime);       
     readUSDist(); 
     lastPidTime=cycleTime;
   } // PID cycle 
           
+  struct set_s sp;
+  uint8_t qsz=setQuGet(&sp);
+  /*  
   if(setRegister) {    
-    Serial.print("SetReg ");
-    Serial.print(setRegister);
-    Serial.print(" : ");
+    Serial.print("SetReg "); Serial.print(setRegister); Serial.print(" : ");
     switch(setRegister) {
       //case REG_TARG_ROT_RATE: 
       case REG_TARG_POW: 
@@ -267,9 +284,33 @@ void loop()
     Serial.println();
     setRegister=0;   
   }
+ */
+ 
+  if(qsz) {    
+    Serial.print("SetReg "); Serial.print(sp.r); Serial.print("\t: "); Serial.print(sp.p[0]); Serial.print("\t, "); Serial.print(sp.p[1]);
+    switch(sp.r) {
+      case REG_TARG_POW:         
+        targ_new_param[0]=sp.p[0];
+        targ_new_param[0]=sp.p[1];
+        if(targ_new_param[0] || targ_new_param[1]) {
+          startDrivePow();  
+        }
+        else   
+          stopDrive();    
+        break;  
+        /*
+      case REG_STEERING:
+        steering=sp.p[0];
+        //Serial.print(steering);    
+        */
+      default:;    
+    }
+    Serial.println();
+  }
  
  if(getOverflow) {Serial.println("===========Get overflow!"); getOverflow=0;}     
  if(setOverflow) {Serial.println("===========Set overflow!"); setOverflow=0;}
+ if(qsz>1) {Serial.print("===========QSZ "); Serial.println(qsz);}
 /*
   if(ST_IS_GETEV()){     
     //Serial.print("GetReg ");
@@ -283,7 +324,7 @@ void loop()
 
 void startDrivePow() {
   /*
-  if(ST_IS_DRIVING() && cur_power[0]==targ_new_param[0] && targ_old_rot_rate[1]==targ_new_param[1]) {
+  if(ST_IS_DRIVING() && cur_power[0]==targ_new_param[0] && cur_power[1]==targ_new_param[1]) {
     Serial.print("Continue drive"); 
     return;
   }
@@ -294,26 +335,14 @@ void startDrivePow() {
   Serial.print("St drv pow: "); 
    
   for(int i=0; i<2; i++) {
-    if(targ_new_param[i]==0) {
-      //drv_dir[i]=0;
-      //targ_rot_rate[i]=0;
-      new_dir=0;
-    } else if(targ_new_param[i]>0) {
-      new_dir=1;
-      //drv_dir[i]=1;
-      //targ_rot_rate[i]=(uint16_t)(targ_new_param[i]);
-    } else {
-      //drv_dir[i]=2;
+    if(targ_new_param[i]==0) new_dir=0;
+    else if(targ_new_param[i]>0) new_dir=1;
+    else {
       new_dir=2;
       targ_new_param[i]=-targ_new_param[i];
-      //targ_rot_rate[i]=(uint16_t)(-targ_new_param[i]);
     }
     
-    if(drv_dir[i] != new_dir || cur_power[i] != targ_new_param[i]) {
-      //drv_dir[i] = new_dir;
-      //cur_power[i]=targ_new_param[i];
-      chg++;
-    }     
+    if(drv_dir[i] != new_dir || cur_power[i] != targ_new_param[i]) chg++;
     
     drv_dir[i] = new_dir;
     cur_power[i]=targ_new_param[i];
@@ -325,14 +354,17 @@ void startDrivePow() {
     Serial.print("\t ;"); 
   }
   
-  if(chg) Serial.print(" >>RST"); 
-  Serial.println();
+   if(chg || !ST_IS_DRIVING()) {
+     Serial.print(" >>RST");    
+    //readEnc(0);
+    Drive(drv_dir[0], cur_power[0], drv_dir[1], cur_power[1]); 
+    ST_SET_DRIVE_ON();
+    //pid_cnt=0;
+    //lastPidTime=millis(); 
+   }
    
-  //readEnc(0);
-  Drive(drv_dir[0], cur_power[0], drv_dir[1], cur_power[1]); 
-  ST_SET_DRIVE_ON();
-  //pid_cnt=0;
-  //lastPidTime=millis(); 
+  Serial.println();
+  
 }
 
 /*
@@ -409,11 +441,12 @@ void stopDrive() {
   if(!ST_IS_DRIVING()) return;
   Drive(0, 0, 0, 0);
   cur_power[0]=cur_power[1]=0;
-  targ_old_rot_rate[0]=targ_rot_rate[0]=0;     
-  targ_old_rot_rate[1]=targ_rot_rate[1]=0;
+  //targ_old_rot_rate[0]=targ_rot_rate[0]=0;     
+  //targ_old_rot_rate[1]=targ_rot_rate[1]=0;
   ST_SET_DRIVE_OFF();
-  pid_cnt=0;
   Serial.println("Stop drive"); 
+  /*
+  pid_cnt=0;
   Serial.println("Chart:");
   for(int j=0; j<NPOW_CHART_N; j++) {
     Serial.print(j*NPOW_CHART_MULT); Serial.print("\t ");
@@ -425,6 +458,7 @@ void stopDrive() {
     }
     Serial.println();
   }
+  */
 }
 
 void readEnc(uint16_t ctime)
@@ -492,9 +526,9 @@ void readEnc(uint16_t ctime)
   }
 }
 
+/*
 void doPID(uint16_t ctime)
 {
-  /*
   if(ctime>0) {
     int8_t i;  
 #ifdef _PID_DEBUG_
@@ -547,8 +581,8 @@ void doPID(uint16_t ctime)
     Serial.println();
 #endif    
   }
-  */
 }
+*/
 
 void Drive(uint8_t ldir, uint8_t lpow, uint8_t rdir, uint8_t rpow) 
 {
@@ -707,25 +741,35 @@ void baseInterrupt(uint8_t i) {
 
 void receiveEvent(int howMany)
 {
-  if(getRegister) getOverflow=1;
-  if(setRegister) setOverflow=1;
+  uint8_t reg=0;
+  int16_t p[2];
   if(Wire.available()==0) return;
-  getRegister=Wire.read();
-  if(Wire.available()==0) return; 
-  setRegister=getRegister;
-  getRegister=0;
-  switch(setRegister) {
-    case REG_TARG_ROT_RATE:
+  reg=Wire.read();
+  if(Wire.available()==0) { 
+    if(getRegister) getOverflow=1;
+    getRegister=reg; 
+    return; 
+  }
+  //if(setRegister) setOverflow=1;  
+  //setRegister=reg;
+  p[0]=p[1]=0;
+  switch(reg) {
+    //case REG_TARG_ROT_RATE:
     case REG_TARG_POW:
+    /*
       readInt16(targ_new_param);
       readInt16(targ_new_param+1);
+      */
+      readInt16(p);
+      readInt16(p+1);      
     case REG_STEERING:
-      readInt16(&steering);
+      //readInt16(&steering);
+      readInt16(p);
       break;  
     default:;
   }  
   while(Wire.available()) Wire.read(); // consume whatever left  
-  //ST_SET_SETEV_ON();
+  setOverflow=setQuAdd(reg, p[0], p[1]);
   lastEvTime = millis();
 }
   
@@ -746,25 +790,22 @@ void requestEvent()
       //updating=0;            
       Wire.write(buffer, 2);     
       break;
+      /*
     case REG_TARG_ROT_RATE:
       writeInt16_2(targ_rot_rate);
       break;
     case REG_ACT_ROT_RATE:
       writeInt16_2(act_rot_rate);
       break;      
+      */
     case REG_ACT_ADV_ACC:
       //writeInt16_2(act_adv_accu_mm);      
       int32_t t[2];
       while(updating);
       updating=1;
       t[0]=act_adv_accu_mm[0]; t[1]=act_adv_accu_mm[1];    
-      //act_adv_accu_mm[0]=0; act_adv_accu_mm[1]=0;
       updating=0;
       writeInt32_2(t);
-      //writeInt16_2_v(t1, t2);
-      //writeInt16_2_v_x(t1, t2);
-      //writeInt16_2_v(act_adv_accu_mm[0], act_adv_accu_mm[1]);
-      //act_adv_accu_mm[0]=act_adv_accu_mm[1]=0;
       break;            
     case REG_ACT_POW:
       int16_t tmp[2];
@@ -779,11 +820,37 @@ void requestEvent()
       break;  
     default:;
   }
-  //ST_SET_GETEV_ON();
   getRegister=0;
   lastEvTime = millis();
 }
 
+uint8_t setQuAdd(uint8_t r, uint8_t p1, uint8_t p2) {
+  while(qlock);
+  qlock=1;
+  uint8_t i=0;
+  uint8_t ovf=0;
+  while(i<=NSETQ-1 && set_q[i].r) i++;  
+  if(i==NSETQ) {
+    ovf=1;
+    i=NSETQ-1;
+  }
+  set_q[i].r=r;
+  set_q[i].p[0]=p1;
+  set_q[i].p[1]=p2;
+  qlock=0;
+  return ovf;
+}
+
+uint8_t setQuGet(struct set_s *sp) {
+  while(qlock);
+  qlock=1;
+  if(!set_q[0].r) { qlock=0; return 0; }
+  *sp=set_q[0];
+  uint8_t sz=1;
+  for(uint8_t i=1; i<NSETQ-1; i++) { set_q[i-1]=set_q[i]; if(set_q[i].r) sz++; }
+  qlock=1;
+  return sz;
+}
 
 void readInt16(int16_t *reg) {
   if(Wire.available()) buffer[0]=Wire.read();
@@ -805,6 +872,8 @@ void writeInt16_2(int16_t *reg) {
   Wire.write(buffer, 4);
 }
 
+
+/*
 void writeInt16_2_v(int16_t v1, int16_t v2) {
   uint16_t v1u=(uint16_t)v1;
   uint16_t v2u=(uint16_t)v2;
@@ -814,6 +883,7 @@ void writeInt16_2_v(int16_t v1, int16_t v2) {
   buffer[3] = (uint8_t)((v2u)&0xFF);  
   Wire.write(buffer, 4);
 }
+*/
 
 /*
 void writeInt16_2_v_x(int16_t v1, int16_t v2) {
