@@ -236,6 +236,8 @@ void setup()
   // init Q
   while(i<=NSETQ-1) set_q[i++].r=0;
   
+  setQuPrint();
+  
   Serial.println("Ready");
   
   lastEvTime = lastPidTime = millis();  
@@ -286,12 +288,13 @@ void loop()
   }
  */
  
-  if(qsz) {    
+  if(qsz) {
+    setQuPrint();   
     Serial.print("SetReg "); Serial.print(sp.r); Serial.print("\t: "); Serial.print(sp.p[0]); Serial.print("\t, "); Serial.print(sp.p[1]);
     switch(sp.r) {
       case REG_TARG_POW:         
         targ_new_param[0]=sp.p[0];
-        targ_new_param[0]=sp.p[1];
+        targ_new_param[1]=sp.p[1];
         if(targ_new_param[0] || targ_new_param[1]) {
           startDrivePow();  
         }
@@ -761,7 +764,8 @@ void receiveEvent(int howMany)
       readInt16(targ_new_param+1);
       */
       readInt16(p);
-      readInt16(p+1);      
+      readInt16(p+1);     
+      break; 
     case REG_STEERING:
       //readInt16(&steering);
       readInt16(p);
@@ -825,7 +829,7 @@ void requestEvent()
 }
 
 uint8_t setQuAdd(uint8_t r, uint8_t p1, uint8_t p2) {
-  while(qlock);
+  //while(qlock);
   qlock=1;
   uint8_t i=0;
   uint8_t ovf=0;
@@ -847,9 +851,21 @@ uint8_t setQuGet(struct set_s *sp) {
   if(!set_q[0].r) { qlock=0; return 0; }
   *sp=set_q[0];
   uint8_t sz=1;
-  for(uint8_t i=1; i<NSETQ-1; i++) { set_q[i-1]=set_q[i]; if(set_q[i].r) sz++; }
-  qlock=1;
+  for(uint8_t i=1; i<=NSETQ-1; i++) { set_q[i-1]=set_q[i]; if(set_q[i].r) sz++; }
+  set_q[NSETQ-1].r=0;
+  qlock=0;
   return sz;
+}
+
+void setQuPrint() {
+  uint8_t r[NSETQ]; 
+  while(qlock);
+  qlock=1;
+  for(uint8_t i=0; i<=NSETQ-1; i++) r[i]=set_q[i].r;
+  qlock=0;
+  Serial.print("QST:");
+  for(uint8_t i=0; i<=NSETQ-1; i++) { Serial.print("\t "); Serial.print(r[i]); }
+  Serial.println();
 }
 
 void readInt16(int16_t *reg) {
