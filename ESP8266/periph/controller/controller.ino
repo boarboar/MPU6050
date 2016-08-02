@@ -165,7 +165,8 @@ uint8_t buffer[16];
 volatile uint8_t v_enc_cnt[2]={0,0}; 
 volatile uint8_t v_es[2]={0,0};
 
-volatile uint8_t updating=0, qlock=0;
+volatile uint8_t updating=0;
+//volatile uint8_t qlock=0;
 
 struct set_s {
   uint8_t r;
@@ -173,6 +174,7 @@ struct set_s {
 };
 
 struct set_s set_q[NSETQ];
+volatile uint8_t set_h, set_t;
 
 void setup()
 {
@@ -234,7 +236,7 @@ void setup()
   */
   
   // init Q
-  while(i<=NSETQ-1) set_q[i++].r=0;
+  setQuInit();
   
   setQuPrint();
   
@@ -828,11 +830,19 @@ void requestEvent()
   lastEvTime = millis();
 }
 
+// Non-blocking queue
+
+void setQuInit() {  
+  for(uint8_t i=0; i<NSETQ; i++) set_q[i++].r=0;
+  set_h=set_t=0;
+}
+  
 uint8_t setQuAdd(uint8_t r, uint8_t p1, uint8_t p2) {
+  uint8_t ovf=0;
   //while(qlock);
+  /*
   qlock=1;
   uint8_t i=0;
-  uint8_t ovf=0;
   while(i<=NSETQ-1 && set_q[i].r) i++;  
   if(i==NSETQ) {
     ovf=1;
@@ -842,29 +852,53 @@ uint8_t setQuAdd(uint8_t r, uint8_t p1, uint8_t p2) {
   set_q[i].p[0]=p1;
   set_q[i].p[1]=p2;
   qlock=0;
+  */
+  if(set_q[set_t].r) ovf=1;
+  set_q[set_t].p[0]=p1;
+  set_q[set_t].p[1]=p2;
+  set_q[set_t].r=r;
+  set_t++;
+  if(set_t==NSETQ) set_t=0;
   return ovf;
 }
 
 uint8_t setQuGet(struct set_s *sp) {
+  
+  /*
   while(qlock);
   qlock=1;
   if(!set_q[0].r) { qlock=0; return 0; }
   *sp=set_q[0];
-  uint8_t sz=1;
   for(uint8_t i=1; i<=NSETQ-1; i++) { set_q[i-1]=set_q[i]; if(set_q[i].r) sz++; }
   set_q[NSETQ-1].r=0;
   qlock=0;
+  return sz;
+  */
+  if(!set_q[set_h].r) return 0;
+  uint8_t sz=1;
+  *sp=set_q[set_h];
+  set_q[set_h].r=0;
+  set_h++;
+  if(set_h==NSETQ) set_h=0;
+  if(set_q[set_h].r) sz++;
   return sz;
 }
 
 void setQuPrint() {
   uint8_t r[NSETQ]; 
-  while(qlock);
-  qlock=1;
-  for(uint8_t i=0; i<=NSETQ-1; i++) r[i]=set_q[i].r;
-  qlock=0;
-  Serial.print("QST:");
-  for(uint8_t i=0; i<=NSETQ-1; i++) { Serial.print("\t "); Serial.print(r[i]); }
+  //while(qlock);
+  //qlock=1;
+  for(uint8_t i=0; i<NSETQ; i++) r[i]=set_q[i].r;
+  //qlock=0;
+  uint8_t h=set_h;
+  uint8_t t=set_t;
+  Serial.print("QST["); Serial.print(h); Serial.print(":"); Serial.print(t);  Serial.print("]: ");  
+  
+  for(uint8_t i=0; i<NSETQ; i++) { 
+    Serial.print("\t "); Serial.print(r[h]); 
+    h++;
+    if(h==NSETQ) h=0;
+  }
   Serial.println();
 }
 
