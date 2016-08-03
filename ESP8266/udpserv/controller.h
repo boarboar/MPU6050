@@ -42,6 +42,7 @@ public:
   */
   bool setTargPower(float l, float r);
   bool setTargSteering(int16_t s);
+  bool setTargSpeed(int16_t s);
   bool stopDrive();
   bool setPower(int16_t *p);
   bool setSteering(int16_t s);
@@ -49,12 +50,13 @@ public:
   float *getStoredRotRate();
   int32_t *getStoredAdvance();
   int16_t *getStoredPower();
-  int16_t *getTargPower();
+  //int16_t *getTargPower();
+  int16_t *getCurPower();
   int16_t *getStoredSensors();  
   float getMovement();
   float getRotation();
   float getDistance();
-  float getSpeed();
+  int16_t getSpeed();
   float getAngle();
   float getX();
   float getY();
@@ -63,7 +65,7 @@ protected:
   Controller();
   uint8_t testConnection();
   uint8_t _getNumSensors();
-  bool getControllerStatus();
+  //bool getControllerStatus();
   bool getActRotRate(); // in RPS
   bool getActAdvance(); // in MMs
   bool getSensors(); 
@@ -82,7 +84,7 @@ private:
   int16_t fail_p[6]; 
   
   uint8_t buf[16];  
-  uint8_t sta[2];
+  //uint8_t sta[2];
   float mov, rot;
   uint8_t pready;
   uint8_t nsens;
@@ -92,14 +94,16 @@ private:
   int32_t act_advance_0[2];
   int16_t act_power[2];
   int16_t sensors[SENS_SIZE];
-  int16_t targ_pow[2];
+  //int16_t targ_pow[2];
+  int16_t cur_pow[2];
+  int16_t targ_speed; //mm_s
   
   float dist;
   float angle;
   float curr_yaw;
   float r[2];
   float targ_bearing;
-  float speed;
+  int16_t speed; //mm/s
   //float err_bearing_p_0, err_bearing_i;
   int16_t err_bearing_p_0, err_bearing_i;
   

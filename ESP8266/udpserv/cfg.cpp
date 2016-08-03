@@ -12,7 +12,7 @@ enum CFG_ID {CFG_DBG=0, CFG_SYSL=1, CFG_TODO=2};
 
 CfgDrv CfgDrv::Cfg; // singleton
 
-CfgDrv::CfgDrv() : fs_ok(false), dirty(false), last_chg(0), debug_on(0), log_on(0), log_port(0) {;}
+CfgDrv::CfgDrv() : fs_ok(false), log_on(0), debug_on(0), log_port(0), dirty(false), last_chg(0)  {;}
 
 int16_t CfgDrv::init() {
   fs_ok=SPIFFS.begin();

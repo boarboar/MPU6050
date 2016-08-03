@@ -74,12 +74,14 @@ class UnitPanel(wx.Window):
         dc.DrawLines(self.ts(self.axe_line)) ## Y
         dc.DrawTextPoint("Y", self.tp(self.axe_line[1]))
         dc.DrawCirclePoint(self.tp(wx.Point(0, 0)), self.UNIT_LEVEL_RAD)
+        """
         vv = math.hypot(self.v[0]/10, self.v[1]/10)*self.V_SCALE
         if vv>1 :
             #self.SetRotation(math.atan2(-self.v[1], self.v[0]))
             self.SetRotation(math.atan2(self.v[0], self.v[1]))
             dc.SetPen(wx.Pen(wx.RED, 2))
             dc.DrawLines(self.ts(self.MakeArrow(vv)))
+            """
         # draw - vertical
         # Zx=cos(y)*sin(p)*cos(r)+sin(y)*sin(r)
         # Zy=sin(y)*sin(p)*cos(r)-cos(y)*sin(r)
@@ -185,6 +187,7 @@ class ChartPanel(wx.Window):
     def UpdateData(self, t, att, v=None):
         if len(self.points)==0 : self.t0=0
         #point=(t, att, v, (math.atan2(-v[1], v[0])*180.0/math.pi, math.hypot(v[0], v[1])))
+        v= [0 , 0] # tempoarrily
         point=(t, att, v, (math.atan2(v[0], v[1])*180.0/math.pi, math.hypot(v[0], v[1])))
         self.points.append(point)
         x1=(point[0]-self.t0)*self.SCALE_MSEC

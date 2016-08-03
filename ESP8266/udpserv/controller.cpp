@@ -6,6 +6,7 @@ const int DEV_ID=4;
 const int M_POW_MIN=30; 
 const int M_POW_MAX=240;
 const int M_POW_NORM=140;
+const int M_SPEED_NORM=200;
 
 const int gain_p=40;
 const int gain_d=160;
@@ -57,7 +58,9 @@ bool Controller::init() {
   act_advance[0]=act_advance[1]=0;
   act_advance_0[0]=act_advance_0[1]=0;
   act_power[0]=act_power[1]=0;
-  targ_pow[0]=targ_pow[1]=0;
+  //targ_pow[0]=targ_pow[1]=0;
+  cur_pow[0]=cur_pow[1]=0;
+  targ_speed=0;
   for(int i=0; i<SENS_SIZE; i++) sensors[i]=0;
   resetIntegrator();
   pready=testConnection();
@@ -74,11 +77,9 @@ bool Controller::init() {
 void Controller::resetIntegrator() {
   dist=angle=0.0f;
   r[0]=r[1]=0.0f;
-  speed=0.0f;
+  speed=0;
   curr_yaw=0;
   targ_bearing=0;  
-  //err_bearing_p_0=0.0f;
-  //err_bearing_i=0.0f;
   err_bearing_p_0=err_bearing_i=0;
   act_advance_0[0]=act_advance[0];
   act_advance_0[1]=act_advance[1];
@@ -92,29 +93,26 @@ uint8_t Controller::testConnection() {
 
 bool Controller::process(float yaw, uint32_t dt) {
   if(!pready) return false;
-  //boolean alr=false;
-  //int16_t tmp[2];
-
   curr_yaw=yaw;
   
-  if(!getControllerStatus()) return false;
+ // if(!getControllerStatus()) return false;
 
  //Serial.print(F("CTRL STAT: ")); Serial.print(sta[0]); Serial.print(F(" \t ")); Serial.println(sta[1]);
 
   if(!getActAdvance()) return false;
 
-
+/*
   if(sta[1]) { // experimental
     // Serial.print(F("CTRL STAT ALR: ")); Serial.print(sta[0]); Serial.print(F(" \t ")); Serial.println(sta[1]);
     raiseFail(CTL_FAIL_ALR, sta[0], sta[1], 0, 0);
     return false;
   }
+*/
 
   float dist0=dist;
   dist=(float)(act_advance[0]+act_advance[1])*0.5f; // in mm;
   mov=dist-dist0;
-  
-  
+   
   if(abs(act_advance[0]-act_advance_0[0])>512 || abs(act_advance[1]-act_advance_0[1])>512) {
     //raiseFail(CTL_FAIL_OVF, act_advance[0], act_advance[1]);
         Serial.print(F("ADV=")); 
@@ -127,10 +125,7 @@ bool Controller::process(float yaw, uint32_t dt) {
     act_advance_0[1]=act_advance[1];
     return false;
   }
-  
-  //mov=(float)(act_advance[0]+act_advance[1])*0.5f; // in mm
-  //dist+=mov;
-  
+    
   rot=(float)((act_advance[0]-act_advance_0[0])-(act_advance[1]-act_advance_0[1]))/(float)WHEEL_BASE_MM;  
   angle+=rot;  
   if(angle>PI) angle-=PI*2.0f;
@@ -146,22 +141,17 @@ bool Controller::process(float yaw, uint32_t dt) {
   //differnitaite
   float raw_speed;
   if(dt) {
-    // LPM
+    // LPF
     raw_speed = mov/(float)dt*1000.0f;
-    speed = speed - (speed - raw_speed)*0.5f;
+    speed = (int16_t)((float)speed - ((float)speed - raw_speed)*0.5f);
   }
 
-
-  //if(!getActRotRate()) return false;  
-  //if(!getActPower()) return false;
-  //if(!getSensors()) return false; 
- 
-  //getActRotRate();
   getActPower();
   getSensors();
 
-  //if(targ_rot_rate[0] && targ_rot_rate[1]) {
-  if(targ_pow[0] && targ_pow[1]) {
+  //if(targ_pow[0] && targ_pow[1]) {
+  
+  if(targ_speed) {
 
     Serial.print(F("ADV=")); Serial.print(act_advance[0]); Serial.print(F("\t ")); Serial.println(act_advance[1]);
 
@@ -191,10 +181,14 @@ bool Controller::process(float yaw, uint32_t dt) {
     
     int16_t s=-(int16_t)((int32_t)gain_p*err_bearing_p+(int32_t)gain_d*err_bearing_d+(int32_t)gain_i*err_bearing_i)/gain_div;
     
-    int16_t cur_pow[2];
-    cur_pow[0]=targ_pow[0]+s;
-    cur_pow[1]=targ_pow[1]-s;
+    //int16_t cur_pow[2];
+    
+    //cur_pow[0]=targ_pow[0]+s;
+    //cur_pow[1]=targ_pow[1]-s;
 
+    cur_pow[0]+=s;
+    cur_pow[1]-=s;
+    
     for(int i=0; i<2; i++) {
       if(cur_pow[i]<M_POW_MIN) cur_pow[i]=M_POW_MIN; 
       if(cur_pow[i]>M_POW_MAX) cur_pow[i]=M_POW_MAX; 
@@ -206,10 +200,8 @@ bool Controller::process(float yaw, uint32_t dt) {
 
     Serial.print(F("Bearing error: ")); Serial.print(err_bearing_p); Serial.print(F("\t ")); Serial.print(err_bearing_d);  Serial.print(F("\t ")); Serial.print(err_bearing_i);
     Serial.print(F("\t => ")); Serial.print(s); Serial.print(F("\t : ")); Serial.print(cur_pow[0]); Serial.print(F("\t : ")); Serial.print(cur_pow[1]); 
-    Serial.print(F("\t : V=")); Serial.println(speed); 
-    //Serial.print(F("\t : RV=")); Serial.print(raw_speed); 
-    //Serial.print(F("\t : T=")); Serial.print(dt); Serial.print(F("\t : MOV=")); Serial.println(mov);      
-    //setSteering(s);  
+    Serial.print(F("\t : V=")); Serial.print(speed); Serial.print(F("\t : VT=")); Serial.println(targ_speed); 
+    
     setPower(cur_pow);  
   }
    
@@ -222,7 +214,8 @@ bool Controller::process(float yaw, uint32_t dt) {
   return true;
 }
 
-int16_t *Controller::getTargPower() { return targ_pow;}
+//int16_t *Controller::getTargPower() { return targ_pow;}
+int16_t *Controller::getCurPower() { return cur_pow;}
 uint8_t Controller::getNumSensors() { return nsens;}
 float *Controller::getStoredRotRate() { return act_rot_rate;}
 int32_t *Controller::getStoredAdvance() { return act_advance;}
@@ -231,7 +224,7 @@ int16_t *Controller::getStoredSensors() { return sensors;}
 float Controller::getMovement() { return mov;}
 float Controller::getRotation() { return rot;}
 float Controller::getDistance() { return dist*0.1f;} //cm
-float Controller::getSpeed() { return speed*0.1f;} // cm/s
+int16_t Controller::getSpeed() { return speed/10;} // cm/s
 float Controller::getAngle() { return angle;}
 //float *Controller::getCoords() { return r;}
 float Controller::getX() { return r[0]*0.1f;}
@@ -262,8 +255,14 @@ bool Controller::setTargPower(float l, float r) {
   //if(targ_rot_rate[0]==d[0] && targ_rot_rate[1]==d[1]) return true;
   setTargSteering(0);
   err_bearing_p_0=err_bearing_i=0;    
+  /*
   targ_pow[0]=l*M_POW_NORM; targ_pow[1]=r*M_POW_NORM; // temp  
   if(!setPower(targ_pow)) return false;
+  */
+  cur_pow[0]=l*M_POW_NORM; cur_pow[1]=r*M_POW_NORM; // temp  
+  targ_speed=(l+r)*0.5f*M_SPEED_NORM;
+  Serial.print(F("STP TV=")); Serial.print(targ_speed); Serial.print(F("ADV=")); Serial.print(cur_pow[0]); Serial.print(F("\t ")); Serial.println(cur_pow[1]);
+  if(!setPower(cur_pow)) return false;
   return true;
 }
 
@@ -274,11 +273,23 @@ bool Controller::setTargSteering(int16_t s) {
   return true;
 }
 
+bool Controller::setTargSpeed(int16_t speed) {
+  setTargSteering(0);
+  err_bearing_p_0=err_bearing_i=0;    
+  targ_speed=speed*10; //mm
+  cur_pow[0]=cur_pow[1]=(int32_t)targ_speed*M_POW_NORM/M_SPEED_NORM; // temp  
+  Serial.print(F("STV TV=")); Serial.print(targ_speed); Serial.print(F("ADV=")); Serial.print(cur_pow[0]); Serial.print(F("\t ")); Serial.println(cur_pow[1]);
+  if(!setPower(cur_pow)) return false;
+  return true;
+}
+
+/*
 bool Controller::getControllerStatus() { 
   bool res = I2Cdev::readBytes(DEV_ID, REG_STATUS, 2, sta); 
   if(!res) raiseFail(CTL_FAIL_RD, REG_STATUS);
   return res;
 }
+*/
 
 uint8_t Controller::_getNumSensors() {
   bool res = I2Cdev::readByte(DEV_ID, REG_SENSORS_CNT, buf); 
@@ -381,7 +392,6 @@ bool Controller::readInt16_2(uint16_t reg, int16_t *left, int16_t *right) {
     *right = (((int16_t)buf[2]) << 8) | buf[3];
     */
      
-
     *left = (int16_t)((((uint16_t)buf[0]) << 8) | buf[1]);
     *right = (int16_t)((((uint16_t)buf[2]) << 8) | buf[3]);
   
