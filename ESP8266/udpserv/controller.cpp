@@ -8,10 +8,10 @@ const int M_POW_MAX=240;
 const int M_POW_NORM=140;
 const int M_SPEED_NORM=200;
 
-const int gain_p=40;
-const int gain_d=160;
+const int gain_p=20;
+const int gain_d=320;
 const int gain_i=10;
-const int gain_div=40;
+const int gain_div=80;
     
 Controller Controller::ControllerProc ; // singleton
 
