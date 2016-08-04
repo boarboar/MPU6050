@@ -104,8 +104,9 @@ private:
   float r[2];
   float targ_bearing;
   int16_t speed; //mm/s
-  //float err_bearing_p_0, err_bearing_i;
-  int16_t err_bearing_p_0, err_bearing_i;
+  float err_bearing_p_0, err_bearing_i;
+  float err_speed_p_0, err_speed_i;
+  //int16_t err_bearing_p_0, err_bearing_i;
   
 };
 

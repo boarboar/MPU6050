@@ -83,6 +83,7 @@ void Controller::resetIntegrator() {
   err_bearing_p_0=err_bearing_i=0;
   act_advance_0[0]=act_advance[0];
   act_advance_0[1]=act_advance[1];
+  err_speed_p_0=err_speed_i=0; 
 }
 
 uint8_t Controller::testConnection() {
@@ -156,19 +157,7 @@ bool Controller::process(float yaw, uint32_t dt) {
     Serial.print(F("ADV=")); Serial.print(act_advance[0]); Serial.print(F("\t ")); Serial.println(act_advance[1]);
 
     // simple proortional
-    /*
-    float err_bearing_p = yaw-targ_bearing;
-    if(err_bearing_p>PI) err_bearing_p-=PI*2.0f;
-    else if(err_bearing_p<-PI) err_bearing_p+=PI*2.0f;
-    float err_bearing_d=err_bearing_p-err_bearing_p_0;
-    if(err_bearing_d>PI) err_bearing_d-=PI*2.0f;
-    else if(err_bearing_d<-PI) err_bearing_d+=PI*2.0f;
-    err_bearing_i=err_bearing_i*0.5+err_bearing_p;
-    err_bearing_p_0=err_bearing_p;
-    
-    int16_t s=-err_bearing_p*180.0/PI;
-    */
-
+/*
     int16_t err_bearing_p = (int16_t)((yaw-targ_bearing)*180.0/PI);
     if(err_bearing_p>180) err_bearing_p-=360;
     else if(err_bearing_p<-180) err_bearing_p+=360;
@@ -180,12 +169,24 @@ bool Controller::process(float yaw, uint32_t dt) {
     err_bearing_p_0=err_bearing_p;
     
     int16_t s=-(int16_t)((int32_t)gain_p*err_bearing_p+(int32_t)gain_d*err_bearing_d+(int32_t)gain_i*err_bearing_i)/gain_div;
-    
-    //int16_t cur_pow[2];
-    
-    //cur_pow[0]=targ_pow[0]+s;
-    //cur_pow[1]=targ_pow[1]-s;
+*/    
 
+    float err_bearing_p = (yaw-targ_bearing)*180.0f/PI;
+    if(err_bearing_p>180.0f) err_bearing_p-=360.0f;
+    else if(err_bearing_p<-180.0f) err_bearing_p+=360.0f;
+    float err_bearing_d=err_bearing_p-err_bearing_p_0;
+    if(err_bearing_d>180.0f) err_bearing_d-=360.0f;
+    else if(err_bearing_d<-180.0f) err_bearing_d+=360.0f;
+    err_bearing_i=err_bearing_i+err_bearing_p;
+    err_bearing_p_0=err_bearing_p;
+
+    float err_speed_p = speed - targ_speed;
+    float err_speed_d=err_speed_p-err_speed_p_0;
+    err_speed_i=err_speed_i+err_speed_p;
+    err_speed_p_0=err_speed_p;
+    
+    int16_t s=-(int16_t)((err_bearing_p*gain_p+err_bearing_d*gain_d+err_bearing_i*gain_i)/gain_div);
+    
     cur_pow[0]+=s;
     cur_pow[1]-=s;
     
@@ -195,14 +196,20 @@ bool Controller::process(float yaw, uint32_t dt) {
       // maybe a better idea would be to make limits proportional to the target?
     }
 
+    setPower(cur_pow);  
     raiseFail(CTL_LOG_PID, err_bearing_p, err_bearing_d, err_bearing_i, s, cur_pow[0], cur_pow[1]);
 
+    yield();
 
     Serial.print(F("Bearing error: ")); Serial.print(err_bearing_p); Serial.print(F("\t ")); Serial.print(err_bearing_d);  Serial.print(F("\t ")); Serial.print(err_bearing_i);
-    Serial.print(F("\t => ")); Serial.print(s); Serial.print(F("\t : ")); Serial.print(cur_pow[0]); Serial.print(F("\t : ")); Serial.print(cur_pow[1]); 
-    Serial.print(F("\t : V=")); Serial.print(speed); Serial.print(F("\t : VT=")); Serial.println(targ_speed); 
+    Serial.print(F("\t => ")); Serial.print(s); Serial.print(F("\t : ")); Serial.print(cur_pow[0]); Serial.print(F("\t : ")); Serial.println(cur_pow[1]); 
+
+    yield();
     
-    setPower(cur_pow);  
+    Serial.print(F("\t : V=")); Serial.print(speed); Serial.print(F("\t : VT=")); Serial.print(targ_speed); 
+    Serial.print(F("\tErr: ")); Serial.print(err_speed_p); Serial.print(F("\t ")); Serial.print(err_speed_d);  Serial.print(F("\t ")); Serial.println(err_speed_i);
+    
+    
   }
    
 /*
