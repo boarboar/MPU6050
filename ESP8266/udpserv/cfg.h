@@ -15,6 +15,13 @@ public:
   uint8_t log_on, debug_on;  
   IPAddress log_addr;
   uint16_t log_port;  
+  struct  {
+    int16_t gain_p;
+    int16_t gain_d;
+    int16_t gain_i;
+    int16_t gain_div;
+    int16_t limit_i;
+  } bear_pid;
 protected:  
   CfgDrv();
   bool fs_ok;

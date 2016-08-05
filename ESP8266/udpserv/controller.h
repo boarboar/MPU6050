@@ -107,7 +107,13 @@ private:
   float err_bearing_p_0, err_bearing_i;
   float err_speed_p_0, err_speed_i;
   //int16_t err_bearing_p_0, err_bearing_i;
-  
+  uint32_t pid_cnt;
+
+  int16_t gain_p;
+  int16_t gain_d; 
+  int16_t gain_i;
+  int16_t gain_div;
+  int16_t limit_i;
 };
 
 #endif //_UMP_CONTROLLER_H_
