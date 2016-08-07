@@ -1,4 +1,5 @@
 #include <Wire.h>
+#include <Servo.h> 
 
 //#define _SIMULATION_ 1
 #define _PID_DEBUG_ 
@@ -28,7 +29,7 @@
 // ENC IN
 #define ENC2_IN   P1_5
 #define ENC1_IN   P2_0
-
+/*
 #ifdef _US_M_WIRE_
   #define US_1_IN      P2_2 
   #define US_2_IN      P1_3
@@ -36,8 +37,17 @@
 #else
   #define US_IN      P2_2 // try to tie all of them to one echo pin
 #endif
+*/
 
+#ifdef _US_M_WIRE_
+  #define US_1_IN      P2_2 
+  #define US_2_IN      P2_3
+  #define US_3_IN      P1_3
+#else
+  #define US_IN      P2_2 // try to tie all of them to one echo pin
+#endif
 
+#define SERVO_IN P1_3
 
 // USSENS
 #define US_1_OUT   P1_0
@@ -84,7 +94,7 @@
 
 #define M_WUP_PID_CNT 1
 
-#define M_SENS_N       3 // number of sensors 
+#define M_SENS_N       3 // number of sensors
 #define M_SENS_CYCLE   1 // number of sensors to read at cycle
 
 #define REG_WHO_AM_I         0xFF  // 1 unsigned byte
@@ -125,7 +135,9 @@
 #define NPOW_CHART_N     6
 #define NPOW_CHART_MULT  2
 
-uint8_t M_POW_MIN[2]={M_POW_MIN_0, M_POW_MIN_1}; 
+Servo sservo;
+
+//uint8_t M_POW_MIN[2]={M_POW_MIN_0, M_POW_MIN_1}; 
 
 uint32_t lastEvTime, lastPidTime;
 int16_t sens[M_SENS_N];
@@ -176,6 +188,9 @@ struct set_s {
 struct set_s set_q[NSETQ];
 volatile uint8_t set_h, set_t;
 
+int16_t sservo_pos=0;
+int8_t sservo_step=30;
+
 void setup()
 {
   // prepare ports
@@ -201,6 +216,7 @@ void setup()
 
   pinMode(ENC1_IN, INPUT);   
   pinMode(ENC2_IN, INPUT);   
+  
 #ifdef _US_M_WIRE_
   pinMode(US_1_IN, INPUT);   
   pinMode(US_2_IN, INPUT);   
@@ -235,6 +251,11 @@ void setup()
     for(int j=0; j<NPOW_CHART_N; j++) pow_chart[i][j]=0;
   */
   
+  Serial.println("Init Servo...");
+  sservo.attach(SERVO_IN);  // attaches the servo on pin 9 to the servo object
+  sservo.write(0);
+
+
   // init Q
   setQuInit();
   
@@ -650,12 +671,21 @@ void Drive_s1(uint8_t dir, uint8_t pow, int16_t p_en, uint8_t p1)
 }
 
 void readUSDist() {
+  //uint32_t t=millis();
+  sservo.write(sservo_pos);
+  //uint32_t dt=millis()-t;
+  //Serial.print(t); Serial.print(" \t"); Serial.println(sservo_pos); 
+  sservo_pos+=sservo_step;
+  if((sservo_step>0 && sservo_pos>=180) || (sservo_step<0 && sservo_pos<=0)) sservo_step=-sservo_step;
+  /*
 #ifdef _US_M_WIRE_
-  int ports_in[M_SENS_N]={US_1_IN, US_2_IN, US_3_IN};
+  //int ports_in[M_SENS_N]={US_1_IN, US_2_IN, US_3_IN};
+  int ports_in[M_SENS_N]={US_1_IN, US_2_IN};
 #else
   int ports_in[M_SENS_N]={US_IN, US_IN, US_IN};
 #endif  
-  int ports[M_SENS_N]={US_1_OUT, US_2_OUT, US_3_OUT};
+  //int ports[M_SENS_N]={US_1_OUT, US_2_OUT, US_3_OUT};
+  int ports[M_SENS_N]={US_1_OUT, US_2_OUT};
   int out_port=ports[current_sens];
   int in_port=ports_in[current_sens];
   static bool ignore=false;
@@ -707,18 +737,18 @@ void readUSDist() {
       sens[current_sens] = -2;
       //delay(50);
       ignore=true;
-      /*
+      
       //play with timing ?
-      delay(50);
-      pinMode(US_IN, OUTPUT);
-      digitalWrite(US_IN, LOW);
-      delay(50);
-      pinMode(US_IN, INPUT);
-      */
-      /*
-      if(digitalRead(US_IN)==HIGH) { Serial.print("US Reset failed: "); Serial.println(current_sens);}
-      else { Serial.print("US Reset OK: "); Serial.println(current_sens);}
-      */
+      //delay(50);
+      //pinMode(US_IN, OUTPUT);
+      //digitalWrite(US_IN, LOW);
+      //delay(50);
+      //pinMode(US_IN, INPUT);
+     
+      
+      //if(digitalRead(US_IN)==HIGH) { Serial.print("US Reset failed: "); Serial.println(current_sens);}
+      //else { Serial.print("US Reset OK: "); Serial.println(current_sens);}
+      
     }
       
     if(sens_fail_cnt[current_sens]>8) sens_fail_cnt[current_sens]=8; 
@@ -728,6 +758,7 @@ void readUSDist() {
   }
   current_sens=(current_sens+1)%M_SENS_N;  
   //}
+  */
 }
 
 void encodeInterrupt_1() { baseInterrupt(0); }

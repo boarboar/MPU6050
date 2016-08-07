@@ -16,8 +16,9 @@
 //#define M_MAGIC_ID 0x4C
 
 #define SENS_SIZE 8
-
+#define SPEED_R_SZ 4
 #define V_NORM 10000
+
 #define WHEEL_BASE_MM 130
 
 
@@ -104,6 +105,7 @@ private:
   float r[2];
   float targ_bearing;
   int16_t speed; //mm/s
+  int16_t speed_r[SPEED_R_SZ]; // raw speed readings mm/s
   float err_bearing_p_0, err_bearing_i;
   float err_speed_p_0, err_speed_i;
   //int16_t err_bearing_p_0, err_bearing_i;

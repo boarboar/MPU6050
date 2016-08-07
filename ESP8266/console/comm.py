@@ -45,20 +45,24 @@ class CommandThread(threading.Thread):
                         d = self.__s.recvfrom(1024)
                         #self.__controller.log().LogString("From %s rsp %s" % (d[1], d[0]), 'GREY')
                         resp_json=json.loads(d[0])
-                        if int(req_json["I"]) != int(resp_json["I"]) :
-                            self.__controller.log().LogErrorString("UNMATCHED: "+d[0])
-                        else:
-                            if resp_q is not None:
-                                resp_q.put_nowait(d[0])
+                        try:
+                            if int(req_json["I"]) != int(resp_json["I"]) :
+                                self.__controller.log().LogErrorString("UNMATCHED: "+d[0])
                             else:
-                                self.__controller.resp(d[0], req_json)
-                            break
+                                if resp_q is not None:
+                                    resp_q.put_nowait(d[0])
+                                else:
+                                    self.__controller.resp(d[0], req_json)
+                                break
+                        except KeyError : 
+                            self.__controller.log().LogErrorString("Bad resp : %s" % d[0])
+        
                 except socket.timeout as msg:
                     self.__controller.log().LogErrorString("Timeout")
                     if resp_q is not None: resp_q.put_nowait(None)
                 except socket.error as msg:
                     self.__controller.log().LogErrorString("Sock error : %s" % msg)
-
+                
         self.__s.close()
         self.__controller.log().LogString("Cmd thread stopped")
 
@@ -242,11 +246,15 @@ class PathThread(threading.Thread):
                     self.__controller.reqMoveSync(base_move+move_var[0], base_move+move_var[1])
                     """
                     s=-err_p*180/math.pi
-                    if(s<-180) : s=-180
-                    if(s>180) : s=180
+                    #if(s<-180) : s=-180
+                    #if(s>180) : s=180
+
+                    if(s<-5) : s=-5
+                    if(s>5) : s=5
 
                     s=s0-(s0-s)*0.5 #LPM
                     s0=s
+
 
                     self.__controller.log().LogString("PID:  %s" % s)
 

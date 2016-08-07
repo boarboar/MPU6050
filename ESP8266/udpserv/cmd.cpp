@@ -214,7 +214,7 @@ int16_t c_reset(JsonObject& /*root*/, JsonObject& /*rootOut*/) {
   return 0;
 }
 
-int16_t c_resetMPU(JsonObject& root, JsonObject& /*rootOut*/) {
+int16_t c_resetMPU(JsonObject& root, JsonObject& rootOut) {
   const char *action=root["A"];
   if(!action || !*action) return -3;
   if(!strcmp(action, "MPU")) {
@@ -225,8 +225,13 @@ int16_t c_resetMPU(JsonObject& root, JsonObject& /*rootOut*/) {
   } else if(!strcmp(action, "MPU_INT")) {
     Serial.println(F("Resetting MPU/CTL integrator...")); 
     MpuDrv::Mpu.resetIntegrator();
-    Controller::ControllerProc.resetIntegrator();
+    //Controller::ControllerProc.resetIntegrator();
+    Controller::ControllerProc.needReset();
   } else return -3;
+  JsonArray& r = rootOut.createNestedArray("CRD");
+  r.add((int)Controller::ControllerProc.getX());
+  r.add((int)Controller::ControllerProc.getY());
+  r.add(0); // Z-crd
   return 0;
 }
 
