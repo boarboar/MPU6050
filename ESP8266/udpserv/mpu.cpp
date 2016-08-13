@@ -219,7 +219,7 @@ int16_t MpuDrv::cycle(uint16_t /*dt*/) {
     v.x+=a.x*ts; v.y+=a.y*ts; v.z+=a.z*ts;
 //      r.x+=v.x*ts; r.y+=v.y*ts; r.z+=v.z*ts;
     data_ready=1; 
-    return 1;
+    return settled ? 2 : 1;
   }      
   return 10;
 }

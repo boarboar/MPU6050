@@ -8,6 +8,7 @@ import math
 
 class CommandThread(threading.Thread):
     # device command-resp communication
+    NRET=3
     def __init__(self, controller, addr, port):
         threading.Thread.__init__(self)
         self.__controller = controller
@@ -40,13 +41,13 @@ class CommandThread(threading.Thread):
                 self.__controller.log().LogString("REQ: %s" % json.dumps(req_json))
                 try :
                     self.__s.sendto(json.dumps(req_json), (self.__addr, self.__port))
-                    retr=0
-                    while retr<3 :
+                    retr=self.NRET
+                    while retr>0 :
                         d = self.__s.recvfrom(1024)
-                        #self.__controller.log().LogString("From %s rsp %s" % (d[1], d[0]), 'GREY')
                         resp_json=json.loads(d[0])
                         try:
                             if int(req_json["I"]) != int(resp_json["I"]) :
+                                self.__controller.log().LogString("From %s rsp %s on %s" % (d[1], d[0], str(self.__s.getsockname())), 'GREY')                        
                                 self.__controller.log().LogErrorString("UNMATCHED: "+d[0])
                             else:
                                 if resp_q is not None:
@@ -56,9 +57,14 @@ class CommandThread(threading.Thread):
                                 break
                         except KeyError : 
                             self.__controller.log().LogErrorString("Bad resp : %s" % d[0])
-        
+                        retr-=1
+                        
+                    if retr==0 :
+                        self.__controller.log().LogErrorString("Retries exceeded")
+                        if resp_q is not None: resp_q.put_nowait(None)
+                    
                 except socket.timeout as msg:
-                    self.__controller.log().LogErrorString("Timeout")
+                    self.__controller.log().LogErrorString("Timeout on %s" % str(self.__s.getsockname()))
                     if resp_q is not None: resp_q.put_nowait(None)
                 except socket.error as msg:
                     self.__controller.log().LogErrorString("Sock error : %s" % msg)
@@ -184,7 +190,7 @@ class PathThread(threading.Thread):
         self.__controller.log().LogString("Starting path running")
         move_var=[0.25, 0.25]
         move_var_lim=0.25
-        base_move=0.4
+        base_move=0.25
         #gain_p, gain_d, gain_i, gain_f = 0.5, 5.0, 0.0, 0.02
         gain_p, gain_d, gain_i, gain_f = 2.0, 8.0, 0.05, 5.0
         degain_i=0.5

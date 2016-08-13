@@ -288,11 +288,13 @@ int16_t c_drive(JsonObject& root, JsonObject& rootOut) {
   } else {
     ; // get
   }
+  /*
   if(Controller::ControllerProc.getActPower()) {
     JsonArray& r = rootOut.createNestedArray("W");
     int16_t *pwrs=Controller::ControllerProc.getStoredPower();
     r.add(pwrs[0]), r.add(pwrs[1]);
   }
+  */
   {
   JsonArray& r = rootOut.createNestedArray("TW");
   int16_t *pwrs=Controller::ControllerProc.getCurPower();

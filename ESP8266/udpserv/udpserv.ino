@@ -113,24 +113,23 @@ void doCycle() {
   last_cycle = t;
  
   int16_t mpu_res = MpuDrv::Mpu.cycle(dt);
-/*
-  if(mpu_res==1) {
-    //integrate
-  }
-  */
+
   // collect delay statistics
   int i=0;
   while(i<3 && dt>(CYCLE_TO<<i)) i++;
   Stat::StatStore.cycle_delay_cnt[i]++;
   if(!mpu_res) Stat::StatStore.cycle_mpu_dry_cnt++;
+
+  if(mpu_res==2) Controller::ControllerProc.start();
   
   // Do medium cycle // (200ms)
   dt=t-last_med_cycle;
   if(dt < CYCLE_MED_TO) return;
   last_med_cycle = t;
   
-  MpuDrv::Mpu.process();  
-  Controller::ControllerProc.process(MpuDrv::Mpu.getYaw(), dt); 
+  MpuDrv::Mpu.process();
+
+  if(mpu_res!=2) Controller::ControllerProc.process(MpuDrv::Mpu.getYaw(), dt); 
   yield();
 
   if(MpuDrv::Mpu.getFailReason()) {

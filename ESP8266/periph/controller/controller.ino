@@ -99,6 +99,7 @@
 
 #define REG_WHO_AM_I         0xFF  // 1 unsigned byte
 #define REG_STATUS           0x01  // 2 unsigned bytes
+#define REG_START            0x02  // 1 unsigned bytes
 #define REG_TARG_ROT_RATE    0x03  // 2 signed ints (4 bytes)
 #define REG_ACT_ROT_RATE     0x06  // 2 signed ints (4 bytes)
 #define REG_ACT_ADV_ACC      0x09  // 2 signed ints (4 bytes)
@@ -109,8 +110,9 @@
 #define REG_SENSORS_ALL      0x28  // 8 unsigned ints
 
 #define ST_DRIVE             0x01 
-#define ST_SETEV             0x02 
-#define ST_GETEV             0x04
+//#define ST_SETEV             0x02 
+//#define ST_GETEV             0x04
+#define ST_START             0x08
 
 #define ST_SET_DRIVE_ON()       (sta[0] |= ST_DRIVE)
 #define ST_SET_DRIVE_OFF()      (sta[0] &= ~ST_DRIVE)
@@ -124,6 +126,10 @@
 #define ST_SET_GETEV_OFF()      (sta[0] &= ~ST_GETEV)
 #define ST_IS_GETEV()           (sta[0]&ST_GETEV)  
 */
+#define ST_SET_START_ON()       (sta[0] |= ST_START)
+#define ST_SET_START_OFF()      (sta[0] &= ~ST_START)
+#define ST_IS_STARTED()         (sta[0]&ST_START)  
+
 
 #define NSETQ 2
 
@@ -278,10 +284,14 @@ void loop()
       Serial.println("Comm lost!");
       lastEvTime = cycleTime;
       if(ST_IS_DRIVING()) stopDrive();
-    }    
+    } 
+    
     readEnc(ctime);
-    //if (ST_IS_DRIVING()) doPID(ctime);       
-    readUSDist(); 
+      //if (ST_IS_DRIVING()) doPID(ctime);   
+    if(ST_IS_STARTED()) {
+             
+      readUSDist();
+    } 
     lastPidTime=cycleTime;
   } // PID cycle 
           
@@ -315,6 +325,10 @@ void loop()
     setQuPrint();   
     Serial.print("SetReg "); Serial.print(sp.r); Serial.print("\t: "); Serial.print(sp.p[0]); Serial.print("\t, "); Serial.print(sp.p[1]);
     switch(sp.r) {
+      case REG_START:     
+        if(sp.p[0])  
+          ST_SET_START_ON();  
+        break;
       case REG_TARG_POW:         
         targ_new_param[0]=sp.p[0];
         targ_new_param[1]=sp.p[1];
@@ -329,6 +343,7 @@ void loop()
         steering=sp.p[0];
         //Serial.print(steering);    
         */
+        
       default:;    
     }
     Serial.println();
@@ -547,8 +562,8 @@ void readEnc(uint16_t ctime)
   
   if(ST_IS_DRIVING()) {
     Serial.print(ctime);
-    Serial.print(" \t"); Serial.print(enc_cnt[0]);Serial.print(" \t");Serial.print(enc_cnt[0]);
-    Serial.print(" \t"); Serial.print(act_adv_accu_mm[0]);Serial.print(" \t");Serial.println(act_adv_accu_mm[1]);      
+    Serial.print(" \t"); Serial.print(enc_cnt[0]);Serial.print(" \t");Serial.println(enc_cnt[0]);
+    //Serial.print(" \t"); Serial.print(act_adv_accu_mm[0]);Serial.print(" \t");Serial.println(act_adv_accu_mm[1]);      
   }
 }
 
@@ -786,23 +801,19 @@ void receiveEvent(int howMany)
     getRegister=reg; 
     return; 
   }
-  //if(setRegister) setOverflow=1;  
-  //setRegister=reg;
   p[0]=p[1]=0;
   switch(reg) {
     //case REG_TARG_ROT_RATE:
     case REG_TARG_POW:
-    /*
-      readInt16(targ_new_param);
-      readInt16(targ_new_param+1);
-      */
       readInt16(p);
       readInt16(p+1);     
       break; 
     case REG_STEERING:
-      //readInt16(&steering);
       readInt16(p);
-      break;  
+      break; 
+    case REG_START:
+      p[0]=Wire.read();
+      break;        
     default:;
   }  
   while(Wire.available()) Wire.read(); // consume whatever left  

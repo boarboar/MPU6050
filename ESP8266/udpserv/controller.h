@@ -3,6 +3,7 @@
 
 #define REG_WHO_AM_I         0xFF  // 1 unsigned byte
 #define REG_STATUS           0x01  // 2 unsigned bytes
+#define REG_START            0x02  // 1 unsigned bytes
 #define REG_TARG_ROT_RATE    0x03  // 2 signed ints (4 bytes)
 #define REG_ACT_ROT_RATE     0x06  // 2 signed ints (4 bytes)
 #define REG_ACT_ADV_ACC      0x09  // 2 signed ints (4 bytes)
@@ -27,6 +28,7 @@ public:
   enum FailReason {CTL_FAIL_NONE=0, CTL_FAIL_INIT=1, CTL_FAIL_WRT=2, CTL_FAIL_RD=3, CTL_FAIL_OVF=4, CTL_FAIL_ALR=5, CTL_LOG_PID=100};
   static Controller ControllerProc; // singleton  
   bool init();
+  bool start();
   uint8_t getStatus();
   uint8_t isDataReady();
   uint8_t isNeedReset();
@@ -70,6 +72,7 @@ protected:
   bool getActRotRate(); // in RPS
   bool getActAdvance(); // in MMs
   bool getSensors(); 
+  bool setStart(uint8_t p); 
   void raiseFail(uint8_t reason, int16_t p1=0, int16_t p2=0, int16_t p3=0, int16_t p4=0, int16_t p5=0, int16_t p6=0);  
   bool writeInt16(uint16_t reg, int16_t val);
   bool writeInt16_2(uint16_t reg, int16_t left, int16_t right);

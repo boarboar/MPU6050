@@ -106,6 +106,12 @@ void Controller::resetIntegrator() {
   
 }
 
+bool Controller::start() {
+  Serial.println(F("CTRL START"));
+  setStart(1);
+  return true;
+}
+
 uint8_t Controller::testConnection() {
   bool res = I2Cdev::readByte(DEV_ID, REG_WHO_AM_I, buf); 
   if(!res) return 0;
@@ -359,6 +365,12 @@ uint8_t Controller::_getNumSensors() {
   }
   if(buf[0]>8) buf[0]=8;   
   return buf[0];
+}
+
+bool Controller::setStart(uint8_t p) {
+  bool res = I2Cdev::writeByte(DEV_ID, REG_START, p);
+  if(!res) raiseFail(CTL_FAIL_WRT, REG_START);
+  return res;
 }
 
 /*
