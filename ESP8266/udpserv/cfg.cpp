@@ -7,12 +7,12 @@
 #define MAX_CFG_LINE_SZ 80
 
 const int NCFGS=3; 
-const char *CFG_NAMES[]={"DBG", "SYSL", "TODO"};
-enum CFG_ID {CFG_DBG=0, CFG_SYSL=1, CFG_TODO=2};
+const char *CFG_NAMES[]={"DBG", "SYSL", "SPP"};
+enum CFG_ID {CFG_DBG=0, CFG_SYSL=1, CFG_PIDS=2};
 
 CfgDrv CfgDrv::Cfg; // singleton
 
-CfgDrv::CfgDrv() : log_on(0), debug_on(0), log_port(0),  bear_pid{20, 320, 10, 80, 100}, fs_ok(false), dirty(false), last_chg(0)
+CfgDrv::CfgDrv() : log_on(0), debug_on(0), log_port(0),  bear_pid{4, 100, 4, 10, 100}, fs_ok(false), dirty(false), last_chg(0)
  {
   }
 
@@ -55,6 +55,7 @@ int16_t CfgDrv::load(const char* fname) {
       if (json.success()) {
         const char* cmd = json["C"];
         if(!strcmp(cmd, "SYSL")) setSysLog(json);
+        else if(!strcmp(cmd, "SPP")) setPidParams(json);
         else {
           //Serial.println(F("Bad param or TODO"));
         }
@@ -78,7 +79,7 @@ int16_t CfgDrv::store(const char* fname) {
     return 0;
   }
   for(int i=0; i<NCFGS; i++) {
-    StaticJsonBuffer<200> jsonBuffer;
+    StaticJsonBuffer<400> jsonBuffer;
     JsonObject& json = jsonBuffer.createObject();
     Serial.print(F("Writing ")); Serial.println(CFG_NAMES[i]);
     json["C"]=CFG_NAMES[i];
@@ -91,9 +92,19 @@ int16_t CfgDrv::store(const char* fname) {
         json["ADDR"]=addr;
         break;
       }
-      //case CFG_TODO: json["ON"]=3; break;  
+      case CFG_PIDS: {
+        json["P"]=1;
+        JsonArray& par = json.createNestedArray("PA");
+        par.add(bear_pid.gain_p);
+        par.add(bear_pid.gain_d);
+        par.add(bear_pid.gain_i);
+        par.add(bear_pid.gain_div);
+        par.add(bear_pid.limit_i); 
+        break;  
+      }
       default:;    
     }
+    
     json.printTo(f);
     f.write('\n');
     yield();
@@ -136,5 +147,19 @@ bool CfgDrv::setSysLog(JsonObject& root) {
   }
   else Serial.println(F("SET_SYSL OFF")); 
   return true;
+}
+
+
+bool CfgDrv::setPidParams(JsonObject& json) {
+  JsonArray& par = json["PA"].asArray();
+  if(json["P"]==1) {
+    bear_pid.gain_p=par[0];
+    bear_pid.gain_d=par[1];
+    bear_pid.gain_i=par[2];
+    bear_pid.gain_div=par[3];
+    bear_pid.limit_i=par[4];
+    dirty=true;
+    last_chg=millis();
+  }  
 }
 

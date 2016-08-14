@@ -11,6 +11,7 @@ public:
   //bool isDirty() { return dirty; }
   bool needToStore();
   bool setSysLog(JsonObject& root);
+  bool setPidParams(JsonObject& root);
 public:
   uint8_t log_on, debug_on;  
   IPAddress log_addr;

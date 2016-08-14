@@ -113,12 +113,18 @@ class Controller():
     def reqMove(self, l, r):
         self.__req({"C":"D", "RPS":[round(l,2), round(r,2)]})
 
+    def reqMoveSpeed(self, s):
+        return self.__req({"C":"M", "V":round(s,2)})
+
     def reqMoveSync(self, l, r):
         return self.__req_sync({"C":"D", "RPS":[round(l,2), round(r,2)]})
 
     def reqSteerSync(self, s):
         return self.__req_sync({"C":"S", "S":round(s,2)})
 
+    def reqMoveSpeedSync(self, s):
+        return self.__req_sync({"C":"M", "V":round(s,2)})
+        
     def reqUpload(self):
         # config upload
         # {"I":1,"C":"SYSL", "ON":1, "ADDR":"192.168.1.141", "PORT":4444}

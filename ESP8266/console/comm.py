@@ -199,7 +199,8 @@ class PathThread(threading.Thread):
         self.complete=False
         s0=0
 
-        self.__controller.reqMoveSync(base_move,base_move)
+        #self.__controller.reqMoveSync(base_move,base_move)
+        self.__controller.reqMoveSpeedSync(5) #cm/s
 
         while not self.__stop:  #and not within target ....
             resp_json = self.__controller.reqPositionSync()

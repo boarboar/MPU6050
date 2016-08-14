@@ -6,9 +6,9 @@
 #include "cfg.h"
 
 const int DEV_ID=4;
-const int M_POW_MIN=30; 
-const int M_POW_MAX=240;
-const int M_POW_NORM=140;
+const int M_POW_MIN=35; 
+const int M_POW_MAX=200;
+const int M_POW_NORM=100;
 const int M_SPEED_NORM=200;
 
 /*
@@ -78,15 +78,6 @@ bool Controller::init() {
     need_reset=true;
   }
 
-  gain_p=CfgDrv::Cfg.bear_pid.gain_p;
-  gain_d=CfgDrv::Cfg.bear_pid.gain_d;
-  gain_i=CfgDrv::Cfg.bear_pid.gain_i;
-  gain_div=CfgDrv::Cfg.bear_pid.gain_div;
-  limit_i=CfgDrv::Cfg.bear_pid.limit_i;
-
-  Serial.print(F("CTRL INIT PID: ")); Serial.print(gain_p); Serial.print(F(" \t ")); Serial.print(gain_d); Serial.print(F(" \t ")); Serial.print(gain_i);
-  Serial.print(F(" \t ")); Serial.print(gain_div); Serial.print(F(" \t ")); Serial.println(limit_i);
-  
   return pready;
 }
 
@@ -102,6 +93,16 @@ void Controller::resetIntegrator() {
   act_advance_0[1]=act_advance[1];
   err_speed_p_0=err_speed_i=0; 
   pid_cnt=0;
+
+  gain_p=CfgDrv::Cfg.bear_pid.gain_p;
+  gain_d=CfgDrv::Cfg.bear_pid.gain_d;
+  gain_i=CfgDrv::Cfg.bear_pid.gain_i;
+  gain_div=CfgDrv::Cfg.bear_pid.gain_div;
+  limit_i=CfgDrv::Cfg.bear_pid.limit_i;
+
+  Serial.print(F("CTRL INIT PID: ")); Serial.print(gain_p); Serial.print(F(" \t ")); Serial.print(gain_d); Serial.print(F(" \t ")); Serial.print(gain_i);
+  Serial.print(F(" \t ")); Serial.print(gain_div); Serial.print(F(" \t ")); Serial.println(limit_i);
+  
   Serial.print(F("CTRL RST INT R: ")); Serial.print(getX()); Serial.print(F(" \t ")); Serial.println(getY());  
   
 }
@@ -276,6 +277,7 @@ bool Controller::process(float yaw, uint32_t dt) {
 }
 
 //int16_t *Controller::getTargPower() { return targ_pow;}
+int16_t Controller::getTargSpeed() { return targ_speed/10;}
 int16_t *Controller::getCurPower() { return cur_pow;}
 uint8_t Controller::getNumSensors() { return nsens;}
 float *Controller::getStoredRotRate() { return act_rot_rate;}
@@ -325,6 +327,9 @@ bool Controller::setTargPower(float l, float r) {
   pid_cnt=0;
     
   Serial.print(F("STP TV=")); Serial.print(targ_speed); Serial.print(F("ADV=")); Serial.print(cur_pow[0]); Serial.print(F("\t ")); Serial.println(cur_pow[1]);
+
+  raiseFail(CTL_LOG_POW, 1, round(l), round(r), 0, cur_pow[0], cur_pow[1]);
+
   if(!setPower(cur_pow)) return false;
   return true;
 }
@@ -336,14 +341,17 @@ bool Controller::setTargSteering(int16_t s) {
   return true;
 }
 
-bool Controller::setTargSpeed(int16_t speed) {
+bool Controller::setTargSpeed(int16_t tspeed) {
   setTargSteering(0);
   err_bearing_p_0=err_bearing_i=0;    
-  targ_speed=speed*10; //mm
+  targ_speed=tspeed*10; //mm
   cur_pow[0]=cur_pow[1]=(int32_t)targ_speed*M_POW_NORM/M_SPEED_NORM; // temp  
   pid_cnt=0;
   
   Serial.print(F("STV TV=")); Serial.print(targ_speed); Serial.print(F("ADV=")); Serial.print(cur_pow[0]); Serial.print(F("\t ")); Serial.println(cur_pow[1]);
+  
+  raiseFail(CTL_LOG_POW, 2, tspeed, round(targ_speed), 0, cur_pow[0], cur_pow[1]);
+
   if(!setPower(cur_pow)) return false;
   return true;
 }
@@ -386,7 +394,7 @@ bool Controller::setTargRotRate(int16_t *d) {
   return res;
 }
 */
-
+/*
 bool Controller::stopDrive() {
   //bool res = writeInt16_2(REG_TARG_ROT_RATE, 0, 0); 
   //if(!res) raiseFail(CTL_FAIL_WRT, REG_TARG_ROT_RATE);
@@ -394,7 +402,7 @@ bool Controller::stopDrive() {
   if(!res) raiseFail(CTL_FAIL_WRT, REG_TARG_POW);  
   return res;
 }
-
+*/
 bool Controller::setPower(int16_t *p) {
   bool res = writeInt16_2(REG_TARG_POW, p[0], p[1]); 
   if(!res) raiseFail(CTL_FAIL_WRT, REG_TARG_POW);

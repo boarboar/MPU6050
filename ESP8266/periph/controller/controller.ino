@@ -58,7 +58,8 @@
 #define V_NORM_MAX 30000
 #define V_NORM_PI2 62832L
 
-#define  PID_TIMEOUT 200
+//#define  PID_TIMEOUT 200
+#define  PID_TIMEOUT 100
 #define  CMD_TIMEOUT 1000 // !!!! 
 #define  WHEEL_CHGSTATES 40
 #define  WHEEL_RAD_MM   33 // measured 32
@@ -322,8 +323,8 @@ void loop()
  */
  
   if(qsz) {
-    setQuPrint();   
-    Serial.print("SetReg "); Serial.print(sp.r); Serial.print("\t: "); Serial.print(sp.p[0]); Serial.print("\t, "); Serial.print(sp.p[1]);
+    //setQuPrint();   
+    Serial.print("SetReg "); Serial.print(sp.r); Serial.print("\t: "); Serial.print(sp.p[0]); Serial.print("\t, "); Serial.println(sp.p[1]);
     switch(sp.r) {
       case REG_START:     
         if(sp.p[0])  
