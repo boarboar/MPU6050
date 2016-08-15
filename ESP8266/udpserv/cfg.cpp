@@ -7,12 +7,14 @@
 #define MAX_CFG_LINE_SZ 80
 
 const int NCFGS=3; 
-const char *CFG_NAMES[]={"DBG", "SYSL", "SPP"};
-enum CFG_ID {CFG_DBG=0, CFG_SYSL=1, CFG_PIDS=2};
+const char *CFG_NAMES[]={"DBG", "SYSL", "SPP_1", "SPP_2"};
+enum CFG_ID {CFG_DBG=0, CFG_SYSL=1, CFG_PIDS_1=2, CFG_PIDS_2=3};
 
 CfgDrv CfgDrv::Cfg; // singleton
 
-CfgDrv::CfgDrv() : log_on(0), debug_on(0), log_port(0),  bear_pid{4, 100, 4, 10, 100}, fs_ok(false), dirty(false), last_chg(0)
+CfgDrv::CfgDrv() : log_on(0), debug_on(0), log_port(0),  
+bear_pid{4, 100, 4, 10, 100}, speed_pid{4, 20, 4, 150, 50}, 
+fs_ok(false), dirty(false), last_chg(0)
  {
   }
 
@@ -55,7 +57,7 @@ int16_t CfgDrv::load(const char* fname) {
       if (json.success()) {
         const char* cmd = json["C"];
         if(!strcmp(cmd, "SYSL")) setSysLog(json);
-        else if(!strcmp(cmd, "SPP")) setPidParams(json);
+        else if(!strcmp(cmd, "SPP_1") || !strcmp(cmd, "SPP_2")) setPidParams(json);
         else {
           //Serial.println(F("Bad param or TODO"));
         }
@@ -92,8 +94,9 @@ int16_t CfgDrv::store(const char* fname) {
         json["ADDR"]=addr;
         break;
       }
-      case CFG_PIDS: {
-        json["P"]=1;
+      case CFG_PIDS_1:
+      case CFG_PIDS_2:{
+        json["P"]=i==CFG_PIDS_1 ? 1 : 2;
         JsonArray& par = json.createNestedArray("PA");
         par.add(bear_pid.gain_p);
         par.add(bear_pid.gain_d);
@@ -158,6 +161,14 @@ bool CfgDrv::setPidParams(JsonObject& json) {
     bear_pid.gain_i=par[2];
     bear_pid.gain_div=par[3];
     bear_pid.limit_i=par[4];
+    dirty=true;
+    last_chg=millis();
+  } else  if(json["P"]==2) {
+    speed_pid.gain_p=par[0];
+    speed_pid.gain_d=par[1];
+    speed_pid.gain_i=par[2];
+    speed_pid.gain_div=par[3];
+    speed_pid.limit_i=par[4];
     dirty=true;
     last_chg=millis();
   }  

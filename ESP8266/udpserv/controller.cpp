@@ -6,7 +6,7 @@
 #include "cfg.h"
 
 const int DEV_ID=4;
-const int M_POW_MIN=35; 
+const int M_POW_MIN=30; 
 const int M_POW_MAX=200;
 const int M_POW_NORM=100;
 const int M_SPEED_NORM=200;
@@ -93,15 +93,18 @@ void Controller::resetIntegrator() {
   act_advance_0[1]=act_advance[1];
   err_speed_p_0=err_speed_i=0; 
   pid_cnt=0;
-
-  gain_p=CfgDrv::Cfg.bear_pid.gain_p;
+/*
+  $$$$gain_p=CfgDrv::Cfg.bear_pid.gain_p;
   gain_d=CfgDrv::Cfg.bear_pid.gain_d;
   gain_i=CfgDrv::Cfg.bear_pid.gain_i;
   gain_div=CfgDrv::Cfg.bear_pid.gain_div;
   limit_i=CfgDrv::Cfg.bear_pid.limit_i;
-
-  Serial.print(F("CTRL INIT PID: ")); Serial.print(gain_p); Serial.print(F(" \t ")); Serial.print(gain_d); Serial.print(F(" \t ")); Serial.print(gain_i);
-  Serial.print(F(" \t ")); Serial.print(gain_div); Serial.print(F(" \t ")); Serial.println(limit_i);
+*/
+  
+  Serial.print(F("CTRL INIT PID B: ")); Serial.print(CfgDrv::Cfg.bear_pid.gain_p); Serial.print(F(" \t ")); Serial.print(CfgDrv::Cfg.bear_pid.gain_d); Serial.print(F(" \t ")); 
+  Serial.print(CfgDrv::Cfg.bear_pid.gain_i); Serial.print(F(" \t ")); Serial.print(CfgDrv::Cfg.bear_pid.gain_div); Serial.print(F(" \t ")); Serial.println(CfgDrv::Cfg.bear_pid.limit_i);
+  Serial.print(F("CTRL INIT PID S: ")); Serial.print(CfgDrv::Cfg.speed_pid.gain_p); Serial.print(F(" \t ")); Serial.print(CfgDrv::Cfg.speed_pid.gain_d); Serial.print(F(" \t ")); 
+  Serial.print(CfgDrv::Cfg.speed_pid.gain_i); Serial.print(F(" \t ")); Serial.print(CfgDrv::Cfg.speed_pid.gain_div); Serial.print(F(" \t ")); Serial.println(CfgDrv::Cfg.speed_pid.limit_i);
   
   Serial.print(F("CTRL RST INT R: ")); Serial.print(getX()); Serial.print(F(" \t ")); Serial.println(getY());  
   
@@ -210,7 +213,7 @@ bool Controller::process(float yaw, uint32_t dt) {
     
     int16_t s=-(int16_t)((int32_t)gain_p*err_bearing_p+(int32_t)gain_d*err_bearing_d+(int32_t)gain_i*err_bearing_i)/gain_div;
 */    
-
+      int16_t limit=CfgDrv::Cfg.bear_pid.limit_i;
       float err_bearing_p = (yaw-targ_bearing)*180.0f/PI;
       if(err_bearing_p>180.0f) err_bearing_p-=360.0f;
       else if(err_bearing_p<-180.0f) err_bearing_p+=360.0f;
@@ -218,22 +221,23 @@ bool Controller::process(float yaw, uint32_t dt) {
       if(err_bearing_d>180.0f) err_bearing_d-=360.0f;
       else if(err_bearing_d<-180.0f) err_bearing_d+=360.0f;
       err_bearing_i=err_bearing_i+err_bearing_p;
-      if(err_bearing_i>limit_i) err_bearing_i=limit_i;
-      if(err_bearing_i<-limit_i) err_bearing_i=-limit_i;
+      if(err_bearing_i>limit) err_bearing_i=limit;
+      if(err_bearing_i<-limit) err_bearing_i=-limit;
       err_bearing_p_0=err_bearing_p;
 
       
-      int16_t s=-(int16_t)((err_bearing_p*gain_p+err_bearing_d*gain_d+err_bearing_i*gain_i)/gain_div);
+      int16_t s=-(int16_t)((err_bearing_p*CfgDrv::Cfg.bear_pid.gain_p+err_bearing_d*CfgDrv::Cfg.bear_pid.gain_d+err_bearing_i*CfgDrv::Cfg.bear_pid.gain_i)/CfgDrv::Cfg.bear_pid.gain_div);
       int16_t ss=0;
       
-      if(pid_cnt>4) {
+      if(pid_cnt>=(SPEED_R_SZ*3/2)) {
+        limit=CfgDrv::Cfg.speed_pid.limit_i;
         float err_speed_p = speed - targ_speed;
         float err_speed_d=err_speed_p-err_speed_p_0;
         err_speed_i=err_speed_i+err_speed_p;      
-        if(err_speed_i>limit_i/5) err_speed_i=limit_i/5;
-        if(err_speed_i<-limit_i/5) err_speed_i=-limit_i/5;
+        if(err_speed_i>limit) err_speed_i=limit;
+        if(err_speed_i<-limit) err_speed_i=-limit;
         err_speed_p_0=err_speed_p;    
-        ss=-(int16_t)((err_speed_p*gain_p+err_speed_d*gain_d/2+err_speed_i*gain_i)/gain_div/10);
+        ss=-(int16_t)((err_speed_p*CfgDrv::Cfg.speed_pid.gain_p+err_speed_d*CfgDrv::Cfg.speed_pid.gain_d+err_speed_i*CfgDrv::Cfg.speed_pid.gain_i)/CfgDrv::Cfg.speed_pid.gain_div);
         //Serial.print(F("V=")); Serial.print(speed); Serial.print(F("\t : VT=")); Serial.print(targ_speed); 
         Serial.print(F("VErr: ")); Serial.print(err_speed_p); Serial.print(F("\t ")); Serial.print(err_speed_d);  Serial.print(F("\t ")); Serial.print(err_speed_i);
         Serial.print(F("\t => ")); Serial.println(ss);
@@ -328,7 +332,7 @@ bool Controller::setTargPower(float l, float r) {
     
   Serial.print(F("STP TV=")); Serial.print(targ_speed); Serial.print(F("ADV=")); Serial.print(cur_pow[0]); Serial.print(F("\t ")); Serial.println(cur_pow[1]);
 
-  raiseFail(CTL_LOG_POW, 1, round(l), round(r), 0, cur_pow[0], cur_pow[1]);
+  //raiseFail(CTL_LOG_POW, 1, round(l), round(r), 0, cur_pow[0], cur_pow[1]);
 
   if(!setPower(cur_pow)) return false;
   return true;
@@ -350,7 +354,7 @@ bool Controller::setTargSpeed(int16_t tspeed) {
   
   Serial.print(F("STV TV=")); Serial.print(targ_speed); Serial.print(F("ADV=")); Serial.print(cur_pow[0]); Serial.print(F("\t ")); Serial.println(cur_pow[1]);
   
-  raiseFail(CTL_LOG_POW, 2, tspeed, round(targ_speed), 0, cur_pow[0], cur_pow[1]);
+  //raiseFail(CTL_LOG_POW, 2, tspeed, round(targ_speed), 0, cur_pow[0], cur_pow[1]);
 
   if(!setPower(cur_pow)) return false;
   return true;
