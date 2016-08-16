@@ -251,6 +251,9 @@ void setup()
   Wire.onRequest(requestEvent); // register event  
   
   analogFrequency(32); 
+  
+  //analogFrequency(48); 
+  
   for(int i=0; i<M_SENS_N; i++) { sens[i]=0; sens_fail_cnt[i]=0; }
   
   /*
@@ -880,7 +883,7 @@ void setQuInit() {
   set_h=set_t=0;
 }
   
-uint8_t setQuAdd(uint8_t r, uint8_t p1, uint8_t p2) {
+uint8_t setQuAdd(uint8_t r, int8_t p1, int8_t p2) {
   uint8_t ovf=0;
   //while(qlock);
   /*

@@ -16,7 +16,6 @@ const char* password = "boarboar";
 const char* cfg_file = "/config.json";
 const int udp_port = 4444;
 const int CYCLE_TO = 5;
-//const int CYCLE_MED_TO = 200;
 const int CYCLE_MED_TO = 100;
 const int CYCLE_SLOW_TO = 2000;
 const int MPU_SDA=0;

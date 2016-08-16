@@ -6,8 +6,8 @@
 
 #define MAX_CFG_LINE_SZ 80
 
-const int NCFGS=3; 
-const char *CFG_NAMES[]={"DBG", "SYSL", "SPP_1", "SPP_2"};
+const int NCFGS=4; 
+const char *CFG_NAMES[NCFGS]={"DBG", "SYSL", "SPP_1", "SPP_2"};
 enum CFG_ID {CFG_DBG=0, CFG_SYSL=1, CFG_PIDS_1=2, CFG_PIDS_2=3};
 
 CfgDrv CfgDrv::Cfg; // singleton
@@ -96,13 +96,21 @@ int16_t CfgDrv::store(const char* fname) {
       }
       case CFG_PIDS_1:
       case CFG_PIDS_2:{
-        json["P"]=i==CFG_PIDS_1 ? 1 : 2;
+        struct pid_params *p=NULL;
+        if(i==CFG_PIDS_1) {
+          json["P"]=1;
+          p=&bear_pid;          
+        } else {
+          json["P"]=2;
+          p=&speed_pid;
+        }
+        
         JsonArray& par = json.createNestedArray("PA");
-        par.add(bear_pid.gain_p);
-        par.add(bear_pid.gain_d);
-        par.add(bear_pid.gain_i);
-        par.add(bear_pid.gain_div);
-        par.add(bear_pid.limit_i); 
+        par.add(p->gain_p);
+        par.add(p->gain_d);
+        par.add(p->gain_i);
+        par.add(p->gain_div);
+        par.add(p->limit_i); 
         break;  
       }
       default:;    
@@ -155,22 +163,20 @@ bool CfgDrv::setSysLog(JsonObject& root) {
 
 bool CfgDrv::setPidParams(JsonObject& json) {
   JsonArray& par = json["PA"].asArray();
-  if(json["P"]==1) {
-    bear_pid.gain_p=par[0];
-    bear_pid.gain_d=par[1];
-    bear_pid.gain_i=par[2];
-    bear_pid.gain_div=par[3];
-    bear_pid.limit_i=par[4];
+  struct pid_params *p=NULL;
+  if(json["P"]==1) p=&bear_pid;
+  else  if(json["P"]==2) p=&speed_pid;
+  if(p==NULL) return false;
+  p->gain_p=par[0];
+  p->gain_d=par[1];
+  p->gain_i=par[2];
+  p->gain_div=par[3];
+  p->limit_i=par[4];
+  if(json["S"]==1) {
     dirty=true;
     last_chg=millis();
-  } else  if(json["P"]==2) {
-    speed_pid.gain_p=par[0];
-    speed_pid.gain_d=par[1];
-    speed_pid.gain_i=par[2];
-    speed_pid.gain_div=par[3];
-    speed_pid.limit_i=par[4];
-    dirty=true;
-    last_chg=millis();
-  }  
+    Serial.println(F("SPP set to save"));
+  }
+  return true;  
 }
 

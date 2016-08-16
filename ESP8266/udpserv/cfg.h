@@ -1,15 +1,16 @@
 #ifndef _UMP_CFG_H_
 #define _UMP_CFG_H_
-/*
-struct pid_params {
+
+  
+class CfgDrv {
+  struct pid_params {
     int16_t gain_p;
     int16_t gain_d;
     int16_t gain_i;
     int16_t gain_div;
     int16_t limit_i;
   };
-  */
-class CfgDrv {
+
 public:
   const unsigned int LAZY_WRITE_TIMEOUT=10; //seconds
   static CfgDrv Cfg; // singleton
@@ -23,14 +24,8 @@ public:
 public:
   uint8_t log_on, debug_on;  
   IPAddress log_addr;
-  uint16_t log_port;  
-  struct {
-    int16_t gain_p;
-    int16_t gain_d;
-    int16_t gain_i;
-    int16_t gain_div;
-    int16_t limit_i;
-  } bear_pid, speed_pid;
+  uint16_t log_port;
+  struct pid_params bear_pid, speed_pid;
 protected:  
   CfgDrv();
   bool fs_ok;

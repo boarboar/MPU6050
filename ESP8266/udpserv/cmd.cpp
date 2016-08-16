@@ -36,7 +36,7 @@ enum CMDS_ID {CMD_INFO=0, CMD_RESET=1, CMD_SETSYSLOG=2, CMD_POS=3, CMD_RESET_MPU
 // {"I":1,"C":"D","RPS":[0.1, -0.1]}
 // {"I":1,"C":"S","S":-10}
 // {"I":1,"C":"M","V":10}
-// {"I":1,"C":"SPP","P":1,"PA":[30, 320, 10, 80, 100]}
+// {"I":1,"C":"SPP","P":1,"PA":[30, 320, 10, 80, 100],"S":0}
 
 int16_t CmdProc::init(uint16_t port) {
   if(udp_rcv.begin(port)) {

@@ -349,7 +349,7 @@ bool Controller::setTargSpeed(int16_t tspeed) {
   setTargSteering(0);
   err_bearing_p_0=err_bearing_i=0;    
   targ_speed=tspeed*10; //mm
-  cur_pow[0]=cur_pow[1]=(int32_t)targ_speed*M_POW_NORM/M_SPEED_NORM; // temp  
+  cur_pow[0]=cur_pow[1]=(int32_t)abs(targ_speed)*M_POW_NORM/M_SPEED_NORM; // temp  
   pid_cnt=0;
   
   Serial.print(F("STV TV=")); Serial.print(targ_speed); Serial.print(F("ADV=")); Serial.print(cur_pow[0]); Serial.print(F("\t ")); Serial.println(cur_pow[1]);
@@ -408,7 +408,9 @@ bool Controller::stopDrive() {
 }
 */
 bool Controller::setPower(int16_t *p) {
-  bool res = writeInt16_2(REG_TARG_POW, p[0], p[1]); 
+  bool res=false;
+  if(targ_speed>=0) writeInt16_2(REG_TARG_POW, p[0], p[1]);
+  else  writeInt16_2(REG_TARG_POW, -p[0], -p[1]);
   if(!res) raiseFail(CTL_FAIL_WRT, REG_TARG_POW);
   return res;
 }
@@ -459,6 +461,9 @@ bool Controller::writeInt16(uint16_t reg, int16_t v) {
 
 
 bool Controller::writeInt16_2(uint16_t reg, int16_t left, int16_t right) {
+
+    //Serial.print(F("WRT=\t ")); Serial.print(left); Serial.print(F("\t ")); Serial.println(right);
+
     buf[0] = (uint8_t)(left>>8);
     buf[1] = (uint8_t)(left&0xFF);   
     buf[2] = (uint8_t)(right>>8);
