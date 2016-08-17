@@ -124,6 +124,9 @@ class Controller():
 
     def reqMoveSpeedSync(self, s):
         return self.__req_sync({"C":"M", "V":round(s,2)})
+
+    def reqBearingSync(self, s):
+        return self.__req_sync({"C":"B", "A":round(s,2)})
         
     def reqUpload(self):
         # config upload
@@ -217,7 +220,9 @@ class Controller():
         else : self.__form.LogString("FOUND %s" % result, 'FOREST GREEN')
 
     def stopPathRunning(self):
+        print("stopPathRunning")
         if self.__comm_path_thread!=None:
+            print("stopPathRunning-1")
             self.__comm_path_thread.stop()
             self.__comm_path_thread.join()
             self.__comm_path_thread = None

@@ -47,6 +47,7 @@ public:
   bool setTargSteering(int16_t s);
   bool setTargSpeed(int16_t s);
   int16_t getTargSpeed();
+  bool setTargBearing(int16_t s);
   
   //bool stopDrive();
   bool setPower(int16_t *p);

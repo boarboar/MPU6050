@@ -200,7 +200,7 @@ class PathThread(threading.Thread):
         s0=0
 
         #self.__controller.reqMoveSync(base_move,base_move)
-        self.__controller.reqMoveSpeedSync(5) #cm/s
+        self.__controller.reqMoveSpeedSync(6) #cm/s
 
         while not self.__stop:  #and not within target ....
             resp_json = self.__controller.reqPositionSync()
@@ -263,7 +263,7 @@ class PathThread(threading.Thread):
                     s0=s
 
 
-                    self.__controller.log().LogString("PID:  %s" % s)
+                    #self.__controller.log().LogString("PID:  %s" % s)
 
                     """
                     s=feedback
@@ -275,13 +275,17 @@ class PathThread(threading.Thread):
                                                        round(feedback,2), round(s,2)))
                     """
 
-                    self.__controller.reqSteerSync(s)
+                    #self.__controller.reqSteerSync(s)
+                    
+                    self.__controller.reqBearingSync(plan_a*180/math.pi)
 
             except KeyError: pass
 
             #time.sleep(2)
             #time.sleep(0.25) # let it move a bit
 
+        print("Out of loop")    
+            
         self.__controller.reqMoveSync(0,0)
 
         self.__controller.log().LogString("Path running thread stopped")

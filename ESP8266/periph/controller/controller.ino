@@ -263,9 +263,11 @@ void setup()
   
   Serial.println("Init Servo...");
   sservo.attach(SERVO_IN);  // attaches the servo on pin 9 to the servo object
+  sservo.write(-90);
+  delay(500);
+  sservo.write(90);
+  delay(500);
   sservo.write(0);
-
-
   // init Q
   setQuInit();
   
@@ -883,7 +885,7 @@ void setQuInit() {
   set_h=set_t=0;
 }
   
-uint8_t setQuAdd(uint8_t r, int8_t p1, int8_t p2) {
+uint8_t setQuAdd(uint8_t r, int16_t p1, int16_t p2) {
   uint8_t ovf=0;
   //while(qlock);
   /*

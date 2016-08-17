@@ -111,9 +111,9 @@ class MyForm(wx.Frame):
         self.Bind(wx.EVT_BUTTON, lambda evt, move=(-rps, rps): self.controller.reqMove(move[0], move[1]), self.btn_mov_left)
         self.Bind(wx.EVT_BUTTON, lambda evt, move=(rps, -rps): self.controller.reqMove(move[0], move[1]), self.btn_mov_right)
         #self.Bind(wx.EVT_BUTTON, lambda evt, move=(rps, rps): self.controller.reqMove(move[0], move[1]), self.btn_mov_up)
-        self.Bind(wx.EVT_BUTTON, lambda evt, speed=5: self.controller.reqMoveSpeed(speed), self.btn_mov_up)
+        self.Bind(wx.EVT_BUTTON, lambda evt, speed=7: self.controller.reqMoveSpeed(speed), self.btn_mov_up)
         #self.Bind(wx.EVT_BUTTON, lambda evt, move=(-rps, -rps): self.controller.reqMove(move[0], move[1]), self.btn_mov_dn)
-        self.Bind(wx.EVT_BUTTON, lambda evt, speed=-5: self.controller.reqMoveSpeed(speed), self.btn_mov_dn)        
+        self.Bind(wx.EVT_BUTTON, lambda evt, speed=-7: self.controller.reqMoveSpeed(speed), self.btn_mov_dn)        
         #self.Bind(wx.EVT_BUTTON, lambda evt, move=(0.0, 0.0): self.controller.reqMove(move[0], move[1]), self.btn_mov_stop)
         self.Bind(wx.EVT_BUTTON, lambda evt, speed=0: self.controller.reqMoveSpeed(speed), self.btn_mov_stop)
         

@@ -215,6 +215,7 @@ bool Controller::process(float yaw, uint32_t dt) {
 */    
       int16_t limit=CfgDrv::Cfg.bear_pid.limit_i;
       float err_bearing_p = (yaw-targ_bearing)*180.0f/PI;
+      if(targ_speed<0) err_bearing_p=-err_bearing_p; 
       if(err_bearing_p>180.0f) err_bearing_p-=360.0f;
       else if(err_bearing_p<-180.0f) err_bearing_p+=360.0f;
       float err_bearing_d=err_bearing_p-err_bearing_p_0;
@@ -342,6 +343,16 @@ bool Controller::setTargSteering(int16_t s) {
   targ_bearing = curr_yaw+(float)s/180.0*PI;
   if(targ_bearing>PI) targ_bearing-=PI*2.0f;
   else if(targ_bearing<-PI) targ_bearing+=PI*2.0f;  
+  return true;
+}
+
+bool Controller::setTargBearing(int16_t s) {
+  targ_bearing = (float)s/180.0*PI;
+  if(targ_bearing>PI) targ_bearing-=PI*2.0f;
+  else if(targ_bearing<-PI) targ_bearing+=PI*2.0f;  
+
+  //Serial.print(F("TBear=")); Serial.print(targ_bearing); Serial.print(F("\t Yaw=")); Serial.println(curr_yaw);
+  
   return true;
 }
 
