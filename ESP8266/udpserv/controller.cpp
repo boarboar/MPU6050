@@ -437,8 +437,8 @@ bool Controller::stopDrive() {
 */
 bool Controller::setPower(int16_t *p) {
   bool res=false;
-  if(targ_speed>=0) writeInt16_2(REG_TARG_POW, p[0], p[1]);
-  else  writeInt16_2(REG_TARG_POW, -p[0], -p[1]);
+  if(targ_speed>=0) res=writeInt16_2(REG_TARG_POW, p[0], p[1]);
+  else  res=writeInt16_2(REG_TARG_POW, -p[0], -p[1]);
   if(!res) raiseFail(CTL_FAIL_WRT, REG_TARG_POW);  
   return res;
 }
