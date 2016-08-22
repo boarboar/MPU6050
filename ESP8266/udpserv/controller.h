@@ -67,6 +67,8 @@ public:
   float getX();
   float getY();
   bool getActPower();   
+  float getAVQErr();
+
 protected:  
   Controller();
   uint8_t testConnection();
@@ -116,6 +118,7 @@ private:
   float err_speed_p_0, err_speed_i;
   //int16_t err_bearing_p_0, err_bearing_i;
   uint32_t pid_cnt;
+  float qsum_err;
 /*
   int16_t gain_p;
   int16_t gain_d; 

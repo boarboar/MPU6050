@@ -349,6 +349,7 @@ int16_t c_move(JsonObject& root, JsonObject& rootOut) {
   int16_t *pwrs=Controller::ControllerProc.getCurPower();
   r.add(pwrs[0]), r.add(pwrs[1]);
   }     
+  rootOut["QE"]=Controller::ControllerProc.getAVQErr();  
   return 0;
 }
 

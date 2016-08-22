@@ -93,6 +93,7 @@ void Controller::resetIntegrator() {
   act_advance_0[1]=act_advance[1];
   err_speed_p_0=err_speed_i=0; 
   pid_cnt=0;
+  qsum_err=0;
 /*
   $$$$gain_p=CfgDrv::Cfg.bear_pid.gain_p;
   gain_d=CfgDrv::Cfg.bear_pid.gain_d;
@@ -226,6 +227,7 @@ bool Controller::process(float yaw, uint32_t dt) {
       if(err_bearing_i<-limit) err_bearing_i=-limit;
       err_bearing_p_0=err_bearing_p;
 
+      qsum_err+=err_bearing_p*err_bearing_p;
       
       int16_t s=-(int16_t)((err_bearing_p*CfgDrv::Cfg.bear_pid.gain_p+err_bearing_d*CfgDrv::Cfg.bear_pid.gain_d+err_bearing_i*CfgDrv::Cfg.bear_pid.gain_i)/CfgDrv::Cfg.bear_pid.gain_div);
       int16_t ss=0;
@@ -298,6 +300,11 @@ float Controller::getAngle() { return angle;}
 float Controller::getX() { return r[0]*0.1f;}
 float Controller::getY() { return r[1]*0.1f;}
 
+float Controller::getAVQErr() {
+  if(!pid_cnt) return 0;
+  return qsum_err/((uint32_t)pid_cnt*pid_cnt);
+}
+
 /*
 bool Controller::setTargRotRate(float l, float r) {
   int16_t d[2];
@@ -357,16 +364,26 @@ bool Controller::setTargBearing(int16_t s) {
 }
 
 bool Controller::setTargSpeed(int16_t tspeed) {
+  if(targ_speed==0 && tspeed!=0) {
+    // start moving
+    qsum_err=0;
+    pid_cnt=0;
+    Serial.print(F("Start TV=")); Serial.println(tspeed);     
+  } else if(targ_speed!=0 && tspeed==0) {
+    // stop moving    
+    Serial.print(F("Stop TV, AVQE=")); Serial.println(getAVQErr());     
+  }
+
   setTargSteering(0);
   err_bearing_p_0=err_bearing_i=0;    
   targ_speed=tspeed*10; //mm
   cur_pow[0]=cur_pow[1]=(int32_t)abs(targ_speed)*M_POW_NORM/M_SPEED_NORM; // temp  
-  pid_cnt=0;
+  //pid_cnt=0;
   
-  Serial.print(F("STV TV=")); Serial.print(targ_speed); Serial.print(F("ADV=")); Serial.print(cur_pow[0]); Serial.print(F("\t ")); Serial.println(cur_pow[1]);
+  //Serial.print(F("STV TV=")); Serial.print(targ_speed); Serial.print(F("ADV=")); Serial.print(cur_pow[0]); Serial.print(F("\t ")); Serial.println(cur_pow[1]);
   
   //raiseFail(CTL_LOG_POW, 2, tspeed, round(targ_speed), 0, cur_pow[0], cur_pow[1]);
-
+  
   if(!setPower(cur_pow)) return false;
   return true;
 }
@@ -422,7 +439,7 @@ bool Controller::setPower(int16_t *p) {
   bool res=false;
   if(targ_speed>=0) writeInt16_2(REG_TARG_POW, p[0], p[1]);
   else  writeInt16_2(REG_TARG_POW, -p[0], -p[1]);
-  if(!res) raiseFail(CTL_FAIL_WRT, REG_TARG_POW);
+  if(!res) raiseFail(CTL_FAIL_WRT, REG_TARG_POW);  
   return res;
 }
 
