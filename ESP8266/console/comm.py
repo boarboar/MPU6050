@@ -199,10 +199,9 @@ class PathThread(threading.Thread):
         self.complete=False
         s0=0
 
-        #self.__controller.reqMoveSync(base_move,base_move)
         self.__controller.reqMoveSpeedSync(6) #cm/s
 
-        while not self.__stop:  #and not within target ....
+        while not self.__stop :
             resp_json = self.__controller.reqPositionSync()
             try:
                 if resp_json is not None and resp_json["C"]=="POS":
@@ -281,11 +280,7 @@ class PathThread(threading.Thread):
 
             except KeyError: pass
 
-            #time.sleep(2)
             #time.sleep(0.25) # let it move a bit
 
-        print("Out of loop")    
-            
-        self.__controller.reqMoveSync(0,0)
-
+        self.__controller.reqMoveSpeedSync(0)
         self.__controller.log().LogString("Path running thread stopped")

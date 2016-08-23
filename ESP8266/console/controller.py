@@ -220,11 +220,11 @@ class Controller():
         else : self.__form.LogString("FOUND %s" % result, 'FOREST GREEN')
 
     def stopPathRunning(self):
-        print("stopPathRunning")
         if self.__comm_path_thread!=None:
-            print("stopPathRunning-1")
             self.__comm_path_thread.stop()
-            self.__comm_path_thread.join()
+            #time.sleep(20)
+            #print("stopPathRunning-3")
+            #self.__comm_path_thread.join()
             self.__comm_path_thread = None
 
     def isPathRunning(self):
