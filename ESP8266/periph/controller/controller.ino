@@ -379,7 +379,7 @@ void startDrivePow() {
   
   uint8_t chg=0;
   uint8_t new_dir=0;
-  Serial.print("St drv pow: "); 
+  //Serial.print("St drv pow: "); 
    
   for(int i=0; i<2; i++) {
     if(targ_new_param[i]==0) new_dir=0;
@@ -394,23 +394,34 @@ void startDrivePow() {
     drv_dir[i] = new_dir;
     cur_power[i]=targ_new_param[i];
     targ_new_param[i]=0;
-      
+    
+    /*  
     Serial.print(i==0 ? "\t L: " : "\t R: ");
     //Serial.print(changeDir ? " RST" : " PID"); Serial.print(", ");
     Serial.print(drv_dir[i]); Serial.print("\t "); Serial.print(cur_power[i]);
     Serial.print("\t ;"); 
+    */
   }
   
    if(chg || !ST_IS_DRIVING()) {
-     Serial.print(" >>RST");    
+     
     //readEnc(0);
     Drive(drv_dir[0], cur_power[0], drv_dir[1], cur_power[1]); 
     ST_SET_DRIVE_ON();
     //pid_cnt=0;
     //lastPidTime=millis(); 
+    
+    //Serial.print(" >>RST");    
+    for(int i=0; i<2; i++) {
+      Serial.print(i==0 ? "\t L: " : "\t R: ");
+      //Serial.print(changeDir ? " RST" : " PID"); Serial.print(", ");
+      //Serial.print(drv_dir[i]); Serial.print("\t "); 
+      Serial.print(cur_power[i]);
+      Serial.print("\t ;"); 
+    }
+    Serial.println();
    }
    
-  Serial.println();
   
 }
 
@@ -567,8 +578,8 @@ void readEnc(uint16_t ctime)
   } // for i
   
   if(ST_IS_DRIVING()) {
-    Serial.print(ctime);
-    Serial.print(" \t"); Serial.print(enc_cnt[0]);Serial.print(" \t");Serial.println(enc_cnt[0]);
+    //Serial.print(ctime);
+    //Serial.print(" \t"); Serial.print(enc_cnt[0]);Serial.print(" \t");Serial.println(enc_cnt[0]);
     //Serial.print(" \t"); Serial.print(act_adv_accu_mm[0]);Serial.print(" \t");Serial.println(act_adv_accu_mm[1]);      
   }
 }
