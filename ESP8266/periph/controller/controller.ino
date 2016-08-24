@@ -410,7 +410,7 @@ void startDrivePow() {
     ST_SET_DRIVE_ON();
     //pid_cnt=0;
     //lastPidTime=millis(); 
-    
+    /*
     //Serial.print(" >>RST");    
     for(int i=0; i<2; i++) {
       Serial.print(i==0 ? "\t L: " : "\t R: ");
@@ -420,6 +420,7 @@ void startDrivePow() {
       Serial.print("\t ;"); 
     }
     Serial.println();
+    */
    }
    
   
