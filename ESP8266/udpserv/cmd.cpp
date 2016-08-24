@@ -157,6 +157,43 @@ boolean CmdProc::sendAlarm(uint8_t alr, uint8_t param, int16_t dt, int8_t npa, i
   return true;
 }
 
+
+boolean CmdProc::sendEvent(uint16_t id, uint8_t module,  uint8_t level, uint8_t code, int8_t npa, int16_t *pa) {
+  if(CfgDrv::Cfg.log_on<SL_LEVEL_ALARM) return false; //!!! should be adjusted with level
+  StaticJsonBuffer<400> jsonBufferOut;
+  JsonObject& rootOut = jsonBufferOut.createObject();
+  rootOut["C"] = level>CMD_LLEVEL_ALR ? "L" : "A";
+  rootOut["T"] = millis();
+  rootOut["I"] = id;
+  rootOut["M"] = module;
+  rootOut["K"] = code;
+  if(pa && npa) {
+    JsonArray& par = rootOut.createNestedArray("P");
+    uint8_t mpa=npa-1;
+    while(mpa && pa[mpa]) mpa--;
+    if(mpa) {
+      mpa++;    
+      for(uint8_t i=0; i<mpa; i++) par.add(pa[i]);
+    }    
+  }
+  _sendToSysLog(rootOut);
+  return true;
+}
+
+boolean CmdProc::sendEvent(uint16_t id, uint8_t module,  uint8_t level, uint8_t code, const char *s) {
+  if(CfgDrv::Cfg.log_on<SL_LEVEL_ALARM) return false; //!!! should be adjusted with level
+  StaticJsonBuffer<400> jsonBufferOut;
+  JsonObject& rootOut = jsonBufferOut.createObject();
+  rootOut["C"] = level>CMD_LLEVEL_ALR ? "L" : "A";
+  rootOut["T"] = millis();
+  rootOut["I"] = id;
+  rootOut["M"] = module;
+  rootOut["K"] = code;
+  rootOut["S"] = s;
+  _sendToSysLog(rootOut);
+  return true;
+}
+  
 void CmdProc::_sendToSysLog(JsonObject& rootOut) {
   rootOut.printTo(packetBuffer, BUF_SZ-1);
   udp_snd.beginPacket(CfgDrv::Cfg.log_addr, CfgDrv::Cfg.log_port);

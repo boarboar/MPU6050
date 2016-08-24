@@ -25,7 +25,7 @@
 
 class Controller {
 public:
-  enum FailReason {CTL_FAIL_NONE=0, CTL_FAIL_INIT=1, CTL_FAIL_WRT=2, CTL_FAIL_RD=3, CTL_FAIL_OVF=4, CTL_FAIL_ALR=5, CTL_LOG_PID=100, CTL_LOG_POW=101};
+  enum FailReason {CTL_FAIL_NONE=0, CTL_FAIL_INIT=1, CTL_FAIL_WRT=2, CTL_FAIL_RD=3, CTL_FAIL_OVF=4, CTL_FAIL_ALR=5, CTL_LOG_PID=100, CTL_LOG_POW=101, CTL_LOG_PBPID=102};
   static Controller ControllerProc; // singleton  
   bool init();
   bool start();
@@ -33,9 +33,9 @@ public:
   uint8_t isDataReady();
   uint8_t isNeedReset();
   void needReset();
-  uint8_t getFailReason();
-  void getFailParams(int16_t npa, int16_t *pa);
-  void clearFailReason();
+  //uint8_t getFailReason();
+ // void getFailParams(int16_t npa, int16_t *pa);
+  //void clearFailReason();
   void resetIntegrator();
   bool process(float yaw, uint32_t dt);  
   /*
@@ -59,8 +59,8 @@ public:
   //int16_t *getTargPower();
   int16_t *getCurPower();
   int16_t *getStoredSensors();  
-  float getMovement();
-  float getRotation();
+  //float getMovement();
+  //float getRotation();
   float getDistance();
   int16_t getSpeed();
   float getAngle();
@@ -78,7 +78,7 @@ protected:
   bool getActAdvance(); // in MMs
   bool getSensors(); 
   bool setStart(uint8_t p); 
-  void raiseFail(uint8_t reason, int16_t p1=0, int16_t p2=0, int16_t p3=0, int16_t p4=0, int16_t p5=0, int16_t p6=0);  
+  //void raiseFail(uint8_t reason, int16_t p1=0, int16_t p2=0, int16_t p3=0, int16_t p4=0, int16_t p5=0, int16_t p6=0);  
   bool writeInt16(uint16_t reg, int16_t val);
   bool writeInt16_2(uint16_t reg, int16_t left, int16_t right);
   bool readInt16_2(uint16_t reg, int16_t *left, int16_t *right);  
@@ -89,12 +89,12 @@ protected:
 private:  
   uint8_t data_ready;
   uint8_t need_reset;
-  uint8_t fail_reason;
-  int16_t fail_p[6]; 
+  //uint8_t fail_reason;
+  //int16_t fail_p[6]; 
   
   uint8_t buf[16];  
   //uint8_t sta[2];
-  float mov, rot;
+  //float mov, rot;
   uint8_t pready;
   uint8_t nsens;
   float act_rot_rate[2];
@@ -119,6 +119,7 @@ private:
   //int16_t err_bearing_p_0, err_bearing_i;
   uint32_t pid_cnt;
   float qsum_err;
+  float run_dist;
 /*
   int16_t gain_p;
   int16_t gain_d; 

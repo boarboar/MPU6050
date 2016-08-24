@@ -8,6 +8,7 @@
 #include "cmd.h"
 #include "mpu.h"
 #include "controller.h"
+#include "logger.h"
 
 void doCycle();
 
@@ -16,7 +17,8 @@ const char* password = "boarboar";
 const char* cfg_file = "/config.json";
 const int udp_port = 4444;
 const int CYCLE_TO = 5;
-const int CYCLE_MED_TO = 100;
+//const int CYCLE_MED_TO = 100;
+const int CYCLE_MED_TO = 50;
 const int CYCLE_SLOW_TO = 2000;
 const int MPU_SDA=0;
 const int MPU_SDL=2;
@@ -138,6 +140,7 @@ void doCycle() {
     MpuDrv::Mpu.clearFailReason();
   }
 
+/*
   if(Controller::ControllerProc.getFailReason()) {
     uint8_t alr=Controller::ControllerProc.getFailReason();
     boolean isalr=alr<100;
@@ -147,6 +150,9 @@ void doCycle() {
     cmd.sendAlarm(isalr ? CmdProc::ALR_CTL_FAILURE : CmdProc::ALR_CTL_LOG, alr, dt, 6, pa);
     Controller::ControllerProc.clearFailReason();
   }
+  */
+
+  Logger::Instance.flushEvents();
   
 // Do slow cycle // (2000 ms)
   dt=t-last_slow_cycle;
