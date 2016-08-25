@@ -229,6 +229,11 @@ bool Controller::process(float yaw, uint32_t dt) {
         qsum_err+=err_bearing_p*err_bearing_p;
       
       int16_t s=-(int16_t)((err_bearing_p*CfgDrv::Cfg.bear_pid.gain_p+err_bearing_d*CfgDrv::Cfg.bear_pid.gain_d+err_bearing_i*CfgDrv::Cfg.bear_pid.gain_i)/CfgDrv::Cfg.bear_pid.gain_div);
+
+      cur_pow[0]+=s;
+      cur_pow[1]-=s;
+
+/*
       int16_t ss=0;
       
       if(pid_cnt>=(SPEED_R_SZ*3/2)) {
@@ -246,11 +251,9 @@ bool Controller::process(float yaw, uint32_t dt) {
 
       }
     
-      cur_pow[0]+=s;
-      cur_pow[1]-=s;
-
       cur_pow[0]+=ss;
       cur_pow[1]+=ss;
+  */
     
       for(int i=0; i<2; i++) {
         if(cur_pow[i]<M_POW_MIN) cur_pow[i]=M_POW_MIN; 

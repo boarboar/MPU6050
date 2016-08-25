@@ -10,7 +10,7 @@ Logger::Logger() {
   id=0;
   q_h=q_t=0;
   for(int i=0; i<UMP_LOGGER_NQUEUE; i++) {
-    q[i].module=0; q[i].type=UMP_LOGGER_TYPE_NONE; q[i].params.s[0]=0;      
+    q[i].type=UMP_LOGGER_TYPE_NONE; q[i].params.s[0]=0;      
   }
 }
 
@@ -61,9 +61,9 @@ boolean Logger::flushEvents() {
     Serial.print(F(" \t ")); Serial.print(q[q_h].module); Serial.print(F(" \t ")); Serial.print(q[q_h].level);
     Serial.print(F(" \t ")); Serial.print(q[q_h].code); Serial.print(F(" \t ")); Serial.println(q[q_h].type);   
     */
-    if(q[q_t].type=UMP_LOGGER_TYPE_S) CmdProc::Cmd.sendEvent(q[q_h].id, q[q_h].module, q[q_h].level, q[q_h].code, q[q_h].params.s);
+    if(q[q_t].type==UMP_LOGGER_TYPE_S) CmdProc::Cmd.sendEvent(q[q_h].id, q[q_h].module, q[q_h].level, q[q_h].code, q[q_h].params.s);
     else  CmdProc::Cmd.sendEvent(q[q_h].id, q[q_h].module, q[q_h].level, q[q_h].code, UMP_LOGGER_NPARAM, q[q_h].params.p);    
-    q[q_h].module=q[q_h].type=0;     
+    q[q_h].type=UMP_LOGGER_TYPE_NONE;     
     q_h++;         
     if(q_h==UMP_LOGGER_NQUEUE) q_h=0;
   }
