@@ -29,30 +29,17 @@
 // ENC IN
 #define ENC2_IN   P1_5
 #define ENC1_IN   P2_0
-/*
-#ifdef _US_M_WIRE_
-  #define US_1_IN      P2_2 
-  #define US_2_IN      P1_3
-  #define US_3_IN      P2_3
-#else
-  #define US_IN      P2_2 // try to tie all of them to one echo pin
-#endif
-*/
 
-#ifdef _US_M_WIRE_
-  #define US_1_IN      P2_2 
-  #define US_2_IN      P2_3
-  #define US_3_IN      P1_3
-#else
-  #define US_IN      P2_2 // try to tie all of them to one echo pin
-#endif
+// USSENS
+
+#define US_1_IN      P2_2 
+#define US_2_IN      P2_3
+
+#define US_1_OUT   P1_0
+#define US_2_OUT   P2_6   // XTAL remove sel
 
 #define SERVO_IN P1_3
 
-// USSENS
-#define US_1_OUT   P1_0
-#define US_2_OUT   P2_6   // XTAL remove sel
-#define US_3_OUT   P2_7   // XTAL remove sel
 
 #define V_NORM 10000
 #define V_NORM_MAX 30000
@@ -100,7 +87,7 @@
 
 #define REG_WHO_AM_I         0xFF  // 1 unsigned byte
 #define REG_STATUS           0x01  // 2 unsigned bytes
-#define REG_START            0x02  // 1 unsigned bytes
+#define REG_START            0x02  // 1 unsigned bytesc
 #define REG_TARG_ROT_RATE    0x03  // 2 signed ints (4 bytes)
 #define REG_ACT_ROT_RATE     0x06  // 2 signed ints (4 bytes)
 #define REG_ACT_ADV_ACC      0x09  // 2 signed ints (4 bytes)
@@ -176,7 +163,7 @@ volatile uint8_t getRegister = 0;
 volatile uint8_t getOverflow=0;
 volatile uint8_t setOverflow=0;
 
-uint8_t current_sens=0;
+uint8_t sens_step=0;
 
 uint8_t buffer[16];
 
@@ -195,8 +182,8 @@ struct set_s {
 struct set_s set_q[NSETQ];
 volatile uint8_t set_h, set_t;
 
-int16_t sservo_pos=0;
-int8_t sservo_step=30;
+int16_t sservo_pos=90;
+int8_t sservo_step=45;
 
 void setup()
 {
@@ -210,10 +197,10 @@ void setup()
   
   uint8_t i;
 #ifndef _MOTOR_ONE_WIRE_  
-  int ports[9]={M1_OUT_1,M1_OUT_2,M2_OUT_1,M2_OUT_2, M1_EN, M2_EN, US_1_OUT, US_2_OUT, US_3_OUT};
+  int ports[8]={M1_OUT_1,M1_OUT_2,M2_OUT_1,M2_OUT_2, M1_EN, M2_EN, US_1_OUT, US_2_OUT};
   const int portlen=9;
 #else
-  int ports[7]={M1_OUT_1,M2_OUT_1,M1_EN, M2_EN, US_1_OUT, US_2_OUT, US_3_OUT};
+  int ports[6]={M1_OUT_1,M2_OUT_1,M1_EN, M2_EN, US_1_OUT, US_2_OUT};
   const int portlen=7;
 #endif
   for(i=0;i<portlen;i++) {
@@ -224,13 +211,8 @@ void setup()
   pinMode(ENC1_IN, INPUT);   
   pinMode(ENC2_IN, INPUT);   
   
-#ifdef _US_M_WIRE_
   pinMode(US_1_IN, INPUT);   
   pinMode(US_2_IN, INPUT);   
-  pinMode(US_3_IN, INPUT);   
-#else
-  pinMode(US_IN, INPUT);   
-#endif
 
   // encoders interrupts
   attachInterrupt(ENC1_IN, encodeInterrupt_1, CHANGE); 
@@ -263,11 +245,8 @@ void setup()
   
   Serial.println("Init Servo...");
   sservo.attach(SERVO_IN);  // attaches the servo on pin 9 to the servo object
-  sservo.write(-90);
   delay(500);
   sservo.write(90);
-  delay(500);
-  sservo.write(0);
   // init Q
   setQuInit();
   
@@ -704,12 +683,12 @@ void Drive_s1(uint8_t dir, uint8_t pow, int16_t p_en, uint8_t p1)
 }
 
 void readUSDist() {
-  //uint32_t t=millis();
-  sservo.write(sservo_pos);
-  //uint32_t dt=millis()-t;
-  //Serial.print(t); Serial.print(" \t"); Serial.println(sservo_pos); 
-  sservo_pos+=sservo_step;
-  if((sservo_step>0 && sservo_pos>=180) || (sservo_step<0 && sservo_pos<=0)) sservo_step=-sservo_step;
+  if(sens_step==0) {
+    sservo.write(sservo_pos);
+    if((sservo_step>0 && sservo_pos>=180) || (sservo_step<0 && sservo_pos<=0)) sservo_step=-sservo_step;
+    sservo_pos+=sservo_step;
+  } else {
+  
   /*
 #ifdef _US_M_WIRE_
   //int ports_in[M_SENS_N]={US_1_IN, US_2_IN, US_3_IN};
@@ -792,6 +771,8 @@ void readUSDist() {
   current_sens=(current_sens+1)%M_SENS_N;  
   //}
   */
+  }
+ sens_step=(sens_step+1)%M_SENS_N;  
 }
 
 void encodeInterrupt_1() { baseInterrupt(0); }

@@ -57,7 +57,7 @@ public:
   int32_t *getStoredAdvance();
   int16_t *getStoredPower();
   //int16_t *getTargPower();
-  int16_t *getCurPower();
+  //int16_t *getCurPower();
   int16_t *getStoredSensors();  
   //float getMovement();
   //float getRotation();
@@ -104,7 +104,9 @@ private:
   int16_t act_power[2];
   int16_t sensors[SENS_SIZE];
   //int16_t targ_pow[2];
-  int16_t cur_pow[2];
+  //int16_t cur_pow[2];
+  int16_t base_pow;
+  int16_t delta_pow;
   int16_t targ_speed; //mm_s
   
   float dist;

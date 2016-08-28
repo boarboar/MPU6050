@@ -13,7 +13,7 @@ enum CFG_ID {CFG_DBG=0, CFG_SYSL=1, CFG_PIDS_1=2, CFG_PIDS_2=3};
 CfgDrv CfgDrv::Cfg; // singleton
 
 CfgDrv::CfgDrv() : log_on(0), debug_on(0), log_port(0),  
-bear_pid{4, 100, 4, 10, 100}, speed_pid{4, 20, 4, 150, 50}, 
+bear_pid{4, 100, 2, 10, 100}, speed_pid{4, 20, 4, 150, 50}, 
 fs_ok(false), dirty(false), last_chg(0)
  {
   }
