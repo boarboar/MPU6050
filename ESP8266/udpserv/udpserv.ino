@@ -133,25 +133,13 @@ void doCycle() {
 
   if(mpu_res!=2) Controller::ControllerProc.process(MpuDrv::Mpu.getYaw(), dt); 
   yield();
-
+/*
   if(MpuDrv::Mpu.getFailReason()) {
     Serial.print(F("MPU FAILURE ")); Serial.println(MpuDrv::Mpu.getFailReason());
     cmd.sendAlarm(CmdProc::ALR_MPU_FAILURE, MpuDrv::Mpu.getFailReason());
     MpuDrv::Mpu.clearFailReason();
   }
-
-/*
-  if(Controller::ControllerProc.getFailReason()) {
-    uint8_t alr=Controller::ControllerProc.getFailReason();
-    boolean isalr=alr<100;
-    if(isalr) { Serial.print(F("CTL FAILURE ")); Serial.println(alr);}
-    int16_t pa[6];
-    Controller::ControllerProc.getFailParams(6, pa);
-    cmd.sendAlarm(isalr ? CmdProc::ALR_CTL_FAILURE : CmdProc::ALR_CTL_LOG, alr, dt, 6, pa);
-    Controller::ControllerProc.clearFailReason();
-  }
-  */
-
+*/
   Logger::Instance.flushEvents();
   
 // Do slow cycle // (2000 ms)
@@ -169,6 +157,7 @@ void doCycle() {
   if(Controller::ControllerProc.isNeedReset()) {
     cmd.sendAlarm(CmdProc::ALR_CTL_RESET, 0);
     Controller::ControllerProc.init();
+    Controller::ControllerProc.start(); // forced start for testing purposes...
   }
   
   if(CfgDrv::Cfg.needToStore()) CfgDrv::Cfg.store(cfg_file);

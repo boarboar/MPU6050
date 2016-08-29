@@ -66,7 +66,8 @@ class MyForm(wx.Frame):
         self.btn_mov_up = wx.Button(panel, wx.ID_ANY, u"\u2191", size=( bsz,  bsz))
         self.btn_mov_dn = wx.Button(panel, wx.ID_ANY, u"\u2193", size=( bsz,  bsz))
         self.btn_mov_stop = wx.Button(panel, wx.ID_ANY, u"\u2717", size=( bsz,  bsz))
-
+        self.txt_mov_speed = wx.TextCtrl(panel, size=( bsz*4,  bsz))
+        self.txt_mov_speed.SetValue("20")
 
         self.unitPan = draw.UnitPanel(panel)
         self.chart = draw.ChartPanel(panel)
@@ -110,13 +111,14 @@ class MyForm(wx.Frame):
         rps=0.5    
         self.Bind(wx.EVT_BUTTON, lambda evt, move=(-rps, rps): self.controller.reqMove(move[0], move[1]), self.btn_mov_left)
         self.Bind(wx.EVT_BUTTON, lambda evt, move=(rps, -rps): self.controller.reqMove(move[0], move[1]), self.btn_mov_right)
-        #self.Bind(wx.EVT_BUTTON, lambda evt, move=(rps, rps): self.controller.reqMove(move[0], move[1]), self.btn_mov_up)
-        self.Bind(wx.EVT_BUTTON, lambda evt, speed=7: self.controller.reqMoveSpeed(speed), self.btn_mov_up)
-        #self.Bind(wx.EVT_BUTTON, lambda evt, move=(-rps, -rps): self.controller.reqMove(move[0], move[1]), self.btn_mov_dn)
-        self.Bind(wx.EVT_BUTTON, lambda evt, speed=-7: self.controller.reqMoveSpeed(speed), self.btn_mov_dn)        
-        #self.Bind(wx.EVT_BUTTON, lambda evt, move=(0.0, 0.0): self.controller.reqMove(move[0], move[1]), self.btn_mov_stop)
-        self.Bind(wx.EVT_BUTTON, lambda evt, speed=0: self.controller.reqMoveSpeed(speed), self.btn_mov_stop)
-        
+        #self.Bind(wx.EVT_BUTTON, lambda evt, speed=7: self.controller.reqMoveSpeed(speed), self.btn_mov_up)
+        #self.Bind(wx.EVT_BUTTON, lambda evt, speed=-7: self.controller.reqMoveSpeed(speed), self.btn_mov_dn)
+        #self.Bind(wx.EVT_BUTTON, lambda evt, speed=0: self.controller.reqMoveSpeed(speed), self.btn_mov_stop)
+
+        self.Bind(wx.EVT_BUTTON, lambda evt, dir=1: self.reqMove(dir), self.btn_mov_up)
+        self.Bind(wx.EVT_BUTTON, lambda evt, dir=-1: self.reqMove(dir), self.btn_mov_dn)
+        self.Bind(wx.EVT_BUTTON, lambda evt, dir=0: self.reqMove(dir), self.btn_mov_stop)
+
         self.LogString("Local address is %s" % socket.gethostbyname(socket.gethostname()))
         self.map.Reset() # init particles filter and position
         self.history = self.model["CMD_HIST"]
@@ -172,6 +174,7 @@ class MyForm(wx.Frame):
         sizer_map_ctrls.Add(self.btn_mov_up, 0, wx.LEFT|wx.BOTTOM, 0)
         sizer_map_ctrls.Add(self.btn_mov_dn, 0, wx.LEFT|wx.BOTTOM, 0)
         sizer_map_ctrls.Add(self.btn_mov_stop, 0, wx.LEFT|wx.BOTTOM, 0)
+        sizer_map_ctrls.Add(self.txt_mov_speed, 0, wx.LEFT|wx.BOTTOM, 0)
 
         sizer_pan.Add(sizer_ctrls, 0, wx.ALL|wx.RIGHT, 5)
         sizer_ctrls.Add(self.btn_st, 0, wx.ALL|wx.CENTER, 5)
@@ -278,7 +281,10 @@ class MyForm(wx.Frame):
             if len(self.controller.planner.spath)<2 :
                 self.LogErrorString('No path')
                 return
-            self.controller.startPathRunning()
+            try :
+                speed=int(self.txt_mov_speed.GetValue())
+            except ValueError : speed=20
+            self.controller.startPathRunning(speed)
 
     def onDumpModel(self, event):
         self.LogString(str(self.model.dump()))
@@ -328,6 +334,12 @@ class MyForm(wx.Frame):
 
     def onUpdStatEvent(self, evt):
         self.statusbar.SetStatusText(str(self.model["FHS"]), 0)
+
+    def reqMove(self, dir):
+        try :
+            speed=int(self.txt_mov_speed.GetValue())
+        except ValueError : speed=20
+        self.controller.reqMoveSpeed(speed*dir)
 
 class SettingsDialog(wx.Dialog):
     def __init__(self, model, *args, **kw):

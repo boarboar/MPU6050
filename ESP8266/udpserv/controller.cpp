@@ -29,25 +29,7 @@ uint8_t Controller::getStatus() { return pready; }
 uint8_t Controller::isDataReady() { return pready && data_ready; }
 uint8_t Controller::isNeedReset() { return need_reset; }
 void    Controller::needReset() {  need_reset=true; }
-//uint8_t Controller::getFailReason() { return fail_reason; }
-//void  Controller::clearFailReason() { fail_reason=CTL_FAIL_NONE; }
 
-/*
-void Controller::raiseFail(uint8_t reason, int16_t p1, int16_t p2, int16_t p3, int16_t p4, int16_t p5, int16_t p6) {
-  fail_reason=reason;
-  fail_p[0]=p1;
-  fail_p[1]=p2;
-  fail_p[2]=p3;
-  fail_p[3]=p4;
-  fail_p[4]=p5;
-  fail_p[5]=p6;
-}
-
-void Controller::getFailParams(int16_t npa, int16_t *pa) {
-  if(npa>6) npa=6;
-  for(int i=0; i<npa; i++) pa[i]=fail_p[i]; 
- } 
-*/
 
 bool Controller::init() {
   pready=false;
@@ -55,13 +37,9 @@ bool Controller::init() {
   //fail_reason=0;
   need_reset=false; 
   nsens=0;
-  //targ_rot_rate[0]=targ_rot_rate[1]=0;
   act_rot_rate[0]=act_rot_rate[1]=0;
   act_advance[0]=act_advance[1]=0;
-  //act_advance_0[0]=act_advance_0[1]=0;
   act_power[0]=act_power[1]=0;
-  //targ_pow[0]=targ_pow[1]=0;
-  //cur_pow[0]=cur_pow[1]=0;
   base_pow=0;
   delta_pow=0;
   targ_speed=0;
@@ -69,11 +47,9 @@ bool Controller::init() {
   resetIntegrator();
   pready=testConnection();
   if(pready) {
-    //raiseFail(CTL_FAIL_NONE);
     Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL, Logger::UMP_LOGGER_EVENT, CTL_FAIL_INIT, "CTL_INT_OK");  
     nsens=_getNumSensors();      
   } else {
-    //raiseFail(CTL_FAIL_INIT);
     Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_INIT, "CTL_INT_FL");  
     need_reset=true;
   }
@@ -94,8 +70,6 @@ void Controller::resetIntegrator() {
   err_speed_p_0=err_speed_i=0; 
   pid_cnt=0;
   qsum_err=0;
-
-  //raiseFail(CTL_LOG_PBPID, CfgDrv::Cfg.bear_pid.gain_p, CfgDrv::Cfg.bear_pid.gain_d, CfgDrv::Cfg.bear_pid.gain_i, CfgDrv::Cfg.bear_pid.gain_div, CfgDrv::Cfg.bear_pid.limit_i);
 
   Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_EVENT, CTL_LOG_PBPID, CfgDrv::Cfg.bear_pid.gain_p, CfgDrv::Cfg.bear_pid.gain_d, CfgDrv::Cfg.bear_pid.gain_i, CfgDrv::Cfg.bear_pid.gain_div, CfgDrv::Cfg.bear_pid.limit_i);  
   
@@ -144,7 +118,6 @@ bool Controller::process(float yaw, uint32_t dt) {
   run_dist+=fabs(mov);
    
   if(abs(act_advance[0]-act_advance_0[0])>512 || abs(act_advance[1]-act_advance_0[1])>512) {
-    //raiseFail(CTL_FAIL_OVF, act_advance[0], act_advance[1]);
         Serial.print(F("ADV=")); 
         Serial.print(act_advance[0]); Serial.print(F("\t ")); Serial.println(act_advance[1]);
         Serial.print(F("\t ADV0=\t ")); 
@@ -171,11 +144,8 @@ bool Controller::process(float yaw, uint32_t dt) {
   r[1]+=mov*cos(yaw);
 
   //differnitaite
-  //float raw_speed;
   if(dt) {
     // LPF
-    //raw_speed = mov/(float)dt*1000.0f;
-    //speed = (int16_t)((float)speed - ((float)speed - raw_speed)*0.5f);
     int16_t raw_speed=(int16_t)(mov/(float)dt*1000.0f);
     int16_t sum_speed=0;
     for(int i=0; i<SPEED_R_SZ-1; i++) {
@@ -190,8 +160,6 @@ bool Controller::process(float yaw, uint32_t dt) {
   getActPower();
   getSensors();
 
-  //if(targ_pow[0] && targ_pow[1]) {
-  
   if(targ_speed) {
 
     Serial.print(F("PCNT=")); Serial.print(pid_cnt); 
@@ -200,29 +168,30 @@ bool Controller::process(float yaw, uint32_t dt) {
 
     if(pid_cnt>0) {
 
-      // simple proortional
+      int16_t limit=CfgDrv::Cfg.bear_pid.limit_i;
 /*
     int16_t err_bearing_p = (int16_t)((yaw-targ_bearing)*180.0/PI);
+    if(targ_speed<0) err_bearing_p=-err_bearing_p; 
     if(err_bearing_p>180) err_bearing_p-=360;
     else if(err_bearing_p<-180) err_bearing_p+=360;
     int16_t err_bearing_d=err_bearing_p-err_bearing_p_0;
     if(err_bearing_d>180) err_bearing_d-=360;
     else if(err_bearing_d<-180) err_bearing_d+=360;
-    //err_bearing_i=err_bearing_i/2+err_bearing_p;
-    err_bearing_i=err_bearing_i+err_bearing_p;
-    err_bearing_p_0=err_bearing_p;
-    
-    int16_t s=-(int16_t)((int32_t)gain_p*err_bearing_p+(int32_t)gain_d*err_bearing_d+(int32_t)gain_i*err_bearing_i)/gain_div;
+
 */    
-      int16_t limit=CfgDrv::Cfg.bear_pid.limit_i;
-      float err_bearing_p = (yaw-targ_bearing)*180.0f/PI;
+      float err_bearing_p, err_bearing_d;
+      err_bearing_p = (yaw-targ_bearing)*180/PI;
       if(targ_speed<0) err_bearing_p=-err_bearing_p; 
-      if(err_bearing_p>180.0f) err_bearing_p-=360.0f;
-      else if(err_bearing_p<-180.0f) err_bearing_p+=360.0f;
-      float err_bearing_d=err_bearing_p-err_bearing_p_0;
-      if(err_bearing_d>180.0f) err_bearing_d-=360.0f;
-      else if(err_bearing_d<-180.0f) err_bearing_d+=360.0f;
-      //err_bearing_i=err_bearing_i+err_bearing_p;
+      
+      if(err_bearing_p>180) err_bearing_p-=360;
+      else if(err_bearing_p<-180) err_bearing_p+=360;
+      
+      err_bearing_d=err_bearing_p-err_bearing_p_0;
+      
+      if(err_bearing_d>180) err_bearing_d-=360;
+      else if(err_bearing_d<-180) err_bearing_d+=360;
+
+      
       err_bearing_i=err_bearing_i+err_bearing_p;
       if(err_bearing_i>limit) err_bearing_i=limit;
       if(err_bearing_i<-limit) err_bearing_i=-limit;
@@ -235,8 +204,6 @@ bool Controller::process(float yaw, uint32_t dt) {
       delta_pow=s;
       
       int16_t cur_pow[2];
-      //cur_pow[0]+=s;
-      //cur_pow[1]-=s;
       cur_pow[0]=base_pow+delta_pow;
       cur_pow[1]=base_pow-delta_pow;
       
@@ -269,7 +236,6 @@ bool Controller::process(float yaw, uint32_t dt) {
       }
     
       setPower(cur_pow);      
-      //raiseFail(CTL_LOG_PID, round(err_bearing_p), round(err_bearing_d), round(err_bearing_i), s, cur_pow[0], cur_pow[1]);
       Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_EVENT, CTL_LOG_PID, dt, round(err_bearing_p), round(err_bearing_d), round(err_bearing_i), s, cur_pow[0], cur_pow[1]);  
  
       yield();
@@ -315,26 +281,6 @@ float Controller::getAVQErr() {
   return qsum_err/((uint32_t)pid_cnt*pid_cnt);
 }
 
-/*
-bool Controller::setTargRotRate(float l, float r) {
-  int16_t d[2];
-  d[0]=(int16_t)(l*V_NORM);
-  d[1]=(int16_t)(r*V_NORM);
-  // init steering parameters
-  setTargSteering(0);
-  //err_bearing_p_0=0.0f;
-  //err_bearing_i=0.0f;
-  err_bearing_p_0=err_bearing_i=0;  
-  if(targ_rot_rate[0]==d[0] && targ_rot_rate[1]==d[1]) return true;
-  //if(!setTargRotRate(d)) return false;
-  targ_pow[0]=l*120; targ_pow[1]=r*120; // temp  
-  if(!setPower(targ_pow)) return false;
-  targ_rot_rate[0]=d[0];
-  targ_rot_rate[1]=d[1];
-  return true;
-}
-*/
-
 bool Controller::setTargPower(float l, float r) {
   /*
   // init steering parameters
@@ -367,9 +313,6 @@ bool Controller::setTargBearing(int16_t s) {
   targ_bearing = (float)s/180.0*PI;
   if(targ_bearing>PI) targ_bearing-=PI*2.0f;
   else if(targ_bearing<-PI) targ_bearing+=PI*2.0f;  
-
-  //Serial.print(F("TBear=")); Serial.print(targ_bearing); Serial.print(F("\t Yaw=")); Serial.println(curr_yaw);
-  
   return true;
 }
 
@@ -388,14 +331,11 @@ bool Controller::setTargSpeed(int16_t tspeed) {
   setTargSteering(0);
   err_bearing_p_0=err_bearing_i=0;    
   targ_speed=tspeed*10; //mm
-  //cur_pow[0]=cur_pow[1]=(int32_t)abs(targ_speed)*M_POW_NORM/M_SPEED_NORM; // temp  
   base_pow=(int32_t)abs(targ_speed)*M_POW_NORM/M_SPEED_NORM; // temp
   delta_pow=0;
-  //pid_cnt=0;
   
   //Serial.print(F("STV TV=")); Serial.print(targ_speed); Serial.print(F("ADV=")); Serial.print(cur_pow[0]); Serial.print(F("\t ")); Serial.println(cur_pow[1]);
   
-  //raiseFail(CTL_LOG_POW, 2, tspeed, round(targ_speed), 0, cur_pow[0], cur_pow[1]);
   int16_t cur_pow[2]={base_pow, base_pow};
   if(!setPower(cur_pow)) return false;
   return true;
@@ -412,8 +352,6 @@ bool Controller::getControllerStatus() {
 uint8_t Controller::_getNumSensors() {
   bool res = I2Cdev::readByte(DEV_ID, REG_SENSORS_CNT, buf); 
   if(!res) {
-    //fail_reason=CTL_FAIL_RD;
-    //raiseFail(CTL_FAIL_RD, REG_SENSORS_CNT);
     Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL, Logger::UMP_LOGGER_ALARM, CTL_FAIL_RD, REG_SENSORS_CNT);
     return 0;
   }
@@ -423,45 +361,20 @@ uint8_t Controller::_getNumSensors() {
 
 bool Controller::setStart(uint8_t p) {
   bool res = I2Cdev::writeByte(DEV_ID, REG_START, p);
-  //if(!res) raiseFail(CTL_FAIL_WRT, REG_START);
   if(!res) Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL, Logger::UMP_LOGGER_ALARM, CTL_FAIL_WRT, REG_START);
   return res;
 }
 
-/*
-bool Controller::getTargRotRate(int16_t *d) { 
-  bool res = readInt16_2(REG_TARG_ROT_RATE, d, d+1); 
-  if(!res) raiseFail(CTL_FAIL_RD, REG_TARG_ROT_RATE);
-  return res;
-}
-
-bool Controller::setTargRotRate(int16_t *d) {
-  bool res = writeInt16_2(REG_TARG_ROT_RATE, d[0], d[1]); 
-  if(!res) raiseFail(CTL_FAIL_WRT, REG_TARG_ROT_RATE);
-  return res;
-}
-*/
-/*
-bool Controller::stopDrive() {
-  //bool res = writeInt16_2(REG_TARG_ROT_RATE, 0, 0); 
-  //if(!res) raiseFail(CTL_FAIL_WRT, REG_TARG_ROT_RATE);
-  bool res = writeInt16_2(REG_TARG_POW, 0, 0); 
-  if(!res) raiseFail(CTL_FAIL_WRT, REG_TARG_POW);  
-  return res;
-}
-*/
 bool Controller::setPower(int16_t *p) {
   bool res=false;
   if(targ_speed>=0) res=writeInt16_2(REG_TARG_POW, p[0], p[1]);
   else  res=writeInt16_2(REG_TARG_POW, -p[0], -p[1]);
-  //if(!res) raiseFail(CTL_FAIL_WRT, REG_TARG_POW);  
   if(!res) Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL, Logger::UMP_LOGGER_ALARM, CTL_FAIL_WRT, REG_TARG_POW);
   return res;
 }
 
 bool Controller::setSteering(int16_t s) {
   bool res = writeInt16(REG_STEERING, s); 
-  //if(!res) raiseFail(CTL_FAIL_WRT, REG_STEERING);
   if(!res) Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL, Logger::UMP_LOGGER_ALARM, CTL_FAIL_WRT, REG_STEERING);
   return res;
 }
@@ -470,7 +383,6 @@ bool Controller::getActRotRate() {
   int16_t tmp[2];
   bool res = readInt16_2(REG_ACT_ROT_RATE, tmp, tmp+1);
   if(!res) {
-    //raiseFail(CTL_FAIL_RD, REG_ACT_ROT_RATE);
     Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL, Logger::UMP_LOGGER_ALARM, CTL_FAIL_RD, REG_ACT_ROT_RATE);
     return false;
   }
@@ -480,23 +392,19 @@ bool Controller::getActRotRate() {
 }
 
 bool Controller::getActAdvance(/*int16_t *d*/) {
-  //bool res = readInt16_2(REG_ACT_ADV_ACC, act_advance, act_advance+1);
   bool res = readInt32_2(REG_ACT_ADV_ACC, act_advance);  
-  //if(!res) raiseFail(CTL_FAIL_RD, REG_ACT_ADV_ACC, buf[4]);
   if(!res) Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL, Logger::UMP_LOGGER_ALARM, CTL_FAIL_RD, REG_ACT_ADV_ACC);
   return res;
 }
 
 bool Controller::getActPower(/*int16_t *d*/) {
   bool res = readInt16_2(REG_ACT_POW, act_power, act_power+1); 
-  //if(!res) raiseFail(CTL_FAIL_RD, REG_ACT_POW);
   if(!res) Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL, Logger::UMP_LOGGER_ALARM, CTL_FAIL_RD, REG_ACT_POW);
   return res;
 }
 
 bool Controller::getSensors(/*int16_t *sens*/) {
   bool res = readInt16_N(REG_SENSORS_ALL, 8, sensors); 
-  //if(!res) raiseFail(CTL_FAIL_RD, REG_SENSORS_ALL);
   if(!res) Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL, Logger::UMP_LOGGER_ALARM, CTL_FAIL_RD, REG_SENSORS_ALL);
   return res;
 }
@@ -524,14 +432,8 @@ bool Controller::writeInt16_2(uint16_t reg, int16_t left, int16_t right) {
 bool Controller::readInt16_2(uint16_t reg, int16_t *left, int16_t *right) {
     bool res = I2Cdev::readBytes(DEV_ID, reg, 4, buf);
     if(!res) return false;
-    /*
-    *left = (((int16_t)buf[0]) << 8) | buf[1];
-    *right = (((int16_t)buf[2]) << 8) | buf[3];
-    */
-     
     *left = (int16_t)((((uint16_t)buf[0]) << 8) | buf[1]);
     *right = (int16_t)((((uint16_t)buf[2]) << 8) | buf[3]);
-  
     return res;
 }
 
@@ -550,16 +452,6 @@ bool Controller::readInt32_2(uint16_t reg, int32_t *d) {
     buf[7]);
     return res;
 }
-
-/*
-bool Controller::readInt16_2_x(uint16_t reg, int16_t *left, int16_t *right) {
-    bool res = I2Cdev::readBytes(DEV_ID, reg, 5, buf);
-    if(buf[4] != M_MAGIC_ID) return false;
-    *left = (((int16_t)buf[0]) << 8) | buf[1];
-    *right = (((int16_t)buf[2]) << 8) | buf[3];
-    return res;
-}
-*/
 
 bool Controller::readInt16_N(uint16_t reg, uint16_t n, int16_t *d) {
     bool res = I2Cdev::readBytes(DEV_ID, reg, n*2, buf);

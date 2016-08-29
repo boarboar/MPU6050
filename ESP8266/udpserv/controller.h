@@ -33,30 +33,20 @@ public:
   uint8_t isDataReady();
   uint8_t isNeedReset();
   void needReset();
-  //uint8_t getFailReason();
- // void getFailParams(int16_t npa, int16_t *pa);
-  //void clearFailReason();
   void resetIntegrator();
   bool process(float yaw, uint32_t dt);  
-  /*
-  bool setTargRotRate(float l, float r);
-  bool setTargRotRate(int16_t *d);
-  bool getTargRotRate(int16_t *d);
-  */
   bool setTargPower(float l, float r);
   bool setTargSteering(int16_t s);
   bool setTargSpeed(int16_t s);
   int16_t getTargSpeed();
   bool setTargBearing(int16_t s);
   
-  //bool stopDrive();
   bool setPower(int16_t *p);
   bool setSteering(int16_t s);
   uint8_t getNumSensors();
   float *getStoredRotRate();
   int32_t *getStoredAdvance();
   int16_t *getStoredPower();
-  //int16_t *getTargPower();
   //int16_t *getCurPower();
   int16_t *getStoredSensors();  
   //float getMovement();
@@ -82,15 +72,12 @@ protected:
   bool writeInt16(uint16_t reg, int16_t val);
   bool writeInt16_2(uint16_t reg, int16_t left, int16_t right);
   bool readInt16_2(uint16_t reg, int16_t *left, int16_t *right);  
-  //bool readInt16_2_x(uint16_t reg, int16_t *left, int16_t *right);  
   bool readInt16_2(uint16_t reg, int16_t *d);
   bool readInt32_2(uint16_t reg, int32_t *d);
   bool readInt16_N(uint16_t reg, uint16_t n, int16_t *d);
 private:  
   uint8_t data_ready;
   uint8_t need_reset;
-  //uint8_t fail_reason;
-  //int16_t fail_p[6]; 
   
   uint8_t buf[16];  
   //uint8_t sta[2];
@@ -103,7 +90,6 @@ private:
   int32_t act_advance_0[2];
   int16_t act_power[2];
   int16_t sensors[SENS_SIZE];
-  //int16_t targ_pow[2];
   //int16_t cur_pow[2];
   int16_t base_pow;
   int16_t delta_pow;
@@ -122,13 +108,6 @@ private:
   uint32_t pid_cnt;
   float qsum_err;
   float run_dist;
-/*
-  int16_t gain_p;
-  int16_t gain_d; 
-  int16_t gain_i;
-  int16_t gain_div;
-  int16_t limit_i;
-  */
 };
 
 #endif //_UMP_CONTROLLER_H_

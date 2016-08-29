@@ -230,8 +230,8 @@ class Controller():
     def isPathRunning(self):
         return self.__comm_path_thread!=None and self.__comm_path_thread.complete!=True
 
-    def startPathRunning(self):
-        self.__comm_path_thread=comm.PathThread(self, self.planner, self.unit)
+    def startPathRunning(self, speed):
+        self.__comm_path_thread=comm.PathThread(self, self.planner, self.unit, speed)
         self.__comm_path_thread.start()
 
     def movePathRunning(self):

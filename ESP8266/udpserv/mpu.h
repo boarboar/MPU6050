@@ -28,8 +28,8 @@ public:
   uint8_t isDataReady();
   uint8_t isNeedReset();
   void needReset();
-  uint8_t getFailReason();
-  void clearFailReason();
+  //uint8_t getFailReason();
+  //void clearFailReason();
   void getAll(float* ypr, float* af, float* vf);  
   void resetIntegrator();
   void process();
@@ -46,7 +46,7 @@ protected:
   int8_t dmpStatus; 
   uint8_t data_ready;
   uint8_t need_reset;
-  uint8_t fail_reason;
+  //uint8_t fail_reason;
   uint16_t packetSize;    // expected DMP packet size (default is 42 bytes)
   uint16_t fifoCount;     // count of all bytes currently in FIFO
   uint8_t fifoBuffer[64]; // FIFO storage buffer
