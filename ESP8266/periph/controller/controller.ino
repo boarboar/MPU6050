@@ -3,7 +3,7 @@
 
 //#define _SIMULATION_ 1
 //#define _PID_DEBUG_ 
-#define _US_DEBUG_ 
+//#define _US_DEBUG_ 
 
 #define _US_M_WIRE_  // multiple input wires 
 
@@ -212,7 +212,7 @@ void loop()
     
     readEnc(ctime);
     
-    //if(ST_IS_STARTED()) // commented for US test purposes
+    if(ST_IS_STARTED()) // commented for US test purposes
     {            
       readUSDist();
     } 
