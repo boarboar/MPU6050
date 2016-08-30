@@ -6,9 +6,10 @@ class Unit:
     def __init__(self, umap, pfilter):
         self.map=umap
         self.pfilter=pfilter
-        scan_a0=-90
-        scan_n=3
-        scan_d=(-scan_a0*2)/(scan_n-1)
+        #scan_a0=-90
+        #scan_n=3
+        #scan_d=(-scan_a0*2)/(scan_n-1)
+        scan_a0, scan_n, scan_d = -60, 6, 60
         self.scan_angles=[]
         self.scan_rays=[]
         for i in range(scan_n) :
