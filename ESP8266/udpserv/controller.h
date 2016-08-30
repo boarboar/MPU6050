@@ -68,7 +68,6 @@ protected:
   bool getActAdvance(); // in MMs
   bool getSensors(); 
   bool setStart(uint8_t p); 
-  //void raiseFail(uint8_t reason, int16_t p1=0, int16_t p2=0, int16_t p3=0, int16_t p4=0, int16_t p5=0, int16_t p6=0);  
   bool writeInt16(uint16_t reg, int16_t val);
   bool writeInt16_2(uint16_t reg, int16_t left, int16_t right);
   bool readInt16_2(uint16_t reg, int16_t *left, int16_t *right);  
@@ -102,9 +101,9 @@ private:
   float targ_bearing;
   int16_t speed; //mm/s
   int16_t speed_r[SPEED_R_SZ]; // raw speed readings mm/s
-  float err_bearing_p_0, err_bearing_i;
+  //float err_bearing_p_0, err_bearing_i;
+  int16_t err_bearing_p_0, err_bearing_i;
   float err_speed_p_0, err_speed_i;
-  //int16_t err_bearing_p_0, err_bearing_i;
   uint32_t pid_cnt;
   float qsum_err;
   float run_dist;

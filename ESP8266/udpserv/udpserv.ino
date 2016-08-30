@@ -124,7 +124,7 @@ void doCycle() {
 
   if(mpu_res==2) Controller::ControllerProc.start();
   
-  // Do medium cycle // (200ms)
+  // Do medium cycle // (50ms)
   dt=t-last_med_cycle;
   if(dt < CYCLE_MED_TO) return;
   last_med_cycle = t;

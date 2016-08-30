@@ -2,15 +2,13 @@
 #include <Servo.h> 
 
 //#define _SIMULATION_ 1
-//#define _PID_DEBUG_ 
-//#define _US_DEBUG_ 
+#define _US_DEBUG_ 
 
 #define _US_M_WIRE_  // multiple input wires 
 
 #define _MOTOR_ONE_WIRE_ 
 
 #define M_OWN_ID 0x53
-//#define M_MAGIC_ID 0x4C
 
 // MOTOR OUT
 
@@ -50,7 +48,6 @@
 #define    WHEEL_RAD_MM   33 // measured 32
 
 #define M_SENS_N       6 // number of sensors
-//#define M_SENS_CYCLE   1 // number of sensors to read at cycle
 
 #define REG_WHO_AM_I         0xFF  // 1 unsigned byte
 #define REG_STATUS           0x01  // 2 unsigned bytes
@@ -86,8 +83,8 @@
 //#define NPOW_CHART_MULT  2
 
 #define SERVO_NSTEPS  1
+#define SERVO_TOT_STEPS  3
 #define SERVO_STEP    60
-//#define SERVO_ZERO    1
 #define SERVO_ZERO_SHIFT    5
 
 Servo sservo;
@@ -395,11 +392,6 @@ void readUSDist() {
     sservo_pos+=sservo_step;
     int16_t sservo_angle=90-SERVO_ZERO_SHIFT+sservo_pos*SERVO_STEP;
     sservo.write(sservo_angle);
-    /*
-    sservo.write(sservo_pos);
-    if((sservo_step>0 && sservo_pos>=180) || (sservo_step<0 && sservo_pos<=0)) sservo_step=-sservo_step;
-    sservo_pos+=sservo_step;
-    */
 #ifdef _US_DEBUG_      
     Serial.print("Servo "); Serial.println(sservo_pos);
 #endif    
@@ -421,11 +413,18 @@ void readUSDist() {
   
     // actual constant should be 58.138
     int16_t tmp =(int16_t)(pulseIn(in_port, HIGH, 40000)/58);  //play with timing ?
+   if(tmp==0) tmp=-1;
+   uint8_t current_sens=-sservo_step+1+(sens_step-1)*3;
 #ifdef _US_DEBUG_  
-  Serial.print("\t\t\t\t\t");
-  for(int j=0; j<sens_step; j++) Serial.print("\t");
-   Serial.println(tmp);
+    Serial.print("\t\t\t\t\t");
+    for(int j=0; j<sens_step; j++) Serial.print("\t");
+    Serial.print(tmp);
+    Serial.print("\t [");
+    Serial.print(current_sens);
+    Serial.println("]");
 #endif  
+
+   sens[current_sens] = tmp;
   }
  sens_step=(sens_step+1)%3;  
 }

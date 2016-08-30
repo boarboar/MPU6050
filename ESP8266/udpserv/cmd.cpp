@@ -166,7 +166,7 @@ boolean CmdProc::sendEvent(uint16_t id, uint8_t module,  uint8_t level, uint8_t 
   rootOut["T"] = millis();
   rootOut["I"] = id;
   rootOut["M"] = module;
-  rootOut["K"] = code;
+  rootOut["F"] = code;
   if(pa && npa) {
     JsonArray& par = rootOut.createNestedArray("P");
     uint8_t mpa=npa-1;
@@ -188,7 +188,7 @@ boolean CmdProc::sendEvent(uint16_t id, uint8_t module,  uint8_t level, uint8_t 
   rootOut["T"] = millis();
   rootOut["I"] = id;
   rootOut["M"] = module;
-  rootOut["K"] = code;
+  rootOut["F"] = code;
   rootOut["S"] = s;
   _sendToSysLog(rootOut);
   return true;

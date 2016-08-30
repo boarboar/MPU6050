@@ -4,6 +4,8 @@
 #include "MPU6050.h"
 #include "helper_3dmath.h"
 
+#define MPU_FAIL_CNT_SZ 4
+
 class MpuDrv {
   public:
   static const int8_t ST_0=0;
@@ -17,8 +19,9 @@ class MpuDrv {
   static const int16_t ACC_INIT_TOL=20;
   static const int16_t INIT_PERIOD_MIN=20;
   static const int16_t INIT_PERIOD_MAX=60;
-  enum FailReason {MPU_FAIL_NONE=0, MPU_FAIL_INIT=1, MPU_FAIL_NODATA=2, MPU_FAIL_FIFOOVFL=3, MPU_FAIL_FIFOTMO=4, MPU_FAIL_FIFOEXCESS=5, MPU_FAIL_CONVTMO=6, 
-    MPU_FAIL_INIT_OK=128};
+  //enum FailReason {MPU_FAIL_NONE=0, MPU_FAIL_INIT=1, MPU_FAIL_NODATA=2, MPU_FAIL_FIFOOVFL=3, MPU_FAIL_FIFOTMO=4, MPU_FAIL_FIFOEXCESS=5, MPU_FAIL_CONVTMO=6, MPU_FAIL_INIT_OK=128};
+  enum FailReason {MPU_FAIL_NONE=0, MPU_FAIL_INIT=1,  MPU_FAIL_CONVTMO=2, MPU_FAIL_CYCLE=3, MPU_FAIL_INIT_OK=128};
+  enum FailCountIdx { MPU_FAIL_NODATA_IDX=0, MPU_FAIL_FIFOOVFL_IDX=1, MPU_FAIL_FIFOTMO_IDX=2, MPU_FAIL_FIFOEXCESS_IDX=3 };
 public:
   static MpuDrv Mpu; // singleton  
   int16_t init(/*uint16_t sda, uint16_t sdl,*/ uint16_t intr);
@@ -47,6 +50,7 @@ protected:
   uint8_t data_ready;
   uint8_t need_reset;
   //uint8_t fail_reason;
+  uint8_t fail_cnt[MPU_FAIL_CNT_SZ];
   uint16_t packetSize;    // expected DMP packet size (default is 42 bytes)
   uint16_t fifoCount;     // count of all bytes currently in FIFO
   uint8_t fifoBuffer[64]; // FIFO storage buffer

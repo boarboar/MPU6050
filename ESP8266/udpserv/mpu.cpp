@@ -34,6 +34,7 @@ int16_t MpuDrv::init() {
   conv_count=0;
   need_reset=0;
   //fail_reason=0;
+  for(int i=0; i<MPU_FAIL_CNT_SZ; i++) fail_cnt[i]=0;
   resetIntegrator();
   Serial.println(F("Init I2C dev..."));
   mpu.initialize();
@@ -70,7 +71,6 @@ int16_t MpuDrv::init() {
     // enter warmup/convergence stage 
     dmpStatus=ST_WUP;
     start=millis();
-    //fail_reason=MPU_FAIL_INIT_OK;
     Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_IMU, Logger::UMP_LOGGER_EVENT, MPU_FAIL_INIT_OK, "IMU_INT_OK");  
     Serial.print(F("DMP ok! Wait for int...FIFO sz is ")); Serial.println(packetSize);    
   } else {
@@ -80,7 +80,6 @@ int16_t MpuDrv::init() {
     // (if it's going to break, usually the code will be 1)
     //Serial.print(F("DMP Init fail, code ")); Serial.println(devStatus);
     dmpStatus = ST_FAIL;
-    //fail_reason=MPU_FAIL_INIT;
     Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_IMU,  Logger::UMP_LOGGER_ALARM, MPU_FAIL_INIT_OK, "IMU_INT_FL");  
     need_reset=1;
   }
@@ -100,7 +99,8 @@ int16_t MpuDrv::cycle(uint16_t /*dt*/) {
     need_reset=1;
     data_ready=0;
     //fail_reason=MPU_FAIL_NODATA;
-    Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_IMU,  Logger::UMP_LOGGER_ALARM, MPU_FAIL_NODATA, "IMU_ND");  
+    //Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_IMU,  Logger::UMP_LOGGER_ALARM, MPU_FAIL_NODATA, "IMU_ND");  
+    fail_cnt[MPU_FAIL_NODATA_IDX]++;
     return -10;
   }
 /*
@@ -117,7 +117,8 @@ int16_t MpuDrv::cycle(uint16_t /*dt*/) {
     fifoCount=0;
     Stat::StatStore.mpu_owfl_cnt++;
     //fail_reason=MPU_FAIL_FIFOOVFL;
-    Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_IMU,  Logger::UMP_LOGGER_ALARM, MPU_FAIL_FIFOOVFL, "IMU_OVF");  
+    //Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_IMU,  Logger::UMP_LOGGER_ALARM, MPU_FAIL_FIFOOVFL, "IMU_OVF");  
+    fail_cnt[MPU_FAIL_FIFOOVFL_IDX]++;
     //Serial.println(F("FIFO overflow!!!"));
     return -2;
   } 
@@ -132,7 +133,8 @@ int16_t MpuDrv::cycle(uint16_t /*dt*/) {
     //Serial.println(F("FIFO wait - giveup!!!"));
     Stat::StatStore.mpu_gup_cnt++;
     //fail_reason=MPU_FAIL_FIFOTMO;
-    Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_IMU,  Logger::UMP_LOGGER_ALARM, MPU_FAIL_FIFOTMO, "IMU_FTMO");  
+    //Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_IMU,  Logger::UMP_LOGGER_ALARM, MPU_FAIL_FIFOTMO, "IMU_FTMO");  
+    fail_cnt[MPU_FAIL_FIFOTMO_IDX]++;
     return 0; // giveup
   }
   // read a packet from FIFO
@@ -145,7 +147,8 @@ int16_t MpuDrv::cycle(uint16_t /*dt*/) {
     mpu.resetFIFO();
     fifoCount=0;
     //fail_reason=MPU_FAIL_FIFOEXCESS;
-    Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_IMU,  Logger::UMP_LOGGER_ALARM, MPU_FAIL_FIFOEXCESS, "IMU_XCS");  
+    //Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_IMU,  Logger::UMP_LOGGER_ALARM, MPU_FAIL_FIFOEXCESS, "IMU_XCS");  
+    fail_cnt[MPU_FAIL_FIFOEXCESS_IDX]++;
     return -3;
   }   
     
@@ -171,6 +174,7 @@ int16_t MpuDrv::cycle(uint16_t /*dt*/) {
    if(qe<QUAT_INIT_TOL && ae<ACC_INIT_TOL) {
       conv_count++;
       if((millis()-start)/1000 > INIT_PERIOD_MIN && conv_count>3) settled=true;            
+      Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_IMU,  Logger::UMP_LOGGER_EVENT, MPU_FAIL_CONVTMO, "IMU_CVTMO");  
     } else conv_count=0;  
    if((millis()-start)/1000 > INIT_PERIOD_MAX) {
       Serial.println(F("===MPU Failed to converge, however switching to settled status...")); // TODO -?
@@ -192,6 +196,8 @@ int16_t MpuDrv::cycle(uint16_t /*dt*/) {
   count++; 
   
   if(dmpStatus==ST_READY) {
+#ifdef IMU_USE_INTEGRATION    
+    // =======actually, this is not needed if we do not use IMU accel-based integration integration
     // integrate motion
     Quaternion q, q0;
     VectorFloat ga;    
@@ -226,6 +232,7 @@ int16_t MpuDrv::cycle(uint16_t /*dt*/) {
     start=mcs;
     v.x+=a.x*ts; v.y+=a.y*ts; v.z+=a.z*ts;
 //      r.x+=v.x*ts; r.y+=v.y*ts; r.z+=v.z*ts;
+#endif
     data_ready=1; 
     return settled ? 2 : 1;
   }      
@@ -247,6 +254,14 @@ void MpuDrv::process() {
   q=q0.getProduct(q); // real quaternion (relative to base)
   mpu.dmpGetGravity(&gravity, &q);
   mpu.dmpGetYawPitchRoll(ypr, &q, &gravity); 
+
+  // flush alarms
+  for(int i=0; i<MPU_FAIL_CNT_SZ; i++) {
+    if(fail_cnt[i]) {
+      Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_IMU,  Logger::UMP_LOGGER_ALARM, MPU_FAIL_CYCLE+i, fail_cnt[i]);  
+      fail_cnt[i]=0;
+    }
+  }
 }
 
 float MpuDrv::getYaw() { return ypr[0]; }

@@ -123,7 +123,6 @@ bool Controller::process(float yaw, uint32_t dt) {
         Serial.print(F("\t ADV0=\t ")); 
         Serial.print(act_advance_0[0]); Serial.print(F("\t ")); Serial.println(act_advance_0[1]);
 
-    //raiseFail(CTL_FAIL_OVF, buf[0], buf[1], buf[2], buf[3]);
     Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OVF, buf[0], buf[1], buf[2], buf[3]);  
   
     act_advance_0[0]=act_advance[0];
@@ -169,18 +168,10 @@ bool Controller::process(float yaw, uint32_t dt) {
     if(pid_cnt>0) {
 
       int16_t limit=CfgDrv::Cfg.bear_pid.limit_i;
-/*
-    int16_t err_bearing_p = (int16_t)((yaw-targ_bearing)*180.0/PI);
-    if(targ_speed<0) err_bearing_p=-err_bearing_p; 
-    if(err_bearing_p>180) err_bearing_p-=360;
-    else if(err_bearing_p<-180) err_bearing_p+=360;
-    int16_t err_bearing_d=err_bearing_p-err_bearing_p_0;
-    if(err_bearing_d>180) err_bearing_d-=360;
-    else if(err_bearing_d<-180) err_bearing_d+=360;
+      int16_t err_bearing_p, err_bearing_d;
 
-*/    
-      float err_bearing_p, err_bearing_d;
-      err_bearing_p = (yaw-targ_bearing)*180/PI;
+      //float err_bearing_p, err_bearing_d;
+      err_bearing_p = ((yaw-targ_bearing)*180.0f/PI);
       if(targ_speed<0) err_bearing_p=-err_bearing_p; 
       
       if(err_bearing_p>180) err_bearing_p-=360;
@@ -199,9 +190,11 @@ bool Controller::process(float yaw, uint32_t dt) {
 
       if(run_dist>=100) //100mm
         qsum_err+=err_bearing_p*err_bearing_p;
-      
-      int16_t s=-(int16_t)((err_bearing_p*CfgDrv::Cfg.bear_pid.gain_p+err_bearing_d*CfgDrv::Cfg.bear_pid.gain_d+err_bearing_i*CfgDrv::Cfg.bear_pid.gain_i)/CfgDrv::Cfg.bear_pid.gain_div);
-      delta_pow=s;
+
+      // use 32 bit math?
+      //int16_t s=-(int16_t)((err_bearing_p*CfgDrv::Cfg.bear_pid.gain_p+err_bearing_d*CfgDrv::Cfg.bear_pid.gain_d+err_bearing_i*CfgDrv::Cfg.bear_pid.gain_i)/CfgDrv::Cfg.bear_pid.gain_div);
+      //delta_pow=s;
+      delta_pow=-(int16_t)((err_bearing_p*CfgDrv::Cfg.bear_pid.gain_p+err_bearing_d*CfgDrv::Cfg.bear_pid.gain_d+err_bearing_i*CfgDrv::Cfg.bear_pid.gain_i)/CfgDrv::Cfg.bear_pid.gain_div);
       
       int16_t cur_pow[2];
       cur_pow[0]=base_pow+delta_pow;
@@ -236,12 +229,13 @@ bool Controller::process(float yaw, uint32_t dt) {
       }
     
       setPower(cur_pow);      
-      Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_EVENT, CTL_LOG_PID, dt, round(err_bearing_p), round(err_bearing_d), round(err_bearing_i), s, cur_pow[0], cur_pow[1]);  
+      //Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_EVENT, CTL_LOG_PID, dt, round(err_bearing_p), round(err_bearing_d), round(err_bearing_i), s, cur_pow[0], cur_pow[1]);  
+      Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_EVENT, CTL_LOG_PID, dt, err_bearing_p, err_bearing_d, err_bearing_i, delta_pow, cur_pow[0], cur_pow[1]);  
  
-      yield();
+      //yield();
 
       Serial.print(F("BErr: ")); Serial.print(err_bearing_p); Serial.print(F("\t ")); Serial.print(err_bearing_d);  Serial.print(F("\t ")); Serial.print(err_bearing_i);
-      Serial.print(F("\t => ")); Serial.print(s); Serial.print(F("\t : ")); Serial.print(cur_pow[0]); Serial.print(F("\t : ")); Serial.println(cur_pow[1]); 
+      Serial.print(F("\t => ")); Serial.print(delta_pow); Serial.print(F("\t : ")); Serial.print(cur_pow[0]); Serial.print(F("\t : ")); Serial.println(cur_pow[1]); 
 
       yield();
     
