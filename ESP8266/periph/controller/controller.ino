@@ -2,7 +2,7 @@
 #include <Servo.h> 
 
 //#define _SIMULATION_ 1
-#define _US_DEBUG_ 
+//#define _US_DEBUG_ 
 
 #define _US_M_WIRE_  // multiple input wires 
 
@@ -414,12 +414,16 @@ void readUSDist() {
     // actual constant should be 58.138
     int16_t tmp =(int16_t)(pulseIn(in_port, HIGH, 40000)/58);  //play with timing ?
    if(tmp==0) tmp=-1;
-   uint8_t current_sens=-sservo_step+1+(sens_step-1)*3;
+   int8_t current_sens=-sservo_pos+1+(sens_step-1)*3;
 #ifdef _US_DEBUG_  
-    Serial.print("\t\t\t\t\t");
+    Serial.print("\t\t");
     for(int j=0; j<sens_step; j++) Serial.print("\t");
     Serial.print(tmp);
     Serial.print("\t [");
+    Serial.print(sservo_pos);
+    Serial.print("\t ,");
+    Serial.print(sens_step);
+    Serial.print("\t -> ");
     Serial.print(current_sens);
     Serial.println("]");
 #endif  
