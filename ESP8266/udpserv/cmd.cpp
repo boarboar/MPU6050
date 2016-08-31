@@ -134,6 +134,7 @@ boolean CmdProc::sendAlarm(uint8_t alr, uint8_t param, int16_t dt, int16_t p1, i
 }
 */
 
+/*
 boolean CmdProc::sendAlarm(uint8_t alr, uint8_t param, int16_t dt, int8_t npa, int16_t* pa) {
   //{"C": "A", "T":12345, "R":1123, "P":1123, "PA":[]} 
   if(CfgDrv::Cfg.log_on<SL_LEVEL_ALARM) return false;
@@ -156,7 +157,7 @@ boolean CmdProc::sendAlarm(uint8_t alr, uint8_t param, int16_t dt, int8_t npa, i
   _sendToSysLog(rootOut);
   return true;
 }
-
+*/
 
 boolean CmdProc::sendEvent(uint16_t id, uint8_t module,  uint8_t level, uint8_t code, int8_t npa, int16_t *pa) {
   if(CfgDrv::Cfg.log_on<SL_LEVEL_ALARM) return false; //!!! should be adjusted with level

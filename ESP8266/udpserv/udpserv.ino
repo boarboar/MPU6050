@@ -56,9 +56,7 @@ void setup() {
   }
   
   delay(1000);
-
-  cmd.sendAlarm(CmdProc::ALR_RESET, 0);
-  
+ 
   if(cmd.init(udp_port)) {
     Serial.print(F("Ready! Listening on "));
     Serial.print(WiFi.localIP());
@@ -69,7 +67,11 @@ void setup() {
     delay(1000);
     ESP.reset();
   } 
-   
+
+  //cmd.sendAlarm(CmdProc::ALR_RESET, 0);
+
+  Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_SYS,  Logger::UMP_LOGGER_ALARM, -1, "RSTED");  
+ 
   yield();
 
   Wire.begin(MPU_SDA, MPU_SDL);
@@ -149,13 +151,15 @@ void doCycle() {
   
 
   if(MpuDrv::Mpu.isNeedReset()) {
-    cmd.sendAlarm(CmdProc::ALR_MPU_RESET, 0);
+    //cmd.sendAlarm(CmdProc::ALR_MPU_RESET, 0);
+    Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_IMU,  Logger::UMP_LOGGER_ALARM, -1, "NEEDRST");  
     MpuDrv::Mpu.init();
     yield();
   }
   
   if(Controller::ControllerProc.isNeedReset()) {
-    cmd.sendAlarm(CmdProc::ALR_CTL_RESET, 0);
+    //cmd.sendAlarm(CmdProc::ALR_CTL_RESET, 0);
+    Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, -1, "NEEDRST");  
     Controller::ControllerProc.init();
     Controller::ControllerProc.start(); // forced start for testing purposes...
   }

@@ -23,7 +23,7 @@ public:
   boolean sendSysLog(const char *buf);
   boolean sendSysLogStatus();
   //boolean sendAlarm(uint8_t alr, uint8_t param, int16_t dt=0, int16_t p1=0, int16_t p2=0);
-  boolean sendAlarm(uint8_t alr, uint8_t param, int16_t dt=0, int8_t npa=0, int16_t *pa=NULL);
+  //boolean sendAlarm(uint8_t alr, uint8_t param, int16_t dt=0, int8_t npa=0, int16_t *pa=NULL);
   boolean sendEvent(uint16_t id, uint8_t module,  uint8_t level, uint8_t code, int8_t npa=0, int16_t *pa=NULL);
   boolean sendEvent(uint16_t id, uint8_t module,  uint8_t level, uint8_t code, const char *s);
 protected:

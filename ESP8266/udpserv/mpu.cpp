@@ -98,8 +98,6 @@ int16_t MpuDrv::cycle(uint16_t /*dt*/) {
     //init(); // RESET MPU
     need_reset=1;
     data_ready=0;
-    //fail_reason=MPU_FAIL_NODATA;
-    //Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_IMU,  Logger::UMP_LOGGER_ALARM, MPU_FAIL_NODATA, "IMU_ND");  
     fail_cnt[MPU_FAIL_NODATA_IDX]++;
     return -10;
   }
@@ -116,8 +114,6 @@ int16_t MpuDrv::cycle(uint16_t /*dt*/) {
     mpu.resetFIFO();
     fifoCount=0;
     Stat::StatStore.mpu_owfl_cnt++;
-    //fail_reason=MPU_FAIL_FIFOOVFL;
-    //Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_IMU,  Logger::UMP_LOGGER_ALARM, MPU_FAIL_FIFOOVFL, "IMU_OVF");  
     fail_cnt[MPU_FAIL_FIFOOVFL_IDX]++;
     //Serial.println(F("FIFO overflow!!!"));
     return -2;
@@ -132,8 +128,6 @@ int16_t MpuDrv::cycle(uint16_t /*dt*/) {
   if(fifoCount < packetSize) {
     //Serial.println(F("FIFO wait - giveup!!!"));
     Stat::StatStore.mpu_gup_cnt++;
-    //fail_reason=MPU_FAIL_FIFOTMO;
-    //Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_IMU,  Logger::UMP_LOGGER_ALARM, MPU_FAIL_FIFOTMO, "IMU_FTMO");  
     fail_cnt[MPU_FAIL_FIFOTMO_IDX]++;
     return 0; // giveup
   }
@@ -146,8 +140,6 @@ int16_t MpuDrv::cycle(uint16_t /*dt*/) {
     Stat::StatStore.mpu_exc_cnt++;
     mpu.resetFIFO();
     fifoCount=0;
-    //fail_reason=MPU_FAIL_FIFOEXCESS;
-    //Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_IMU,  Logger::UMP_LOGGER_ALARM, MPU_FAIL_FIFOEXCESS, "IMU_XCS");  
     fail_cnt[MPU_FAIL_FIFOEXCESS_IDX]++;
     return -3;
   }   
@@ -173,8 +165,7 @@ int16_t MpuDrv::cycle(uint16_t /*dt*/) {
         
    if(qe<QUAT_INIT_TOL && ae<ACC_INIT_TOL) {
       conv_count++;
-      if((millis()-start)/1000 > INIT_PERIOD_MIN && conv_count>3) settled=true;            
-      Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_IMU,  Logger::UMP_LOGGER_EVENT, MPU_FAIL_CONVTMO, "IMU_CVTMO");  
+      if((millis()-start)/1000 > INIT_PERIOD_MIN && conv_count>3) settled=true;                  
     } else conv_count=0;  
    if((millis()-start)/1000 > INIT_PERIOD_MAX) {
       Serial.println(F("===MPU Failed to converge, however switching to settled status...")); // TODO -?
@@ -190,12 +181,14 @@ int16_t MpuDrv::cycle(uint16_t /*dt*/) {
       Serial.print(F("===MPU Converged, cnvcnt=")); Serial.println(conv_count);
       start=micros();
       dmpStatus=ST_READY;        
+      Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_IMU,  Logger::UMP_LOGGER_EVENT, MPU_FAIL_CONVTMO, "IMU_CVTMO");  
      }
   } // warmup
 
   count++; 
   
   if(dmpStatus==ST_READY) {
+     uint32_t mcs=micros();
 #ifdef IMU_USE_INTEGRATION    
     // =======actually, this is not needed if we do not use IMU accel-based integration integration
     // integrate motion
@@ -204,7 +197,6 @@ int16_t MpuDrv::cycle(uint16_t /*dt*/) {
     VectorInt16 aaReal, aaWorld;
     
     float ts;
-    uint32_t mcs;
     // get world frame accel (with adjustment) - needed for V-integration
     mpu.dmpGetQuaternion(&q, q16);
     mpu.dmpGetQuaternion(&q0, q16_0);
@@ -227,12 +219,11 @@ int16_t MpuDrv::cycle(uint16_t /*dt*/) {
     a.x = a.x - A_K * (a.x - ga.x);
     a.y = a.y - A_K * (a.y - ga.y);
     a.z = a.z - A_K * (a.z - ga.z);
-    mcs=micros();
     ts=(float)(micros()-start)/1000000.0f;
-    start=mcs;
     v.x+=a.x*ts; v.y+=a.y*ts; v.z+=a.z*ts;
 //      r.x+=v.x*ts; r.y+=v.y*ts; r.z+=v.z*ts;
 #endif
+    start=mcs;
     data_ready=1; 
     return settled ? 2 : 1;
   }      

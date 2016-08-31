@@ -8,7 +8,7 @@
 class Logger {
 public:
   enum ParamTypes { UMP_LOGGER_TYPE_NONE=0, UMP_LOGGER_TYPE_I16=1, UMP_LOGGER_TYPE_S=2 };
-  enum Modules { UMP_LOGGER_MODULE_IMU=1, UMP_LOGGER_MODULE_CTL=2 };
+  enum Modules { UMP_LOGGER_MODULE_SYS=1, UMP_LOGGER_MODULE_IMU=1, UMP_LOGGER_MODULE_CTL=2 };
   enum Levels { UMP_LOGGER_ALARM=1, UMP_LOGGER_EVENT=2 };
   static  Logger Instance; // singleton  
   boolean putEvent(uint8_t module,  uint8_t level, uint8_t code,  int16_t p0=0, int16_t p1=0, int16_t p2=0, int16_t p3=0, int16_t p4=0, int16_t p5=0, int16_t p6=0, int16_t p7=0);
