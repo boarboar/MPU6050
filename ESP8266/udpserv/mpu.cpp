@@ -19,8 +19,6 @@ int8_t MpuDrv::getStatus() { return dmpStatus; }
 uint8_t MpuDrv::isDataReady() { return dmpStatus==ST_READY && data_ready; }
 uint8_t MpuDrv::isNeedReset() { return need_reset; }
 void    MpuDrv::needReset() {  need_reset=true; }
-//uint8_t MpuDrv::getFailReason() { return fail_reason; }
-//void  MpuDrv::clearFailReason() { fail_reason=MPU_FAIL_NONE; }
 
 int16_t MpuDrv::init(uint16_t /*intrp*/) {
   return init();
@@ -171,7 +169,7 @@ int16_t MpuDrv::cycle(uint16_t /*dt*/) {
       Serial.println(F("===MPU Failed to converge, however switching to settled status...")); // TODO -?
       settled=true;
       //fail_reason=MPU_FAIL_CONVTMO;
-      Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_IMU,  Logger::UMP_LOGGER_ALARM, MPU_FAIL_CONVTMO, "IMU_CVTMO");  
+      Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_IMU,  Logger::UMP_LOGGER_ALARM, MPU_FAIL_CONVTMO, "IMU_CVT_TM");  
     }
 
    for(i=0; i<4; i++) q16_0[i]=q16[i];
@@ -181,7 +179,7 @@ int16_t MpuDrv::cycle(uint16_t /*dt*/) {
       Serial.print(F("===MPU Converged, cnvcnt=")); Serial.println(conv_count);
       start=micros();
       dmpStatus=ST_READY;        
-      Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_IMU,  Logger::UMP_LOGGER_EVENT, MPU_FAIL_CONVTMO, "IMU_CVTMO");  
+      Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_IMU,  Logger::UMP_LOGGER_EVENT, MPU_FAIL_CONVTMO, "IMU_CVT_OK");  
      }
   } // warmup
 

@@ -118,11 +118,12 @@ bool Controller::process(float yaw, uint32_t dt) {
   run_dist+=fabs(mov);
    
   if(abs(act_advance[0]-act_advance_0[0])>512 || abs(act_advance[1]-act_advance_0[1])>512) {
+    /*
         Serial.print(F("ADV=")); 
         Serial.print(act_advance[0]); Serial.print(F("\t ")); Serial.println(act_advance[1]);
         Serial.print(F("\t ADV0=\t ")); 
         Serial.print(act_advance_0[0]); Serial.print(F("\t ")); Serial.println(act_advance_0[1]);
-
+  */
     Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OVF, buf[0], buf[1], buf[2], buf[3]);  
   
     act_advance_0[0]=act_advance[0];

@@ -110,7 +110,8 @@ class UnitMap:
             refState = False
             intrs=intrs0
             if ref != None :
-                pr, cosa, refState = ref
+                #pr, cosa, refState = ref
+                pr, dummy, refState = ref
             if refState :
                 # secondary intersect if any
                 intrs1, ref=self.getIntersectionMap1(intrs0, pr, False, scan_max_dist)
@@ -145,10 +146,11 @@ class UnitMap:
 
         if intrs!=None and findRefl :
             # find reflection vector
-            rl=scan_max_dist-math.sqrt(dist2)
-            #if rl>0 :
-            if rl<=0 : rl=10
-            ref=self.getReflection(p0, intrs, wsect[0], wsect[1], rl, reff)
+            if (scan_max_dist-50)*(scan_max_dist-50) > dist2 :
+                ref=self.getReflection(p0, intrs, wsect[0], wsect[1], math.sqrt(dist2), reff)
+            #rl=scan_max_dist-math.sqrt(dist2)
+            #if rl>50 : # calculate refections only if remaining length exceed this length
+            #    ref=self.getReflection(p0, intrs, wsect[0], wsect[1], rl, reff)
 
         return intrs, ref
 
@@ -261,9 +263,13 @@ class UnitMap:
         refl=math.hypot(ref[0], ref[1])
         #ref = (p1[0]+d[0]-dn*n[0], p1[1]+d[1]-dn*n[1])
         if refl<0.000001 or nn<0.000001 : return None
-        cosa=abs((n[0]*ref[0]+n[1]*ref[1])/(math.sqrt(nn)*refl))
-        ref_state=cosa<reff  # maybe makes sense to make gaussioan
-        return ((p1[0]+rl*ref[0]/refl, p1[1]+rl*ref[1]/refl), cosa, ref_state)
+        #cosa=abs((n[0]*ref[0]+n[1]*ref[1])/(math.sqrt(nn)*refl))
+        #ref_state=cosa<reff  # maybe makes sense to make gaussioan
+        prod=(n[0]*ref[0]+n[1]*ref[1])
+        cosa2=prod*prod/(nn*refl*refl)
+        ref_state=cosa2<reff*reff
+        #return ((p1[0]+rl*ref[0]/refl, p1[1]+rl*ref[1]/refl), cosa, ref_state)
+        return ((p1[0]+rl*ref[0]/refl, p1[1]+rl*ref[1]/refl), None, ref_state)
 
     def find_intersection(self,  p0, p1, p2, p3 ) :
         s10_x = p1[0] - p0[0]

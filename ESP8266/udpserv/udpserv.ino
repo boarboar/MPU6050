@@ -47,7 +47,7 @@ void setup() {
   WiFi.begin(ssid, password);
   Serial.print(F("\nConnecting to ")); Serial.print(ssid);
   uint8_t i = 0;
-  while (WiFi.status() != WL_CONNECTED && i++ < 20) {delay(500); Serial.print(".");/*delay(5); MpuDrv::Mpu.cycle(5);*/}
+  while (WiFi.status() != WL_CONNECTED && i++ < 20) {delay(500); Serial.print(".");}
   Serial.println();
   if(i == 21){
     Serial.print(F("Could not connect to ")); Serial.println(ssid);
@@ -134,14 +134,7 @@ void doCycle() {
   MpuDrv::Mpu.process();
 
   if(mpu_res!=2) Controller::ControllerProc.process(MpuDrv::Mpu.getYaw(), dt); 
-  yield();
-/*
-  if(MpuDrv::Mpu.getFailReason()) {
-    Serial.print(F("MPU FAILURE ")); Serial.println(MpuDrv::Mpu.getFailReason());
-    cmd.sendAlarm(CmdProc::ALR_MPU_FAILURE, MpuDrv::Mpu.getFailReason());
-    MpuDrv::Mpu.clearFailReason();
-  }
-*/
+ // yield();
   Logger::Instance.flushEvents();
   
 // Do slow cycle // (2000 ms)
@@ -149,7 +142,8 @@ void doCycle() {
   if(dt < CYCLE_SLOW_TO) return;
   last_slow_cycle = t;
   
-
+  yield();
+   
   if(MpuDrv::Mpu.isNeedReset()) {
     //cmd.sendAlarm(CmdProc::ALR_MPU_RESET, 0);
     Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_IMU,  Logger::UMP_LOGGER_ALARM, -1, "NEEDRST");  
@@ -162,10 +156,11 @@ void doCycle() {
     Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, -1, "NEEDRST");  
     Controller::ControllerProc.init();
     Controller::ControllerProc.start(); // forced start for testing purposes...
+    yield();
   }
   
   if(CfgDrv::Cfg.needToStore()) CfgDrv::Cfg.store(cfg_file);
-  cmd.sendSysLogStatus();
+  //cmd.sendSysLogStatus();
 
   //pcf_test();
 }

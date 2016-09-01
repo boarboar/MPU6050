@@ -27,10 +27,13 @@ class PFilter:
         self.fwd_noise=5
         self.rot_noise=0.5
         self.sense_noise=20
+        self.gauss_denom=math.sqrt(2.0 * math.pi * (self.sense_noise ** 2))
+        self.gauss_exp_denom=(self.sense_noise ** 2) * 2.0
 
     def InitParticles(self):
         #N_D=20
-        N_D=16
+        #N_D=16
+        N_D=10
         W=1.0/(N_D*N_D)
         LOC_VAR=150
         ANG_VAR=math.pi/2
@@ -135,7 +138,8 @@ class PFilter:
             else :
                 dist2=math.sqrt((intrs[0]-p0[0])*(intrs[0]-p0[0])+(intrs[1]-p0[1])*(intrs[1]-p0[1]))
             scan_dist.append(dist2)
-            prob*=self.Gaussian(dist2, self.sense_noise, meas[i], scan_max_dist)
+            #prob*=self.Gaussian(dist2, self.sense_noise, meas[i], scan_max_dist)
+            prob*=self.Gaussian1(dist2, meas[i], scan_max_dist)
         p.w=prob
         #print(scan_dist)
 
@@ -164,3 +168,9 @@ class PFilter:
         if mu < 0 : mu=scan_max_dist
         if x < 0 : x=scan_max_dist
         return math.exp(- ((mu - x) ** 2) / (sigma ** 2) / 2.0) / math.sqrt(2.0 * math.pi * (sigma ** 2))
+
+    def Gaussian1(self, mu, x, scan_max_dist):
+        # calculates the probability of x for 1-dim Gaussian with mean mu and var. sigma
+        if mu < 0 : mu=scan_max_dist
+        if x < 0 : x=scan_max_dist
+        return math.exp(- ((mu - x) ** 2) / self.gauss_exp_denom) / self.gauss_denom
