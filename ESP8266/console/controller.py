@@ -119,6 +119,9 @@ class Controller():
     def reqMoveSync(self, l, r):
         return self.__req_sync({"C":"D", "RPS":[round(l,2), round(r,2)]})
 
+    def reqSteer(self, s):
+        return self.__req({"C":"S", "S":round(s,2)})
+
     def reqSteerSync(self, s):
         return self.__req_sync({"C":"S", "S":round(s,2)})
 

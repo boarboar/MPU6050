@@ -57,7 +57,7 @@ class Unit:
         self.__l_sin=math.sin(self.a_mean)
 
         self.__r_x, self.__r_y = x, y # simulated crd
-        self.isInside=self.map.isInsideTest(x+self.start[0], y+self.start[1])
+        self.isInside=self.map.isInsideTest(x+self.start[0], y+self.start[1]) is not None
 
         print("Unit Mov: Rot %s Dist %s in %s s" %
               (str(move_rot*180.0/math.pi), move_dist, str(round(timeit.default_timer() - start_time, 2))))

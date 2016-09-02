@@ -49,7 +49,7 @@
 #define    WHEEL_RAD_MM   33 // measured 32
 
 #define M_SENS_N       6 // number of sensors
-#define M_SENS_CNT    4 
+#define M_SENS_CNT    2 
 
 #define REG_WHO_AM_I         0xFF  // 1 unsigned byte
 #define REG_STATUS           0x01  // 2 unsigned bytes

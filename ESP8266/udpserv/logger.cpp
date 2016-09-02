@@ -46,9 +46,7 @@ boolean Logger::putEvent(uint8_t module,  uint8_t level, uint8_t code, const cha
   q[q_t].type=UMP_LOGGER_TYPE_S;
   strncpy(q[q_t].params.s, pa, UMP_LOGGER_NSSZ);
   q[q_t].params.s[UMP_LOGGER_NSSZ-1]=0;
-
-  Serial.print(F("PUT EVT ")); Serial.print(q[q_t].id); Serial.print(F("\t type  ")); Serial.print(q[q_t].type); Serial.print(F("\t at  ")); Serial.println(q_t);   
- 
+  //Serial.print(F("PUT EVT ")); Serial.print(q[q_t].id); Serial.print(F("\t type  ")); Serial.print(q[q_t].type); Serial.print(F("\t at  ")); Serial.println(q_t);   
   q_t++;
   if(q_t==UMP_LOGGER_NQUEUE) q_t=0;
   return true;  
@@ -56,11 +54,7 @@ boolean Logger::putEvent(uint8_t module,  uint8_t level, uint8_t code, const cha
 
 boolean Logger::flushEvents() {
   for(uint8_t i=0; i<UMP_LOGGER_NQUEUE && q[q_h].type!=UMP_LOGGER_TYPE_NONE; i++) { 
-    Serial.print(F("GET EVT ")); Serial.print(q[q_h].id);  Serial.print(F("\t type  ")); Serial.print(q[q_h].type); Serial.print(F("\t at  ")); Serial.println(q_h);
-    /*   
-    Serial.print(F(" \t ")); Serial.print(q[q_h].module); Serial.print(F(" \t ")); Serial.print(q[q_h].level);
-    Serial.print(F(" \t ")); Serial.print(q[q_h].code); Serial.print(F(" \t ")); Serial.println(q[q_h].type);   
-    */
+    //Serial.print(F("GET EVT ")); Serial.print(q[q_h].id);  Serial.print(F("\t type  ")); Serial.print(q[q_h].type); Serial.print(F("\t at  ")); Serial.println(q_h);
     if(q[q_h].type==UMP_LOGGER_TYPE_S) CmdProc::Cmd.sendEvent(q[q_h].id, q[q_h].module, q[q_h].level, q[q_h].code, q[q_h].params.s);
     else  CmdProc::Cmd.sendEvent(q[q_h].id, q[q_h].module, q[q_h].level, q[q_h].code, UMP_LOGGER_NPARAM, q[q_h].params.p);    
     q[q_h].type=UMP_LOGGER_TYPE_NONE;     

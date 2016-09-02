@@ -50,7 +50,8 @@ class PFilter:
         if len(self.particles)==0 : return
         for p in self.particles :
             p.move_d(mov+random.gauss(0, self.fwd_noise), rot+random.gauss(0, self.rot_noise))
-            if self.map.isInsideTest(p.x, p.y) :
+            #todo optimization - start testing from area it inside (returned from isInsideTest)
+            if self.map.isInsideTest(p.x, p.y) is not None :
                 self.updateParticleProbabilities(p, scans, scan_angles, scan_max_dist)
             else : p.w=0.0
         #print self.particles

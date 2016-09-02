@@ -13,9 +13,12 @@ class UnitMap:
             with open(mapfile) as data_file:
                 self.map = json.load(data_file)
             #pprint(__map)
+            area_id=0
             walls=[]
             for area in self.map["AREAS"] :
+                area_id+=1
                 parea0=area["AT"]
+                area["ID"]=area_id
                 for wall in area["WALLS"] :
                     parea0=area["AT"]
                     wall_crd=wall["C"]
@@ -25,7 +28,7 @@ class UnitMap:
                     if 'S' in wall : opened=wall["S"]
                     walls.append((
                         (parea0[0]+wall_crd[0], parea0[1]+wall_crd[1]), (parea0[0]+wall_crd[2], parea0[1]+wall_crd[3]),
-                        opened, area["WALLSREFL"]
+                        opened, area["WALLSREFL"], area_id
                     ))
                 for obj in area["OBJECTS"] :
                     pobj0=(parea0[0]+obj["AT"][0], parea0[1]+obj["AT"][1])
@@ -57,18 +60,18 @@ class UnitMap:
         if y>self.boundRect[3] : self.boundRect[3]=y
 
     def At(self, cell):
-        # cell status : 0-space, 1-occupied, 2-variable
+        # cell status : 0-space, 1-occupied/unusable, 2-variable
         status=0
 
         for v in cell :
-            if not self.isInsideTest(v[0], v[1]) :
+            if self.isInsideTest(v[0], v[1]) is None :
                 status=1
                 break
         if status != 0 : return status
 
         # bug - it's possible that all thre points are inside, but internal wall is inside the cell...
         # just for now - test a center point
-        if not self.isInsideTest((cell[0][0]+cell[-2][0])/2, (cell[0][1]+cell[2][1])/2) : return 1
+        if self.isInsideTest((cell[0][0]+cell[-2][0])/2, (cell[0][1]+cell[2][1])/2) is None : return 1
 
         for area in self.map["AREAS"] :
             parea0=area["AT"]
@@ -95,10 +98,8 @@ class UnitMap:
                 if isect!=None :
                     if isect<x : left=left+1
                     else : right=right+1
-            #print (area["NAME"], left, right)
-            if left%2==1 and right%2==1 : return True
-        #print ("OUT")
-        return False
+            if left%2==1 and right%2==1 : return area
+        return None
 
     def getIntersectionMapRefl(self, p0, p1, scan_max_dist):
         intrs0, ref=self.getIntersectionMap1(p0, p1, True, scan_max_dist)

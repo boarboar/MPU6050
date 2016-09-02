@@ -90,6 +90,8 @@ void setup() {
   } else {
     Serial.println(F("Failed to init Ctrl!"));
   } 
+
+  Logger::Instance.flushEvents();
   
   last_cycle=last_med_cycle=last_slow_cycle=millis();
 }

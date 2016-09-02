@@ -1,7 +1,7 @@
 #ifndef _UMP_LOGGER_H_
 #define _UMP_LOGGER_H_
 
-#define UMP_LOGGER_NQUEUE  4 
+#define UMP_LOGGER_NQUEUE  6 
 #define UMP_LOGGER_NPARAM  8 
 #define UMP_LOGGER_NSSZ   16
 

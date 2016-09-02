@@ -168,7 +168,6 @@ int16_t MpuDrv::cycle(uint16_t /*dt*/) {
    if((millis()-start)/1000 > INIT_PERIOD_MAX) {
       Serial.println(F("===MPU Failed to converge, however switching to settled status...")); // TODO -?
       settled=true;
-      //fail_reason=MPU_FAIL_CONVTMO;
       Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_IMU,  Logger::UMP_LOGGER_ALARM, MPU_FAIL_CONVTMO, "IMU_CVT_TM");  
     }
 
