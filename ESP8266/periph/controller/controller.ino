@@ -214,13 +214,14 @@ void loop()
     
     readEnc(ctime);
     
-    uscount++;
-    if(ST_IS_STARTED() && uscount==M_SENS_CNT) // commented for US test purposes
-    {            
-      readUSDist();
-      uscount=0;
-    } 
-    
+    if(ST_IS_STARTED()) {
+      uscount++;
+      if(uscount==M_SENS_CNT) // commented for US test purposes
+      {            
+        readUSDist();
+        uscount=0;
+      } 
+    }
     lastPidTime=cycleTime;
   } // PID cycle 
           
@@ -232,8 +233,11 @@ void loop()
     Serial.print("SetReg "); Serial.print(sp.r); Serial.print("\t: "); Serial.print(sp.p[0]); Serial.print("\t, "); Serial.println(sp.p[1]);
     switch(sp.r) {
       case REG_START:     
-        if(sp.p[0])  
-          ST_SET_START_ON();  
+        if(sp.p[0])  {
+          ST_SET_START_ON();
+          uscount=M_SENS_CNT-1;
+          Serial.println("Start"); 
+        }  
         break;
       case REG_TARG_POW:         
         targ_new_param[0]=sp.p[0];

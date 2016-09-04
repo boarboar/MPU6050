@@ -2,6 +2,7 @@
 #include <WiFiUdp.h>
 #include <ArduinoJson.h>
 #include "cmd.h"
+#include "cfg.h"
 #include "logger.h"
 
 Logger Logger::Instance ; // singleton
@@ -17,6 +18,7 @@ Logger::Logger() {
 boolean Logger::putEvent(uint8_t module,  uint8_t level, uint8_t code, int16_t p0, int16_t p1, int16_t p2, int16_t p3, int16_t p4, int16_t p5, int16_t p6, int16_t p7) {
   //boolean ovf=false;
   //if(q[q_t].module && q[q_t].type) ovf=true;
+  if(CfgDrv::Cfg.log_on<level) return false;
   q[q_t].id=++id;
   q[q_t].module=module;
   q[q_t].level=level;
@@ -31,7 +33,7 @@ boolean Logger::putEvent(uint8_t module,  uint8_t level, uint8_t code, int16_t p
   q[q_t].params.p[6]=p6;
   q[q_t].params.p[7]=p7;
 
-  Serial.print(F("PUT EVT ")); Serial.print(q[q_t].id); Serial.print(F("\t at  ")); Serial.println(q_t);   
+  //Serial.print(F("PUT EVT ")); Serial.print(q[q_t].id); Serial.print(F("\t at  ")); Serial.println(q_t);   
   
   q_t++;
   if(q_t==UMP_LOGGER_NQUEUE) q_t=0;
@@ -39,6 +41,7 @@ boolean Logger::putEvent(uint8_t module,  uint8_t level, uint8_t code, int16_t p
 }
 
 boolean Logger::putEvent(uint8_t module,  uint8_t level, uint8_t code, const char* pa) {
+  if(CfgDrv::Cfg.log_on<level) return false;
   q[q_t].id=++id;
   q[q_t].module=module;
   q[q_t].level=level;
