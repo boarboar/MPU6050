@@ -88,7 +88,7 @@ int16_t CmdProc::doCmd() {
 
 int16_t CmdProc::getSysLogLevel() { return CfgDrv::Cfg.log_on;}
 
-
+/*
 boolean CmdProc::sendSysLog(const char *buf) {
   if(CfgDrv::Cfg.log_on<SL_LEVEL_MESSAGE) return false;
   StaticJsonBuffer<200> jsonBufferOut;
@@ -112,55 +112,10 @@ boolean CmdProc::sendSysLogStatus() {
   _sendToSysLog(rootOut);
   return true;
 }
-
-/*
-boolean CmdProc::sendAlarm(uint8_t alr, uint8_t param, int16_t dt, int16_t p1, int16_t p2) {
-  //{"C": "A", "T":12345, "R":1123, "P":1123, "PA":[]} 
-  if(CfgDrv::Cfg.log_on<SL_LEVEL_ALARM) return false;
-  StaticJsonBuffer<200> jsonBufferOut;
-  JsonObject& rootOut = jsonBufferOut.createObject();
-  rootOut["C"] = "A";
-  rootOut["T"] = millis();
-  rootOut["R"] = alr;
-  rootOut["P"] = param;
-  if(p1 || p2) {
-    JsonArray& pa = rootOut.createNestedArray("PA");
-    pa.add(dt);
-    pa.add(p1);
-    if(p2) pa.add(p2);
-  }
-  _sendToSysLog(rootOut);
-  return true;
-}
-*/
-
-/*
-boolean CmdProc::sendAlarm(uint8_t alr, uint8_t param, int16_t dt, int8_t npa, int16_t* pa) {
-  //{"C": "A", "T":12345, "R":1123, "P":1123, "PA":[]} 
-  if(CfgDrv::Cfg.log_on<SL_LEVEL_ALARM) return false;
-  StaticJsonBuffer<400> jsonBufferOut;
-  JsonObject& rootOut = jsonBufferOut.createObject();
-  rootOut["C"] = alr>=ALR_CTL_LOG ? "L" : "A";
-  rootOut["T"] = millis();
-  rootOut["R"] = alr;
-  rootOut["P"] = param;
-  rootOut["P0"] = dt;
-  if(pa && npa) {
-    //Serial.print("ALRPRM: ");
-    JsonArray& par = rootOut.createNestedArray("PA");
-    for(uint8_t i=0; i<npa; i++) {
-      par.add(pa[i]);
-      //Serial.print(F(" \t ")); Serial.print(pa[i]);     
-    }
-    //Serial.println();
-  }
-  _sendToSysLog(rootOut);
-  return true;
-}
 */
 
 boolean CmdProc::sendEvent(uint16_t id, uint8_t module,  uint8_t level, uint8_t code, int8_t npa, int16_t *pa) {
-  if(CfgDrv::Cfg.log_on<SL_LEVEL_ALARM) return false; //!!! should be adjusted with level
+  //if(CfgDrv::Cfg.log_on<SL_LEVEL_ALARM) return false; //!!! should be adjusted with level
   StaticJsonBuffer<400> jsonBufferOut;
   JsonObject& rootOut = jsonBufferOut.createObject();
   rootOut["C"] = level>CMD_LLEVEL_ALR ? "L" : "A";
@@ -182,7 +137,7 @@ boolean CmdProc::sendEvent(uint16_t id, uint8_t module,  uint8_t level, uint8_t 
 }
 
 boolean CmdProc::sendEvent(uint16_t id, uint8_t module,  uint8_t level, uint8_t code, const char *s) {
-  if(CfgDrv::Cfg.log_on<SL_LEVEL_ALARM) return false; //!!! should be adjusted with level
+  //if(CfgDrv::Cfg.log_on<SL_LEVEL_ALARM) return false; //!!! should be adjusted with level
   StaticJsonBuffer<400> jsonBufferOut;
   JsonObject& rootOut = jsonBufferOut.createObject();
   rootOut["C"] = level>CMD_LLEVEL_ALR ? "L" : "A";

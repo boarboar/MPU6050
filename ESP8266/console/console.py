@@ -68,8 +68,11 @@ class MyForm(wx.Frame):
         self.btn_mov_up = wx.Button(panel, wx.ID_ANY, u"\u2191", size=( bsz,  bsz))
         self.btn_mov_dn = wx.Button(panel, wx.ID_ANY, u"\u2193", size=( bsz,  bsz))
         self.btn_mov_stop = wx.Button(panel, wx.ID_ANY, u"\u2717", size=( bsz,  bsz))
-        self.txt_mov_speed = wx.TextCtrl(panel, size=( bsz*4,  bsz))
+        self.txt_mov_speed = wx.TextCtrl(panel, size=( bsz*2,  bsz))
         self.txt_mov_speed.SetValue("20")
+        self.cb_dist_sim = wx.CheckBox(panel)
+        self.cb_dist_sim.SetValue(False)
+        self.Bind(wx.EVT_CHECKBOX, self.onDistSimEvent, self.cb_dist_sim)
 
         self.unitPan = draw.UnitPanel(panel)
         self.chart = draw.ChartPanel(panel)
@@ -127,6 +130,7 @@ class MyForm(wx.Frame):
         if len(self.history) > 0 :
             self.history_ptr=len(self.history)-1
             self.txt_cmd.SetValue(self.history[self.history_ptr])
+        self.dist_sim = False
 
 
     def layout(self, panel):
@@ -177,6 +181,7 @@ class MyForm(wx.Frame):
         sizer_map_ctrls.Add(self.btn_mov_dn, 0, wx.LEFT|wx.BOTTOM, 0)
         sizer_map_ctrls.Add(self.btn_mov_stop, 0, wx.LEFT|wx.BOTTOM, 0)
         sizer_map_ctrls.Add(self.txt_mov_speed, 0, wx.LEFT|wx.BOTTOM, 0)
+        sizer_map_ctrls.Add(self.cb_dist_sim, 0, wx.LEFT|wx.BOTTOM, 0)
 
         sizer_pan.Add(sizer_ctrls, 0, wx.ALL|wx.RIGHT, 5)
         sizer_ctrls.Add(self.btn_st, 0, wx.ALL|wx.CENTER, 5)
@@ -336,6 +341,11 @@ class MyForm(wx.Frame):
 
     def onUpdStatEvent(self, evt):
         self.statusbar.SetStatusText(str(self.model["FHS"]), 0)
+
+    def onDistSimEvent(self, evt):
+        self.dist_sim = self.cb_dist_sim.GetValue()
+        self.map.dist_sim = self.dist_sim
+        self.map.UpdateDrawing()
 
     def reqMove(self, dir):
         try :

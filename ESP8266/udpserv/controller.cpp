@@ -43,6 +43,7 @@ bool Controller::init() {
   base_pow=0;
   delta_pow=0;
   targ_speed=0;
+  rot_speed=0;
   for(int i=0; i<SENS_SIZE; i++) sensors[i]=0;
   resetIntegrator();
   pready=testConnection();
@@ -301,6 +302,11 @@ bool Controller::setTargSteering(int16_t s) {
   targ_bearing = curr_yaw+(float)s/180.0*PI;
   if(targ_bearing>PI) targ_bearing-=PI*2.0f;
   else if(targ_bearing<-PI) targ_bearing+=PI*2.0f;  
+  // start rotation here - todo
+  rot_speed=M_SPEED_NORM;
+  Serial.println(F("Start ROT")); 
+  // TODO
+  
   return true;
 }
 
@@ -312,16 +318,19 @@ bool Controller::setTargBearing(int16_t s) {
 }
 
 bool Controller::setTargSpeed(int16_t tspeed) {
-  if(targ_speed==0 && tspeed!=0) {
+  if(targ_speed!=0 && tspeed==0) {
+    // stop moving    
+    Serial.print(F("Stop TV, AVQE=")); Serial.println(getAVQErr());     
+  } else if(rot_speed!=0 && tspeed==0) {
+    // stop rotating    
+    Serial.println(F("Stop ROT")); 
+  } else if(targ_speed==0 && tspeed!=0) { 
     // start moving
     qsum_err=0;
     pid_cnt=0;
     run_dist=0;
     Serial.print(F("Start TV=")); Serial.println(tspeed);     
-  } else if(targ_speed!=0 && tspeed==0) {
-    // stop moving    
-    Serial.print(F("Stop TV, AVQE=")); Serial.println(getAVQErr());     
-  }
+  } 
 
   setTargSteering(0);
   err_bearing_p_0=err_bearing_i=0;    

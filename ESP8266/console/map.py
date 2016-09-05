@@ -44,6 +44,7 @@ class MapPanel(wx.Window, UnitMap):
                     ]
         self.start=self.init_start    # unit start point
         self.target=None  # target point
+        self.dist_sim=False
         self.Reset()
         self.OnSize(None)
 
@@ -399,21 +400,34 @@ class MapPanel(wx.Window, UnitMap):
             inters_pen_cr=wx.Pen('GRAY', 2)
             for ray in unit.scan_rays:
                 dc.SetPen(ray_pen)
-                dc.DrawLinePoint(self.tpu(wx.Point(0, 0)), self.tpu(wx.Point(ray[0]*unit.scan_max_dist, ray[1]*unit.scan_max_dist)))
+                if self.dist_sim :
+                    dc.DrawLinePoint(self.tspu(wx.Point(0, 0)), self.tspu(wx.Point(ray[0]*unit.scan_max_dist, ray[1]*unit.scan_max_dist)))
+                else  :
+                    dc.DrawLinePoint(self.tpu(wx.Point(0, 0)), self.tpu(wx.Point(ray[0]*unit.scan_max_dist, ray[1]*unit.scan_max_dist)))
                 # draw measured intersection
                 idist=unit.scans[i]
                 i=i+1
                 if idist>0 :
                     dc.SetPen(inters_pen)
-                    intrs = self.tpu(wx.Point(ray[0]*idist, ray[1]*idist))
+                    if self.dist_sim :
+                        intrs = self.tspu(wx.Point(ray[0]*idist, ray[1]*idist))
+                    else :
+                        intrs = self.tpu(wx.Point(ray[0]*idist, ray[1]*idist))
                     dc.DrawCirclePoint(intrs, 10)
                 # draw calculate intersections
 
-                intrs0, pr, intrs1, refstate, intrs=self.getIntersectionMapRefl(
-                    unit.UnitToMapLoc(0,0),
-                    unit.UnitToMapLoc(ray[0]*unit.scan_max_dist, ray[1]*unit.scan_max_dist),
-                    unit.scan_max_dist
-                )
+                if self.dist_sim :
+                    intrs0, pr, intrs1, refstate, intrs=self.getIntersectionMapRefl(
+                        unit.UnitToMapSim(0,0),
+                        unit.UnitToMapSim(ray[0]*unit.scan_max_dist, ray[1]*unit.scan_max_dist),
+                        unit.scan_max_dist
+                    )
+                else :
+                    intrs0, pr, intrs1, refstate, intrs=self.getIntersectionMapRefl(
+                        unit.UnitToMapLoc(0,0),
+                        unit.UnitToMapLoc(ray[0]*unit.scan_max_dist, ray[1]*unit.scan_max_dist),
+                        unit.scan_max_dist
+                    )
                 if intrs0 != None :
                     if pr != None :
                         dc.SetPen(ray_pen_ref)

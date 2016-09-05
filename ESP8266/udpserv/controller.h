@@ -93,6 +93,7 @@ private:
   int16_t base_pow;
   int16_t delta_pow;
   int16_t targ_speed; //mm_s
+  int16_t rot_speed; //mm_s
   
   float dist;
   float angle;
