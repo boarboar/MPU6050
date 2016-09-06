@@ -223,6 +223,7 @@ void loop()
         uscount=0;
       } 
       */
+      readUSDist();
     }
     lastPidTime=cycleTime;
   } // PID cycle 
