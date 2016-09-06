@@ -68,6 +68,8 @@ protected:
   bool getActAdvance(); // in MMs
   bool getSensors(); 
   bool setStart(uint8_t p); 
+  bool startRotate(int16_t tspeed);
+  void adjustTargBearing(int16_t s, bool absolute);
   bool writeInt16(uint16_t reg, int16_t val);
   bool writeInt16_2(uint16_t reg, int16_t left, int16_t right);
   bool readInt16_2(uint16_t reg, int16_t *left, int16_t *right);  

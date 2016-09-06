@@ -1,6 +1,7 @@
 import math
 import random
 import copy
+import timeit
 
 class Particle:
     def __init__(self, x=150, y=200, a=0.0, w=1.0, id=0):
@@ -32,8 +33,7 @@ class PFilter:
 
     def InitParticles(self):
         #N_D=20
-        #N_D=16
-        N_D=10
+        N_D=14
         W=1.0/(N_D*N_D)
         LOC_VAR=150
         ANG_VAR=math.pi/2
@@ -46,15 +46,33 @@ class PFilter:
                 y=(random.random()-0.5)*LOC_VAR+self.map.start[1]
                 self.particles.append(Particle(a=a, x=x, y=y, id=i*N_D+j, w=W))
 
-    def updateParticles(self, mov, rot, scans, scan_angles, scan_max_dist):
+    def updateParticles(self, mov, rot, scans, scan_angles, scan_max_dist, loc_x, loc_y):
         if len(self.particles)==0 : return
+
+        scan_angles_cos=[]
+        scan_angles_sin=[]
+        for a in scan_angles :
+            scan_angles_cos.append(math.cos(a))
+            scan_angles_sin.append(math.sin(a))
+
+
+        #print (self.map.getSortedWalls((0,0)))
+
+        sorted_walls_base=self.map.getSortedWalls((loc_x, loc_y), scan_max_dist)
+        start_time = timeit.default_timer()
         for p in self.particles :
             p.move_d(mov+random.gauss(0, self.fwd_noise), rot+random.gauss(0, self.rot_noise))
-            #todo optimization - start testing from area it inside (returned from isInsideTest)
             if self.map.isInsideTest(p.x, p.y) is not None :
-                self.updateParticleProbabilities(p, scans, scan_angles, scan_max_dist)
+                sorted_walls=self.map.getReSortedWalls(sorted_walls_base, (p.x, p.y), scan_max_dist)
+                #self.updateParticleProbabilities(p, scans, scan_angles, scan_max_dist, sorted_walls)
+                self.updateParticleProbabilities1(p, scans, scan_angles_cos, scan_angles_sin, scan_max_dist, sorted_walls)
             else : p.w=0.0
-        #print self.particles
+
+        t=timeit.default_timer() - start_time
+        print ('Particle update (%s) in %s s, %s per particle' %
+               (len(self.particles), round(t, 2), round(t/len(self.particles), 4))
+               )
+
         mw=max(p.w for p in self.particles)
 #        if self.__move < 5 or self.__move%5==0 :
         if True :
@@ -127,19 +145,40 @@ class PFilter:
         #return (x, y, var, a, vara)
         return (x, y, var, a_a, var_a_a)
 
-    def updateParticleProbabilities(self, p, meas, scan_angles, scan_max_dist):
-        scan_dist=[]
+
+    def updateParticleProbabilities1(self, p, meas, scan_angles_cos, scan_angles_sin, scan_max_dist, sorted_walls):
+        #scan_dist=[]
+        prob = 1.0
+        p0=(p.x, p.y)
+        cosp=math.cos(p.a)
+        sinp=math.sin(p.a)
+        for i in range(len(scan_angles_cos)) :
+            cosa=scan_angles_cos[i]
+            sina=scan_angles_sin[i]
+            cospa=cosa*cosp-sina*sinp
+            sinpa=cosa*sinp+sina*cosp
+            p1=(p.x+sinpa*scan_max_dist, p.y+cospa*scan_max_dist)
+            intrs0, pr, intrs1, refstate, intrs = self.map.getIntersectionMapRefl(p0, p1, scan_max_dist, sorted_walls)
+            if intrs==None : dist2 = -1
+            else :
+                dist2=math.sqrt((intrs[0]-p0[0])*(intrs[0]-p0[0])+(intrs[1]-p0[1])*(intrs[1]-p0[1]))
+            #scan_dist.append(dist2)
+            prob*=self.Gaussian1(dist2, meas[i], scan_max_dist)
+        p.w=prob
+        #print(scan_dist)
+
+    def updateParticleProbabilities(self, p, meas, scan_angles, scan_max_dist, sorted_walls):
+        #scan_dist=[]
         prob = 1.0
         p0=(p.x, p.y)
         for i in range(len(scan_angles)) :
             a=scan_angles[i]
             p1=(p.x+math.sin(p.a+a)*scan_max_dist, p.y+math.cos(p.a+a)*scan_max_dist)
-            intrs0, pr, intrs1, refstate, intrs = self.map.getIntersectionMapRefl(p0, p1, scan_max_dist)
+            intrs0, pr, intrs1, refstate, intrs = self.map.getIntersectionMapRefl(p0, p1, scan_max_dist, sorted_walls)
             if intrs==None : dist2 = -1
             else :
                 dist2=math.sqrt((intrs[0]-p0[0])*(intrs[0]-p0[0])+(intrs[1]-p0[1])*(intrs[1]-p0[1]))
-            scan_dist.append(dist2)
-            #prob*=self.Gaussian(dist2, self.sense_noise, meas[i], scan_max_dist)
+            #scan_dist.append(dist2)
             prob*=self.Gaussian1(dist2, meas[i], scan_max_dist)
         p.w=prob
         #print(scan_dist)

@@ -51,7 +51,9 @@ class Unit:
         self.__dist=dist
         self.scans=scans
         if self.pfilter is not None :
-            self.pfilter.updateParticles(move_dist, move_rot, scans, self.scan_angles, self.scan_max_dist)
+            loc_x=self.x_mean+dist*math.sin(angle)
+            loc_y=self.y_mean+dist*math.cos(angle)
+            self.pfilter.updateParticles(move_dist, move_rot, scans, self.scan_angles, self.scan_max_dist, loc_x, loc_y)
             self.x_mean, self.y_mean, self.p_var, self.a_mean, self.a_var = self.pfilter.getMeanDistribution()
         self.__l_cos=math.cos(self.a_mean)
         self.__l_sin=math.sin(self.a_mean)

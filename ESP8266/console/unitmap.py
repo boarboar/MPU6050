@@ -2,6 +2,7 @@ import json
 import sys
 import math
 import random
+from operator import itemgetter
 
 from pprint import pprint
 
@@ -28,7 +29,7 @@ class UnitMap:
                     if 'S' in wall : opened=wall["S"]
                     walls.append((
                         (parea0[0]+wall_crd[0], parea0[1]+wall_crd[1]), (parea0[0]+wall_crd[2], parea0[1]+wall_crd[3]),
-                        opened, area["WALLSREFL"], area_id
+                        opened, area["WALLSREFL"]
                     ))
                 for obj in area["OBJECTS"] :
                     pobj0=(parea0[0]+obj["AT"][0], parea0[1]+obj["AT"][1])
@@ -52,6 +53,37 @@ class UnitMap:
             print(self.boundRect)
         #except IOError: pass
         except : pass
+
+    def getSortedWalls(self, p, scan_max_dist):
+        wall_dist=[]
+        walls_all=self.map["WALLS"]
+        maxdist2=scan_max_dist*scan_max_dist
+        for walls in walls_all :
+            p0=walls[0]
+            p1=walls[1]
+            d0=(p0[0]-p[0])*(p0[0]-p[0])+(p0[1]-p[1])*(p0[1]-p[1])
+            d1=(p1[0]-p[0])*(p1[0]-p[0])+(p1[1]-p[1])*(p1[1]-p[1])
+            d=d0
+            if d1<d0 : d=d1
+            if d<maxdist2 :
+                wall_dist.append((p0, p1, walls[2], walls[3], d))
+
+        return sorted(wall_dist, key=itemgetter(4))
+
+    def getReSortedWalls(self, walls0, p, scan_max_dist):
+        wall_dist=[]
+        maxdist2=scan_max_dist*scan_max_dist
+        for walls in walls0 :
+            p0=walls[0]
+            p1=walls[1]
+            d0=(p0[0]-p[0])*(p0[0]-p[0])+(p0[1]-p[1])*(p0[1]-p[1])
+            d1=(p1[0]-p[0])*(p1[0]-p[0])+(p1[1]-p[1])*(p1[1]-p[1])
+            d=d0
+            if d1<d0 : d=d1
+            if d<maxdist2 :
+                wall_dist.append((p0, p1, walls[2], walls[3], d))
+
+        return sorted(wall_dist, key=itemgetter(4))
 
     def AdjustBound(self, x, y):
         if x<self.boundRect[0] : self.boundRect[0]=x
@@ -101,8 +133,8 @@ class UnitMap:
             if left%2==1 and right%2==1 : return area
         return None
 
-    def getIntersectionMapRefl(self, p0, p1, scan_max_dist):
-        intrs0, ref=self.getIntersectionMap1(p0, p1, True, scan_max_dist)
+    def getIntersectionMapRefl(self, p0, p1, scan_max_dist, sorted_walls):
+        intrs0, ref=self.getIntersectionMap1(p0, p1, True, scan_max_dist, sorted_walls)
         refState = False
         pr = None
         intrs1 = None
@@ -115,19 +147,19 @@ class UnitMap:
                 pr, dummy, refState = ref
             if refState :
                 # secondary intersect if any
-                intrs1, ref=self.getIntersectionMap1(intrs0, pr, False, scan_max_dist)
+                intrs1, ref=self.getIntersectionMap1(intrs0, pr, False, scan_max_dist, sorted_walls)
                 intrs=intrs1
         return (intrs0, pr, intrs1, refState, intrs)
 
 
-    def getIntersectionMap1(self, p0, p1, findRefl, scan_max_dist):
+    def getIntersectionMap1(self, p0, p1, findRefl, scan_max_dist, sorted_walls):
         # line p0->p1 in absolute map coords (world)
         intrs = None
         ref=None
         dist2=0
         reff=0
-        all_walls=self.map["WALLS"]
-        for walls in all_walls :
+        for walls in sorted_walls :
+            if dist2 > 0 and walls[4] > dist2 : break
             isect=None
             p2=walls[0]
             p3=walls[1]

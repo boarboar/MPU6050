@@ -2,6 +2,7 @@
 #include <ArduinoJson.h>
 #include <ESP8266WiFi.h>
 #include "FS.h"
+#include "logger.h"
 #include "cfg.h"
 
 #define MAX_CFG_LINE_SZ 80
@@ -13,7 +14,7 @@ enum CFG_ID {CFG_DBG=0, CFG_SYSL=1, CFG_PIDS_1=2, CFG_PIDS_2=3};
 CfgDrv CfgDrv::Cfg; // singleton
 
 CfgDrv::CfgDrv() : log_on(0), debug_on(0), log_port(0),  
-bear_pid{4, 100, 2, 10, 100}, speed_pid{4, 20, 4, 150, 50}, 
+bear_pid{8, 120, 4, 10, 100}, speed_pid{4, 20, 4, 150, 50}, 
 fs_ok(false), dirty(false), last_chg(0)
  {
   }
@@ -123,6 +124,7 @@ int16_t CfgDrv::store(const char* fname) {
   f.close();
   uint16_t t=millis()-ms1;
   Serial.print(F("Cfg written in ")); Serial.println(t);
+  Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_SYS,  Logger::UMP_LOGGER_ALARM, -1, "CFGSTR");  
   return 1;
 }
 

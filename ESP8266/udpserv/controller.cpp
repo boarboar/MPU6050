@@ -277,6 +277,13 @@ float Controller::getAVQErr() {
   return qsum_err/((uint32_t)pid_cnt*pid_cnt);
 }
 
+void Controller::adjustTargBearing(int16_t s, bool absolute) {
+  targ_bearing = (float)s/180.0*PI;
+  if(absolute) targ_bearing+=curr_yaw;
+  if(targ_bearing>PI) targ_bearing-=PI*2.0f;
+  else if(targ_bearing<-PI) targ_bearing+=PI*2.0f;    
+}
+
 bool Controller::setTargPower(float l, float r) {
   /*
   // init steering parameters
@@ -299,22 +306,25 @@ bool Controller::setTargPower(float l, float r) {
 }
 
 bool Controller::setTargSteering(int16_t s) {
+  /*
   targ_bearing = curr_yaw+(float)s/180.0*PI;
   if(targ_bearing>PI) targ_bearing-=PI*2.0f;
   else if(targ_bearing<-PI) targ_bearing+=PI*2.0f;  
-  // start rotation here - todo
-  rot_speed=M_SPEED_NORM;
-  Serial.println(F("Start ROT")); 
-  // TODO
-  
-  return true;
+  */
+  adjustTargBearing(s, true);
+  if(!rot_speed && !targ_speed) return startRotate(M_SPEED_NORM);
+  else return true;  
 }
 
 bool Controller::setTargBearing(int16_t s) {
+  /*
   targ_bearing = (float)s/180.0*PI;
   if(targ_bearing>PI) targ_bearing-=PI*2.0f;
   else if(targ_bearing<-PI) targ_bearing+=PI*2.0f;  
-  return true;
+  */
+  adjustTargBearing(s, false);
+  if(!rot_speed && !targ_speed) return startRotate(M_SPEED_NORM);
+  else return true;  
 }
 
 bool Controller::setTargSpeed(int16_t tspeed) {
@@ -332,7 +342,8 @@ bool Controller::setTargSpeed(int16_t tspeed) {
     Serial.print(F("Start TV=")); Serial.println(tspeed);     
   } 
 
-  setTargSteering(0);
+  //setTargSteering(0);
+  adjustTargBearing(0, true);
   err_bearing_p_0=err_bearing_i=0;    
   targ_speed=tspeed*10; //mm
   base_pow=(int32_t)abs(targ_speed)*M_POW_NORM/M_SPEED_NORM; // temp
@@ -345,6 +356,20 @@ bool Controller::setTargSpeed(int16_t tspeed) {
   return true;
 }
 
+
+bool Controller::startRotate(int16_t tspeed) {
+  rot_speed=tspeed;
+  float a=targ_bearing-curr_yaw;
+  if(a>PI) a-=PI*2.0f;
+  else if(a<-PI) a+=PI*2.0f;    
+  if(a>0.01) Serial.print(F("Start ROT >>")); 
+  else if(a<-0.01) Serial.print(F("Start ROT <<")); 
+  else Serial.print(F("No ROT")); 
+
+  // TODO POWER CTRL
+  
+  return true;
+}
 /*
 bool Controller::getControllerStatus() { 
   bool res = I2Cdev::readBytes(DEV_ID, REG_STATUS, 2, sta); 

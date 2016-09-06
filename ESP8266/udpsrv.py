@@ -88,6 +88,7 @@ yaw=0
 rx, ry = (0, 0)
 drive=[0, 0]
 corr=0
+targ_yaw=0
 init =True
 WHEEL_RAD=3.5
 WHEEL_BASE=13
@@ -108,10 +109,26 @@ while 1:
         if js["C"]=="INFO" : js["FHS"]=99999
         elif js["C"]=="D" : #drive
             if "RPS" in js :
-                drive=js["RPS"]                            
+                drive=js["RPS"]                                            
                 print ("Driving %s" % str(drive))
-            js["ARPS"]=[round(drive[0]/2,2), round(drive[1]/2,2)]
-            
+                if drive[0]==0 and drive[1]==0 :
+                    targ_yaw=0
+                    vx=0
+                    vy=0
+                    rvx=0
+                    rvy=0
+                    vv=0
+            #js["ARPS"]=[round(drive[0]/2,2), round(drive[1]/2,2)]
+            js["W"]=[round(drive[0]*100/2,2), round(drive[1]*100/2,2)]
+            js["TW"]=[round(drive[0]*100/2,2), round(drive[1]*100/2,2)]
+        elif js["C"]=="M" : #move
+            if "V" in js : 
+                drive=[js["V"]/10, js["V"]/10]                
+                print ("Move/Driving %s" % str(drive))
+        elif js["C"]=="S" : #steer
+            if "S" in js : 
+                targ_yaw=yaw+js["S"]           
+                print ("Steering %s" % str(js["S"]))
         elif js["C"]=="RSTMPU" : 
             start=js["P"]
             print start
@@ -129,6 +146,7 @@ while 1:
                 rvy=0
                 vv=0
                 dmov=0
+                targ_yaw=0
                 init=False
             else :   
             
@@ -143,7 +161,9 @@ while 1:
                 #yaw = yaw + gauss_lim(0, 20, 20) #tends to turn right
                 #yaw = yaw + gauss_lim(-10, 10, 20) #tends to turn left
                 
-                yaw = yaw + corr
+                #yaw = yaw + corr
+                
+                yaw = yaw + (targ_yaw-yaw)/2
                 
                 yaw=int(yaw)%360
                 if yaw>180 : yaw = yaw-360
@@ -170,13 +190,14 @@ while 1:
             
             intrsects = []
             intrsects0 = []
-                
+            sorted_walls=map.getSortedWalls((mapx, mapy), unit.scan_max_dist)
+            
             for a in unit.scan_angles :
                 #intrs0, pr, intrs1, refstate, intrs=map.getIntersectionUnit(0, 0, math.sin(a)*map.scan_max_dist, rvy+math.cos(a)*map.scan_max_dist)  
                 intrs0, pr, intrs1, refstate, intrs=map.getIntersectionMapRefl(
                     (mapx, mapy), 
                     UnitToMapSim(math.sin(a)*unit.scan_max_dist, rvy+math.cos(a)*unit.scan_max_dist),
-                    unit.scan_max_dist)  
+                    unit.scan_max_dist, sorted_walls)  
                 
                 if intrs!=None :
                     intrs=(intrs[0]-mapx, intrs[1]-mapy)                                        
@@ -215,9 +236,11 @@ while 1:
             js.update( {
                 "YPR":[round(yaw, 2),int((random.random()-0.5)*360),int((random.random()-0.5)*360)], 
                 #"V":[round(rvx,2), round(rvy,2), 0.0],
-                "V":[0, 0, 0],
+                #"V":[0, 0, 0],
+                "V":round((rvx+rvy)/2,2),
                 "CRD":[round(rx,2), round(ry,2), 0],
                 "D":round(dmov,2),
+                "W":[round(drive[0]*100/2,2), round(drive[1]*100/2,2)],
                 "S":intrsects
                 })
         js["R"]=0

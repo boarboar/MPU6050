@@ -215,12 +215,14 @@ void loop()
     readEnc(ctime);
     
     if(ST_IS_STARTED()) {
+      /*
       uscount++;
       if(uscount==M_SENS_CNT) // commented for US test purposes
       {            
         readUSDist();
         uscount=0;
       } 
+      */
     }
     lastPidTime=cycleTime;
   } // PID cycle 
@@ -235,7 +237,7 @@ void loop()
       case REG_START:     
         if(sp.p[0])  {
           ST_SET_START_ON();
-          uscount=M_SENS_CNT-1;
+          //uscount=M_SENS_CNT-1;
           Serial.println("Start"); 
         }  
         break;
@@ -399,15 +401,24 @@ void Drive_s1(uint8_t dir, uint8_t pow, int16_t p_en, uint8_t p1)
 
 void readUSDist() {
   if(sens_step==0) {
-    if((sservo_step>0 && sservo_pos>=SERVO_NSTEPS) || (sservo_step<0 && sservo_pos<=-SERVO_NSTEPS)) sservo_step=-sservo_step;
-    sservo_pos+=sservo_step;
-    int16_t sservo_angle=90-SERVO_ZERO_SHIFT+sservo_pos*SERVO_STEP;
-    sservo.write(sservo_angle);
+    if(uscount==0) {
+      if((sservo_step>0 && sservo_pos>=SERVO_NSTEPS) || (sservo_step<0 && sservo_pos<=-SERVO_NSTEPS)) sservo_step=-sservo_step;
+      sservo_pos+=sservo_step;
+      int16_t sservo_angle=90-SERVO_ZERO_SHIFT+sservo_pos*SERVO_STEP;
+      sservo.write(sservo_angle);
 #ifdef _US_DEBUG_      
-    Serial.print("Servo "); Serial.println(sservo_pos);
-    for(int i=0; i<M_SENS_N; i++) { Serial.print(sens[i]); Serial.print("\t "); }
-    Serial.println();
+      Serial.print("Servo "); Serial.println(sservo_pos);
+      for(int i=0; i<M_SENS_N; i++) { Serial.print(sens[i]); Serial.print("\t "); }
+      Serial.println();
 #endif    
+    } else {
+#ifdef _US_DEBUG_      
+      Serial.println("Servo wait");
+#endif          
+    }
+    uscount++;
+    if(uscount<M_SENS_CNT) return;
+    uscount=0;
   } else {
     int out_port=sens_step==1 ? US_1_OUT : US_2_OUT;
     int in_port=sens_step==1 ? US_1_IN : US_2_IN;
