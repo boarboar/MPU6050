@@ -6,6 +6,14 @@ from operator import itemgetter
 
 from pprint import pprint
 
+# wall struct
+# 0: p0
+# 1: p1
+# 2: S
+# 3: refl
+# 4: density
+# %: dist
+
 class UnitMap:
     def __init__(self, mapfile):
         self.boundRect=[sys.maxint, sys.maxint, -sys.maxint, -sys.maxint] #bounding rect
@@ -29,30 +37,68 @@ class UnitMap:
                     if 'S' in wall : opened=wall["S"]
                     walls.append((
                         (parea0[0]+wall_crd[0], parea0[1]+wall_crd[1]), (parea0[0]+wall_crd[2], parea0[1]+wall_crd[3]),
-                        opened, area["WALLSREFL"]
+                        opened, area["WALLSREFL"], 1
                     ))
                 for obj in area["OBJECTS"] :
                     pobj0=(parea0[0]+obj["AT"][0], parea0[1]+obj["AT"][1])
-                    crd_p=[]
-                    for c in obj["CS"] :
-                        p = c["C"]
-                        crd_p.append((pobj0[0]+p[0], pobj0[1]+p[1]))
-                    obj["CS_P"]=crd_p
-                    if len(crd_p)<2 or obj['DENSITY'] < 0.1 : continue
                     free_pos=0 #0-fixed; 2-freepos
                     if 'F' in obj : free_pos=obj['F']
-                    op0=crd_p[-1]
-                    for op in crd_p :
-                        walls.append(( op0, op, free_pos, 0))
-                        op0=op
+                    density=1
+                    if 'DENSITY' in obj : density=obj['DENSITY']
+                    obj_walls=[]
+                    if 'CS' in obj :
+                        """
+                        crd_p=[]
+                        for c in obj["CS"] :
+                            p = c["C"]
+                            crd_p.append((pobj0[0]+p[0], pobj0[1]+p[1]))
+                        #obj["CS_P"]=crd_p
+
+                        #if len(crd_p)<2 or density < 0.1 : continue
+                        obj_walls=[]
+                        op0=crd_p[-1]
+                        for op in crd_p :
+                            walls.append(( op0, op, free_pos, 0, density))
+                            obj_walls.append(( op0, op))
+                            op0=op
+                        """
+
+                        p=obj['CS'][-1]['C']
+                        op0=(pobj0[0]+p[0], pobj0[1]+p[1])
+                        for c in obj['CS'] :
+                            p = c["C"]
+                            op=(pobj0[0]+p[0], pobj0[1]+p[1])
+                            walls.append(( op0, op, free_pos, 0, density))
+                            obj_walls.append(( op0, op, free_pos, 0, density))
+                            op0=op
+
+
+                    elif 'CCS' in obj :
+                         for sobj in obj["CCS"] :
+                            psobj0=pobj0
+                            if 'AT' in sobj : psobj0=(pobj0[0]+sobj['AT'][0], pobj0[1]+sobj['AT'][1])
+                            sdensity=1
+                            if 'DENSITY' in sobj : sdensity=sobj['DENSITY']
+                            p=sobj['CS'][-1]['C']
+                            op0=(psobj0[0]+p[0], psobj0[1]+p[1])
+                            for c in sobj['CS'] :
+                                p = c["C"]
+                                op=(psobj0[0]+p[0], psobj0[1]+p[1])
+                                walls.append(( op0, op, free_pos, 0, sdensity))
+                                obj_walls.append(( op0, op, free_pos, 0, sdensity))
+                                op0=op
+
+                    obj["WALLS"]=obj_walls
+
+
 
             self.map["WALLS"]=walls
 
             self.init_start=self.map["START"]
             print("Map loaded")
             print(self.boundRect)
-        #except IOError: pass
-        except : pass
+        except IOError: pass
+        #except : pass
 
     def getSortedWalls(self, p, scan_max_dist):
         wall_dist=[]
@@ -65,10 +111,10 @@ class UnitMap:
             d1=(p1[0]-p[0])*(p1[0]-p[0])+(p1[1]-p[1])*(p1[1]-p[1])
             d=d0
             if d1<d0 : d=d1
-            if d<maxdist2 :
-                wall_dist.append((p0, p1, walls[2], walls[3], d))
+            if d<maxdist2 and walls[4]>0.1 :
+                wall_dist.append((p0, p1, walls[2], walls[3], walls[4], d))
 
-        return sorted(wall_dist, key=itemgetter(4))
+        return sorted(wall_dist, key=itemgetter(5))
 
     def getReSortedWalls(self, walls0, p, scan_max_dist):
         wall_dist=[]
@@ -81,9 +127,9 @@ class UnitMap:
             d=d0
             if d1<d0 : d=d1
             if d<maxdist2 :
-                wall_dist.append((p0, p1, walls[2], walls[3], d))
+                wall_dist.append((p0, p1, walls[2], walls[3], walls[4], d))
 
-        return sorted(wall_dist, key=itemgetter(4))
+        return sorted(wall_dist, key=itemgetter(5))
 
     def AdjustBound(self, x, y):
         if x<self.boundRect[0] : self.boundRect[0]=x
@@ -159,12 +205,13 @@ class UnitMap:
         dist2=0
         reff=0
         for walls in sorted_walls :
-            if dist2 > 0 and walls[4] > dist2 : break
+            if dist2 > 0 and walls[5] > dist2 : break
             isect=None
             p2=walls[0]
             p3=walls[1]
             movable=walls[2]
             reffw=walls[3]
+            density=walls[4]
             if movable==0 or (movable==2 and random.random()>0.5):
                 isect=self.find_intersection(p0, p1, p2, p3)
             if isect!=None :

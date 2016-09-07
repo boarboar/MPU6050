@@ -271,6 +271,7 @@ class MapPanel(wx.Window, UnitMap):
                 # optional - objects
                 try :
                     for obj in area["OBJECTS"] :
+                        """
                         brush=obj_brush_hi_dens
                         pen = obj_pen
                         free_pos=0 #fixed
@@ -283,13 +284,22 @@ class MapPanel(wx.Window, UnitMap):
                         elif free_pos==1 : pen=obj_pen_transient
                         dc.SetBrush(brush)
                         dc.SetPen(pen)
-
+                        """
+                        for w in obj['WALLS'] :
+                            den=w[4]
+                            pen = obj_pen
+                            if den < 0.1 :
+                                pen=obj_pen_hidden
+                            elif w[2]==1 : pen=obj_pen_transient
+                            dc.SetPen(pen)
+                            dc.DrawLinePoint(self.tc(w[0][0], w[0][1]), self.tc(w[1][0], w[1][1]))
+                        """
                         pts=[]
                         for c in obj['CS_P'] :
                             pts.append(self.tc(c[0], c[1]))
 
                         dc.DrawPolygon(pts)
-
+                        """
                 except KeyError : pass
                 except IndexError : pass
         except KeyError : pass
