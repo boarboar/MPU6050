@@ -223,7 +223,7 @@ bool Controller::process(float yaw, uint32_t dt) {
       cur_pow[0]+=ss;
       cur_pow[1]+=ss;
   */
-    
+      // what if reverse or rot ???????
       for(int i=0; i<2; i++) {
         if(cur_pow[i]<M_POW_MIN) cur_pow[i]=M_POW_MIN; 
         if(cur_pow[i]>M_POW_MAX) cur_pow[i]=M_POW_MAX; 
@@ -306,22 +306,12 @@ bool Controller::setTargPower(float l, float r) {
 }
 
 bool Controller::setTargSteering(int16_t s) {
-  /*
-  targ_bearing = curr_yaw+(float)s/180.0*PI;
-  if(targ_bearing>PI) targ_bearing-=PI*2.0f;
-  else if(targ_bearing<-PI) targ_bearing+=PI*2.0f;  
-  */
   adjustTargBearing(s, true);
   if(!rot_speed && !targ_speed) return startRotate(M_SPEED_NORM);
   else return true;  
 }
 
 bool Controller::setTargBearing(int16_t s) {
-  /*
-  targ_bearing = (float)s/180.0*PI;
-  if(targ_bearing>PI) targ_bearing-=PI*2.0f;
-  else if(targ_bearing<-PI) targ_bearing+=PI*2.0f;  
-  */
   adjustTargBearing(s, false);
   if(!rot_speed && !targ_speed) return startRotate(M_SPEED_NORM);
   else return true;  
@@ -333,13 +323,14 @@ bool Controller::setTargSpeed(int16_t tspeed) {
     Serial.print(F("Stop TV, AVQE=")); Serial.println(getAVQErr());     
   } else if(rot_speed!=0 && tspeed==0) {
     // stop rotating    
+    rot_speed=0;
     Serial.println(F("Stop ROT")); 
   } else if(targ_speed==0 && tspeed!=0) { 
     // start moving
     qsum_err=0;
     pid_cnt=0;
     run_dist=0;
-    Serial.print(F("Start TV=")); Serial.println(tspeed);     
+    //Serial.print(F("Start TV=")); Serial.println(tspeed);     
   } 
 
   //setTargSteering(0);
@@ -348,26 +339,34 @@ bool Controller::setTargSpeed(int16_t tspeed) {
   targ_speed=tspeed*10; //mm
   base_pow=(int32_t)abs(targ_speed)*M_POW_NORM/M_SPEED_NORM; // temp
   delta_pow=0;
-  
-  //Serial.print(F("STV TV=")); Serial.print(targ_speed); Serial.print(F("ADV=")); Serial.print(cur_pow[0]); Serial.print(F("\t ")); Serial.println(cur_pow[1]);
-  
+   
   int16_t cur_pow[2]={base_pow, base_pow};
+  Serial.print(F("STV TV=")); Serial.print(targ_speed); Serial.print(F("POW=")); Serial.print(cur_pow[0]); Serial.print(F("\t ")); Serial.println(cur_pow[1]);
   if(!setPower(cur_pow)) return false;
   return true;
 }
 
 
 bool Controller::startRotate(int16_t tspeed) {
-  rot_speed=tspeed;
   float a=targ_bearing-curr_yaw;
   if(a>PI) a-=PI*2.0f;
   else if(a<-PI) a+=PI*2.0f;    
-  if(a>0.01) Serial.print(F("Start ROT >>")); 
-  else if(a<-0.01) Serial.print(F("Start ROT <<")); 
+  if(a>0.01) { 
+    rot_speed=tspeed;  
+    Serial.print(F("Start ROT >>"));     
+  }
+  else if(a<-0.01) { 
+    rot_speed=-tspeed;
+    Serial.print(F("Start ROT <<")); 
+    }
   else Serial.print(F("No ROT")); 
-
-  // TODO POWER CTRL
+  err_bearing_p_0=err_bearing_i=0;    
+  base_pow=(int32_t)abs(rot_speed)*M_POW_NORM/M_SPEED_NORM; // temp
+  delta_pow=0;  
+  int16_t cur_pow[2]={base_pow, -base_pow};
+  Serial.print(F("STR =")); Serial.print(rot_speed); Serial.print(F("POW=")); Serial.print(cur_pow[0]); Serial.print(F("\t ")); Serial.println(cur_pow[1]);
   
+  if(!setPower(cur_pow)) return false;    
   return true;
 }
 /*
