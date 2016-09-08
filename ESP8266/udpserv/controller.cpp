@@ -407,7 +407,7 @@ bool Controller::setPowerStraight(int16_t dir, int16_t *p) {
 bool Controller::setPowerRotate(int16_t dir, int16_t *p) {
   bool res=false;
   if(dir>=0) res=writeInt16_2(REG_TARG_POW, p[0], -p[1]);
-  else  res=writeInt16_2(REG_TARG_POW, p[0], -p[1]);
+  else  res=writeInt16_2(REG_TARG_POW, -p[0], p[1]);
   if(!res) Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL, Logger::UMP_LOGGER_ALARM, CTL_FAIL_WRT, REG_TARG_POW);
   return res;
 }

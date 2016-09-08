@@ -2,7 +2,7 @@
 #include <Servo.h> 
 
 //#define _SIMULATION_ 1
-#define _US_DEBUG_ 
+//#define _US_DEBUG_ 
 
 #define _US_M_WIRE_  // multiple input wires 
 
@@ -88,11 +88,11 @@
 #define SERVO_ZERO_SHIFT    5
 */
 
-#define SERVO_NSTEPS  1
-#define SERVO_TOT_STEPS  5
+#define SERVO_NSTEPS  2
+//#define SERVO_TOT_STEPS  5
 #define SERVO_STEP    36
 #define SERVO_ZERO_SHIFT    5
-#define M_SENS_N      (SERVO_TOT_STEPS*2) // number of sensors
+#define M_SENS_N      10 // number of sensors
 #define M_SENS_CNT    2 
 
 Servo sservo;
@@ -409,10 +409,13 @@ void Drive_s1(uint8_t dir, uint8_t pow, int16_t p_en, uint8_t p1)
 void readUSDist() {
   if(sens_step==0) {
     if(uscount==0) {
+      Serial.print("S0 "); Serial.print(sservo_pos); Serial.print("\t "); Serial.println(sservo_step);
+
       if((sservo_step>0 && sservo_pos>=SERVO_NSTEPS) || (sservo_step<0 && sservo_pos<=-SERVO_NSTEPS)) sservo_step=-sservo_step;
       sservo_pos+=sservo_step;
       int16_t sservo_angle=90-SERVO_ZERO_SHIFT+sservo_pos*SERVO_STEP;
       sservo.write(sservo_angle);
+      Serial.print("S1 "); Serial.print(sservo_pos); Serial.print("\t "); Serial.println(sservo_step);
 #ifdef _US_DEBUG_      
       Serial.print("Servo "); Serial.println(sservo_pos);
       for(int i=0; i<M_SENS_N; i++) { Serial.print(sens[i]); Serial.print("\t "); }
