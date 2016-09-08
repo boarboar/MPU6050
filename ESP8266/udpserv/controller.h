@@ -41,10 +41,9 @@ public:
   int16_t getTargSpeed();
   bool setTargBearing(int16_t s);
   
-  bool setPower(int16_t *p);
-  bool setSteering(int16_t s);
+  //bool setSteering(int16_t s);
   uint8_t getNumSensors();
-  float *getStoredRotRate();
+  //float *getStoredRotRate();
   int32_t *getStoredAdvance();
   int16_t *getStoredPower();
   //int16_t *getCurPower();
@@ -64,11 +63,13 @@ protected:
   uint8_t testConnection();
   uint8_t _getNumSensors();
   //bool getControllerStatus();
-  bool getActRotRate(); // in RPS
+  //bool getActRotRate(); // in RPS
   bool getActAdvance(); // in MMs
   bool getSensors(); 
   bool setStart(uint8_t p); 
   bool startRotate(int16_t tspeed);
+  bool setPowerRotate(int16_t dir, int16_t *p);
+  bool setPowerStraight(int16_t dir, int16_t *p);
   void adjustTargBearing(int16_t s, bool absolute);
   bool writeInt16(uint16_t reg, int16_t val);
   bool writeInt16_2(uint16_t reg, int16_t left, int16_t right);
@@ -80,12 +81,12 @@ private:
   uint8_t data_ready;
   uint8_t need_reset;
   
-  uint8_t buf[16];  
+  uint8_t buf[20];  
   //uint8_t sta[2];
   //float mov, rot;
   uint8_t pready;
   uint8_t nsens;
-  float act_rot_rate[2];
+  //float act_rot_rate[2];
   //int16_t targ_rot_rate[2];
   int32_t act_advance[2];
   int32_t act_advance_0[2];

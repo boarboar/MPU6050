@@ -22,7 +22,7 @@ const int limit_i=100;
     
 Controller Controller::ControllerProc ; // singleton
 
-Controller::Controller() : pready(false), nsens(0), act_rot_rate{0},act_advance{0},act_power{0},sensors{0} {
+Controller::Controller() : pready(false), nsens(0), act_advance{0},act_power{0},sensors{0} {
   }
 
 uint8_t Controller::getStatus() { return pready; }
@@ -37,7 +37,7 @@ bool Controller::init() {
   //fail_reason=0;
   need_reset=false; 
   nsens=0;
-  act_rot_rate[0]=act_rot_rate[1]=0;
+  //act_rot_rate[0]=act_rot_rate[1]=0;
   act_advance[0]=act_advance[1]=0;
   act_power[0]=act_power[1]=0;
   base_pow=0;
@@ -127,8 +127,11 @@ bool Controller::process(float yaw, uint32_t dt) {
   */
     Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OVF, buf[0], buf[1], buf[2], buf[3]);  
   
-    act_advance_0[0]=act_advance[0];
-    act_advance_0[1]=act_advance[1];
+    //act_advance_0[0]=act_advance[0];
+    //act_advance_0[1]=act_advance[1];
+    // RESET PERIPH ?
+    act_advance[0]=act_advance_0[0];
+    act_advance[1]=act_advance_0[1];
     return false;
   }
     
@@ -230,7 +233,7 @@ bool Controller::process(float yaw, uint32_t dt) {
       // maybe a better idea would be to make limits proportional to the target?
       }
     
-      setPower(cur_pow);      
+      setPowerStraight(targ_speed, cur_pow);      
       //Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_EVENT, CTL_LOG_PID, dt, round(err_bearing_p), round(err_bearing_d), round(err_bearing_i), s, cur_pow[0], cur_pow[1]);  
       Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_EVENT, CTL_LOG_PID, dt, err_bearing_p, err_bearing_d, err_bearing_i, delta_pow, cur_pow[0], cur_pow[1]);  
  
@@ -259,7 +262,7 @@ bool Controller::process(float yaw, uint32_t dt) {
 int16_t Controller::getTargSpeed() { return targ_speed/10;}
 //int16_t *Controller::getCurPower() { return cur_pow;}
 uint8_t Controller::getNumSensors() { return nsens;}
-float *Controller::getStoredRotRate() { return act_rot_rate;}
+//float *Controller::getStoredRotRate() { return act_rot_rate;}
 int32_t *Controller::getStoredAdvance() { return act_advance;}
 int16_t *Controller::getStoredPower() { return act_power;}
 int16_t *Controller::getStoredSensors() { return sensors;}
@@ -341,8 +344,8 @@ bool Controller::setTargSpeed(int16_t tspeed) {
   delta_pow=0;
    
   int16_t cur_pow[2]={base_pow, base_pow};
-  Serial.print(F("STV TV=")); Serial.print(targ_speed); Serial.print(F("POW=")); Serial.print(cur_pow[0]); Serial.print(F("\t ")); Serial.println(cur_pow[1]);
-  if(!setPower(cur_pow)) return false;
+  //Serial.print(F("STV TV=")); Serial.print(targ_speed); Serial.print(F("POW=")); Serial.print(cur_pow[0]); Serial.print(F("\t ")); Serial.println(cur_pow[1]);
+  if(!setPowerStraight(targ_speed, cur_pow)) return false;
   return true;
 }
 
@@ -363,10 +366,10 @@ bool Controller::startRotate(int16_t tspeed) {
   err_bearing_p_0=err_bearing_i=0;    
   base_pow=(int32_t)abs(rot_speed)*M_POW_NORM/M_SPEED_NORM; // temp
   delta_pow=0;  
-  int16_t cur_pow[2]={base_pow, -base_pow};
-  Serial.print(F("STR =")); Serial.print(rot_speed); Serial.print(F("POW=")); Serial.print(cur_pow[0]); Serial.print(F("\t ")); Serial.println(cur_pow[1]);
+  int16_t cur_pow[2]={base_pow, base_pow};
+  //Serial.print(F("STR =")); Serial.print(rot_speed); Serial.print(F("POW=")); Serial.print(cur_pow[0]); Serial.print(F("\t ")); Serial.println(cur_pow[1]);
   
-  if(!setPower(cur_pow)) return false;    
+  if(!setPowerRotate(rot_speed, cur_pow)) return false;    
   return true;
 }
 /*
@@ -393,14 +396,23 @@ bool Controller::setStart(uint8_t p) {
   return res;
 }
 
-bool Controller::setPower(int16_t *p) {
+bool Controller::setPowerStraight(int16_t dir, int16_t *p) {
   bool res=false;
-  if(targ_speed>=0) res=writeInt16_2(REG_TARG_POW, p[0], p[1]);
+  if(dir>=0) res=writeInt16_2(REG_TARG_POW, p[0], p[1]);
   else  res=writeInt16_2(REG_TARG_POW, -p[0], -p[1]);
   if(!res) Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL, Logger::UMP_LOGGER_ALARM, CTL_FAIL_WRT, REG_TARG_POW);
   return res;
 }
 
+bool Controller::setPowerRotate(int16_t dir, int16_t *p) {
+  bool res=false;
+  if(dir>=0) res=writeInt16_2(REG_TARG_POW, p[0], -p[1]);
+  else  res=writeInt16_2(REG_TARG_POW, p[0], -p[1]);
+  if(!res) Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL, Logger::UMP_LOGGER_ALARM, CTL_FAIL_WRT, REG_TARG_POW);
+  return res;
+}
+
+/*
 bool Controller::setSteering(int16_t s) {
   bool res = writeInt16(REG_STEERING, s); 
   if(!res) Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL, Logger::UMP_LOGGER_ALARM, CTL_FAIL_WRT, REG_STEERING);
@@ -418,20 +430,21 @@ bool Controller::getActRotRate() {
   act_rot_rate[1]=(float)tmp[1]/V_NORM;
   return res;
 }
+*/
 
-bool Controller::getActAdvance(/*int16_t *d*/) {
+bool Controller::getActAdvance() {
   bool res = readInt32_2(REG_ACT_ADV_ACC, act_advance);  
   if(!res) Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL, Logger::UMP_LOGGER_ALARM, CTL_FAIL_RD, REG_ACT_ADV_ACC);
   return res;
 }
 
-bool Controller::getActPower(/*int16_t *d*/) {
+bool Controller::getActPower() {
   bool res = readInt16_2(REG_ACT_POW, act_power, act_power+1); 
   if(!res) Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL, Logger::UMP_LOGGER_ALARM, CTL_FAIL_RD, REG_ACT_POW);
   return res;
 }
 
-bool Controller::getSensors(/*int16_t *sens*/) {
+bool Controller::getSensors() {
   bool res = readInt16_N(REG_SENSORS_ALL, 8, sensors); 
   if(!res) Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL, Logger::UMP_LOGGER_ALARM, CTL_FAIL_RD, REG_SENSORS_ALL);
   return res;

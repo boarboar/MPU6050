@@ -48,9 +48,6 @@
 #define    WHEEL_CHGSTATES 40
 #define    WHEEL_RAD_MM   33 // measured 32
 
-#define M_SENS_N       6 // number of sensors
-#define M_SENS_CNT    2 
-
 #define REG_WHO_AM_I         0xFF  // 1 unsigned byte
 #define REG_STATUS           0x01  // 2 unsigned bytes
 #define REG_START            0x02  // 1 unsigned bytesc
@@ -84,18 +81,27 @@
 //#define NPOW_CHART_N     6
 //#define NPOW_CHART_MULT  2
 
+/*
 #define SERVO_NSTEPS  1
 #define SERVO_TOT_STEPS  3
 #define SERVO_STEP    60
 #define SERVO_ZERO_SHIFT    5
+*/
+
+#define SERVO_NSTEPS  1
+#define SERVO_TOT_STEPS  5
+#define SERVO_STEP    36
+#define SERVO_ZERO_SHIFT    5
+#define M_SENS_N      (SERVO_TOT_STEPS*2) // number of sensors
+#define M_SENS_CNT    2 
 
 Servo sservo;
 
 uint32_t lastEvTime, lastPidTime;
 //uint8_t sens_fail_cnt[M_SENS_N];
 int16_t targ_new_param[2]={0, 0}; // RPS, 10000 = 1 RPS  (use DRV_RPS_NORM), +/-
-volatile int32_t act_adv_accu_mm[2]={0,0};  // OUT - in mm, after last request. Should be zeored after get request
-uint8_t targ_enc_cnt[2]={0,0}; 
+int32_t act_adv_accu_mm[2]={0,0};  // OUT - in mm, after last request.
+//uint8_t targ_enc_cnt[2]={0,0}; 
 uint8_t  drv_dir[2]={0,0}; // (0,1,2) - NO, FWD, REV
 uint8_t enc_cnt[2]={0,0}; 
 
@@ -106,7 +112,8 @@ volatile uint8_t getRegister = 0;
 volatile uint8_t getOverflow=0;
 volatile uint8_t setOverflow=0;
 
-uint8_t buffer[16];
+//uint8_t buffer[16];
+uint8_t buffer[20];
 
 // volatile encoder section
 volatile uint8_t v_enc_cnt[2]={0,0}; 
@@ -123,8 +130,7 @@ struct set_s {
 struct set_s set_q[NSETQ];
 volatile uint8_t set_h, set_t;
 
-//int16_t sservo_pos=90;
-//int8_t sservo_step=45;
+;
 int16_t sens[M_SENS_N];
 uint8_t sens_step=1;
 int8_t sservo_pos=0; //90

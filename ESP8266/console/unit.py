@@ -9,7 +9,8 @@ class Unit:
         #scan_a0=-90
         #scan_n=3
         #scan_d=(-scan_a0*2)/(scan_n-1)
-        scan_a0, scan_n, scan_d = -60, 6, 60
+        #scan_a0, scan_n, scan_d = -60, 6, 60
+        scan_a0, scan_n, scan_d = -72, 10, 36
         self.scan_angles=[]
         self.scan_rays=[]
         for i in range(scan_n) :

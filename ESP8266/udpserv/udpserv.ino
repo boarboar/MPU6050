@@ -135,7 +135,10 @@ void doCycle() {
   
   MpuDrv::Mpu.process();
 
-  if(mpu_res!=2) Controller::ControllerProc.process(MpuDrv::Mpu.getYaw(), dt); 
+  if(mpu_res!=2) { 
+    delay(1);
+    Controller::ControllerProc.process(MpuDrv::Mpu.getYaw(), dt); 
+  }
  // yield();
   Logger::Instance.flushEvents();
   

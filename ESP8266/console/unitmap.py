@@ -97,7 +97,7 @@ class UnitMap:
             self.init_start=self.map["START"]
             print("Map loaded")
             print(self.boundRect)
-        except IOError: pass
+        except IOError: print("IO Error")
         #except : pass
 
     def getSortedWalls(self, p, scan_max_dist):
