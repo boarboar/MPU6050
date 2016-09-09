@@ -164,14 +164,14 @@ bool Controller::process(float yaw, uint32_t dt) {
   getActPower();
   getSensors();
 
-  if(targ_speed) {
+  if(dt>0 &&(targ_speed || rot_speed)) {
 
     Serial.print(F("PCNT=")); Serial.print(pid_cnt); 
     Serial.print(F("\t\t ADV=")); Serial.print(act_advance[0]); Serial.print(F("\t ")); Serial.print(act_advance[1]);
     Serial.print(F("\t\t V=")); Serial.println(speed); 
 
     if(pid_cnt>0) {
-
+      
       int16_t limit=CfgDrv::Cfg.bear_pid.limit_i;
       int16_t err_bearing_p, err_bearing_d;
 
@@ -182,13 +182,16 @@ bool Controller::process(float yaw, uint32_t dt) {
       if(err_bearing_p>180) err_bearing_p-=360;
       else if(err_bearing_p<-180) err_bearing_p+=360;
       
-      err_bearing_d=err_bearing_p-err_bearing_p_0;
-      
+      err_bearing_d=err_bearing_p-err_bearing_p_0;      
       if(err_bearing_d>180) err_bearing_d-=360;
       else if(err_bearing_d<-180) err_bearing_d+=360;
+      // note: it should rather be (err_bearing_p-err_bearing_p_0)/dt; 
+      // or if normed to 100ms: (int32_t)(err_bearing_p-err_bearing_p_0)*100/dt;
 
-      
       err_bearing_i=err_bearing_i+err_bearing_p;
+      // note: it should rather be +err_bearing_p*dt; 
+      // or if normed to 100ms: (int32_t)(err_bearing_p)*dt/100;
+
       if(err_bearing_i>limit) err_bearing_i=limit;
       if(err_bearing_i<-limit) err_bearing_i=-limit;
       err_bearing_p_0=err_bearing_p;
@@ -232,8 +235,10 @@ bool Controller::process(float yaw, uint32_t dt) {
         if(cur_pow[i]>M_POW_MAX) cur_pow[i]=M_POW_MAX; 
       // maybe a better idea would be to make limits proportional to the target?
       }
-    
-      setPowerStraight(targ_speed, cur_pow);      
+      if(targ_speed)
+        setPowerStraight(targ_speed, cur_pow);      
+      else 
+        setPowerRotate(rot_speed, cur_pow);      
       //Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_EVENT, CTL_LOG_PID, dt, round(err_bearing_p), round(err_bearing_d), round(err_bearing_i), s, cur_pow[0], cur_pow[1]);  
       Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_EVENT, CTL_LOG_PID, dt, err_bearing_p, err_bearing_d, err_bearing_i, delta_pow, cur_pow[0], cur_pow[1]);  
  
@@ -330,8 +335,8 @@ bool Controller::setTargSpeed(int16_t tspeed) {
     Serial.println(F("Stop ROT")); 
   } else if(targ_speed==0 && tspeed!=0) { 
     // start moving
-    qsum_err=0;
     pid_cnt=0;
+    qsum_err=0;
     run_dist=0;
     //Serial.print(F("Start TV=")); Serial.println(tspeed);     
   } 
@@ -366,9 +371,9 @@ bool Controller::startRotate(int16_t tspeed) {
   err_bearing_p_0=err_bearing_i=0;    
   base_pow=(int32_t)abs(rot_speed)*M_POW_NORM/M_SPEED_NORM; // temp
   delta_pow=0;  
+  pid_cnt=0;    
   int16_t cur_pow[2]={base_pow, base_pow};
-  //Serial.print(F("STR =")); Serial.print(rot_speed); Serial.print(F("POW=")); Serial.print(cur_pow[0]); Serial.print(F("\t ")); Serial.println(cur_pow[1]);
-  
+  //Serial.print(F("STR =")); Serial.print(rot_speed); Serial.print(F("POW=")); Serial.print(cur_pow[0]); Serial.print(F("\t ")); Serial.println(cur_pow[1]);  
   if(!setPowerRotate(rot_speed, cur_pow)) return false;    
   return true;
 }

@@ -2,7 +2,7 @@
 #include <Servo.h> 
 
 //#define _SIMULATION_ 1
-//#define _US_DEBUG_ 
+#define _US_DEBUG_ 
 
 #define _US_M_WIRE_  // multiple input wires 
 
@@ -78,22 +78,21 @@
 #define CHGST_TO_RPS_NORM(CNT, MSEC)  ((uint32_t)(CNT)*V_NORM*1000/WHEEL_CHGSTATES/(MSEC))
 #define RPS_TO_CHGST_NORM(RPS, MSEC)  ((uint32_t)(RPS)*WHEEL_CHGSTATES*(MSEC)/V_NORM/1000)
 
-//#define NPOW_CHART_N     6
-//#define NPOW_CHART_MULT  2
 
-/*
 #define SERVO_NSTEPS  1
-#define SERVO_TOT_STEPS  3
 #define SERVO_STEP    60
 #define SERVO_ZERO_SHIFT    5
-*/
+#define M_SENS_N      6 // number of readings
 
+/*
 #define SERVO_NSTEPS  2
-//#define SERVO_TOT_STEPS  5
 #define SERVO_STEP    36
 #define SERVO_ZERO_SHIFT    5
-#define M_SENS_N      10 // number of sensors
-#define M_SENS_CNT    2 
+#define M_SENS_N      10 // number of redings
+*/
+
+//#define M_SENS_CNT    2 
+#define M_SENS_CNT    4 
 
 Servo sservo;
 
@@ -109,8 +108,8 @@ uint8_t cur_power[2]={0,0};
 // 
 volatile uint8_t sta[2]={0,0};
 volatile uint8_t getRegister = 0;
-volatile uint8_t getOverflow=0;
-volatile uint8_t setOverflow=0;
+//volatile uint8_t getOverflow=0;
+//volatile uint8_t setOverflow=0;
 
 //uint8_t buffer[16];
 uint8_t buffer[20];
@@ -132,10 +131,11 @@ volatile uint8_t set_h, set_t;
 
 ;
 int16_t sens[M_SENS_N];
-uint8_t sens_step=1;
+//uint8_t sens_step=1;
+uint8_t sens_step=0;
 int8_t sservo_pos=0; //90
 int8_t sservo_step=1; 
-uint8_t uscount=0;
+//uint8_t uscount=0;
 
 void setup()
 {
@@ -199,7 +199,7 @@ void setup()
   
   Serial.println("Ready");
   
-  uscount=0;
+  //uscount=0;
   
   lastEvTime = lastPidTime = millis();  
 }
@@ -221,16 +221,9 @@ void loop()
     readEnc(ctime);
     
     if(ST_IS_STARTED()) {
-      /*
-      uscount++;
-      if(uscount==M_SENS_CNT) // commented for US test purposes
-      {            
-        readUSDist();
-        uscount=0;
-      } 
-      */
       readUSDist();
     }
+    
     lastPidTime=cycleTime;
   } // PID cycle 
           
@@ -262,8 +255,8 @@ void loop()
     Serial.println();
   }
  
- if(getOverflow) {Serial.println("===========Get overflow!"); getOverflow=0;}     
- if(setOverflow) {Serial.println("===========Set overflow!"); setOverflow=0;}
+ //if(getOverflow) {Serial.println("===========Get overflow!"); getOverflow=0;}     
+ //if(setOverflow) {Serial.println("===========Set overflow!"); setOverflow=0;}
  if(qsz>1) {Serial.print("===========QSZ "); Serial.println(qsz);} 
 }
 
@@ -406,6 +399,7 @@ void Drive_s1(uint8_t dir, uint8_t pow, int16_t p_en, uint8_t p1)
   analogWrite(p_en, pow);
 }
 
+/*
 void readUSDist() {
   if(sens_step==0) {
     if(uscount==0) {
@@ -430,8 +424,8 @@ void readUSDist() {
     if(uscount<M_SENS_CNT) return;
     uscount=0;
   } else {
-    int out_port=sens_step==1 ? US_1_OUT : US_2_OUT;
-    int in_port=sens_step==1 ? US_1_IN : US_2_IN;
+    uint8_t out_port=sens_step==1 ? US_1_OUT : US_2_OUT;
+    uint8_t in_port=sens_step==1 ? US_1_IN : US_2_IN;
     if(digitalRead(in_port)==HIGH) {
 #ifdef _US_DEBUG_            
       Serial.print("US read abort: "); Serial.println(sens_step);      
@@ -447,27 +441,96 @@ void readUSDist() {
   
     // actual constant should be 58.138
     int16_t tmp =(int16_t)(pulseIn(in_port, HIGH, 40000)/58);  //play with timing ?
-   if(tmp==0) tmp=-1;
-   int8_t current_sens=-sservo_pos+1+(sens_step-1)*3;
+    if(tmp==0) tmp=-1;
+    int8_t current_sens=-sservo_pos+1+(sens_step-1)*3;
 #ifdef _US_DEBUG_  
-/*
-    Serial.print("\t\t");
-    for(int j=0; j<sens_step; j++) Serial.print("\t");
-    Serial.print(tmp);
-    Serial.print("\t [");
-    Serial.print(sservo_pos);
-    Serial.print("\t ,");
-    Serial.print(sens_step);
-    Serial.print("\t -> ");
-    Serial.print(current_sens);
-    Serial.println("]");
-    */
     Serial.print(current_sens); Serial.print("\t "); Serial.println(tmp);
 #endif  
 
-   sens[current_sens] = tmp;
+    sens[current_sens] = tmp;
   }
  sens_step=(sens_step+1)%3;  
+}
+*/
+/*
+N=6:  (NSTEPS=1)
+      Sens_s |
+Servo_p      | 0  | 1  |
+------------ +----+----+  
+  -1         | 2  | 5  |  
+------------ +----+----+  
+   0         | 1  | 4  |  
+------------ +----+----+  
+   1         | 0  | 3  |  
+------------ +----+----+  
+
+N=10:  (NSTEPS=2)
+      Sens_s |
+Servo_p      | 0  | 1  |
+------------ +----+----+  
+  -2         | 4  | 9  |  
+------------ +----+----+  
+  -1         | 3  | 8  |  
+------------ +----+----+  
+   0         | 2  | 7  |  
+------------ +----+----+  
+   1         | 1  | 6  |  
+------------ +----+----+  
+   2         | 0  | 5  |  
+------------ +----+----+    
+*/
+
+void readUSDist() {
+  if(sens_step>=2) {
+    if(sens_step==2) {
+      // servo move
+      //Serial.print("S0 "); Serial.print(sservo_pos); Serial.print("\t "); Serial.println(sservo_step);
+      if((sservo_step>0 && sservo_pos>=SERVO_NSTEPS) || (sservo_step<0 && sservo_pos<=-SERVO_NSTEPS)) sservo_step=-sservo_step;
+      sservo_pos+=sservo_step;
+      int16_t sservo_angle=90-SERVO_ZERO_SHIFT+sservo_pos*SERVO_STEP;
+      sservo.write(sservo_angle);
+      //Serial.print("S1 "); Serial.print(sservo_pos); Serial.print("\t "); Serial.println(sservo_step);
+#ifdef _US_DEBUG_      
+      Serial.print("Servo "); Serial.println(sservo_pos);
+      //for(int i=0; i<M_SENS_N; i++) { Serial.print(sens[i]); Serial.print("\t "); }
+      //Serial.println();
+#endif    
+    } else {
+#ifdef _US_DEBUG_      
+      Serial.println("Servo wait");
+#endif          
+    }
+  } else {
+    uint8_t out_port=sens_step==0 ? US_1_OUT : US_2_OUT;
+    uint8_t in_port=sens_step==0 ? US_1_IN : US_2_IN;
+    if(digitalRead(in_port)==HIGH) {
+#ifdef _US_DEBUG_            
+      Serial.print("US read abort: "); Serial.println(sens_step);      
+#endif
+      //ignore=true;
+      return; // TODO reset here ?
+    }
+    digitalWrite(out_port, LOW);
+    delayMicroseconds(2); // or 5?
+    digitalWrite(out_port, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(out_port, LOW);
+  
+    // actual constant should be 58.138
+    int16_t tmp =(int16_t)(pulseIn(in_port, HIGH, 40000)/58);  //play with timing ?
+    if(tmp==0) tmp=-1;
+    //int8_t current_sens=-sservo_pos+1+(sens_step-1)*3;
+    //int8_t current_sens=-sservo_pos+1+sens_step*3; //!!!! That's IT!!!
+    int8_t current_sens=-sservo_pos+SERVO_NSTEPS+sens_step*(SERVO_NSTEPS*2+1); //!!!! That's IT!!!
+#ifdef _US_DEBUG_  
+    Serial.print("SRead"); Serial.print(sens_step); Serial.print("\t "); Serial.print(current_sens); Serial.print("\t "); Serial.println(tmp);
+#endif  
+
+    sens[current_sens] = tmp;
+  }
+ //sens_step=(sens_step+1)%M_SENS_CNT;  
+ sens_step++;
+ if(sens_step==M_SENS_CNT) sens_step=0;
 }
 
   
@@ -492,7 +555,7 @@ void receiveEvent(int howMany)
   if(Wire.available()==0) return;
   reg=Wire.read();
   if(Wire.available()==0) { 
-    if(getRegister) getOverflow=1;
+    //if(getRegister) getOverflow=1;
     getRegister=reg; 
     return; 
   }
@@ -512,7 +575,8 @@ void receiveEvent(int howMany)
     default:;
   }  
   while(Wire.available()) Wire.read(); // consume whatever left  
-  setOverflow=setQuAdd(reg, p[0], p[1]);
+  //setOverflow=setQuAdd(reg, p[0], p[1]);
+  setQuAdd(reg, p[0], p[1]);
   lastEvTime = millis();
 }
   
@@ -560,6 +624,7 @@ void requestEvent()
       break;
     case REG_SENSORS_ALL:  
       writeInt16_N_M(M_SENS_N, 8, sens);
+      //Wire.write((uint8_t *)sens, M_SENS_N*2);
       break;  
     default:;
   }
