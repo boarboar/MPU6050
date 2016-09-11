@@ -2,7 +2,8 @@
 #include <Servo.h> 
 
 //#define _SIMULATION_ 1
-#define _US_DEBUG_ 
+//#define _US_DEBUG_ 
+//#define _US_DEBUG_1_ 
 
 #define _US_M_WIRE_  // multiple input wires 
 
@@ -48,6 +49,8 @@
 #define    WHEEL_CHGSTATES 40
 #define    WHEEL_RAD_MM   33 // measured 32
 
+#define MAX_BUF_I2C        12
+
 #define REG_WHO_AM_I         0xFF  // 1 unsigned byte
 #define REG_STATUS           0x01  // 2 unsigned bytes
 #define REG_START            0x02  // 1 unsigned bytesc
@@ -58,7 +61,9 @@
 #define REG_TARG_POW         0x0B  // 2 signed ints (4 bytes)
 #define REG_STEERING         0x0C  // 1 signed int (2 bytes)
 #define REG_SENSORS_CNT      0x20  // 1 unsigned byte
-#define REG_SENSORS_ALL      0x28  // 8 unsigned ints
+#define REG_SENSORS_1H       0x21  // up to 6 unsigned ints
+#define REG_SENSORS_2H       0x22  // up to 6 unsigned ints
+#define REG_SENSORS_ALL      0x28  // up to 6 unsigned ints
 
 #define ST_DRIVE             0x01 
 #define ST_START             0x08
@@ -78,20 +83,20 @@
 #define CHGST_TO_RPS_NORM(CNT, MSEC)  ((uint32_t)(CNT)*V_NORM*1000/WHEEL_CHGSTATES/(MSEC))
 #define RPS_TO_CHGST_NORM(RPS, MSEC)  ((uint32_t)(RPS)*WHEEL_CHGSTATES*(MSEC)/V_NORM/1000)
 
-
+/*
 #define SERVO_NSTEPS  1
 #define SERVO_STEP    60
 #define SERVO_ZERO_SHIFT    5
 #define M_SENS_N      6 // number of readings
+*/
 
-/*
+
 #define SERVO_NSTEPS  2
 #define SERVO_STEP    36
 #define SERVO_ZERO_SHIFT    5
 #define M_SENS_N      10 // number of redings
-*/
 
-//#define M_SENS_CNT    2 
+
 #define M_SENS_CNT    4 
 
 Servo sservo;
@@ -112,7 +117,7 @@ volatile uint8_t getRegister = 0;
 //volatile uint8_t setOverflow=0;
 
 //uint8_t buffer[16];
-uint8_t buffer[20];
+uint8_t buffer[MAX_BUF_I2C];
 
 // volatile encoder section
 volatile uint8_t v_enc_cnt[2]={0,0}; 
@@ -498,7 +503,11 @@ void readUSDist() {
     } else {
 #ifdef _US_DEBUG_      
       Serial.println("Servo wait");
-#endif          
+#endif
+#ifdef _US_DEBUG_1_      
+      for(int i=0; i<M_SENS_N; i++) { Serial.print(sens[i]); Serial.print("\t "); }
+      Serial.println();
+#endif    
     }
   } else {
     uint8_t out_port=sens_step==0 ? US_1_OUT : US_2_OUT;
@@ -623,9 +632,16 @@ void requestEvent()
       Wire.write((uint8_t)M_SENS_N);
       break;
     case REG_SENSORS_ALL:  
-      writeInt16_N_M(M_SENS_N, 8, sens);
-      //Wire.write((uint8_t *)sens, M_SENS_N*2);
+      //writeInt16_N_M(M_SENS_N, 10, sens);
+      //writeInt16_N_M(M_SENS_N, M_SENS_N, sens);
+      writeInt16_N_M_1(M_SENS_N, sens);      
       break;  
+    case REG_SENSORS_1H:  // 1st half
+      writeInt16_N_M_1(M_SENS_N/2, sens);
+      break;
+    case REG_SENSORS_2H:  // 2nd half
+      writeInt16_N_M_1(M_SENS_N/2, sens+M_SENS_N/2);
+      break;
     default:;
   }
   getRegister=0;
@@ -741,6 +757,7 @@ void writeInt32_2(int32_t *reg) {
 }
 
 void writeInt16_N_M(uint16_t act, uint16_t tot, int16_t *reg) {
+  if(tot*2>MAX_BUF_I2C) tot=MAX_BUF_I2C/2; 
   for(uint16_t i=0, j=0; i<tot; i++) {
     if(i<act) {
       buffer[j++] = (uint8_t)((reg[i])>>8);
@@ -753,3 +770,11 @@ void writeInt16_N_M(uint16_t act, uint16_t tot, int16_t *reg) {
   Wire.write(buffer, tot*2);
 }
 
+void writeInt16_N_M_1(uint16_t tot, int16_t *reg) {
+  if(tot*2>MAX_BUF_I2C) tot=MAX_BUF_I2C/2; 
+  for(uint16_t i=0, j=0; i<tot; i++) {
+      buffer[j++] = (uint8_t)((reg[i])>>8);
+      buffer[j++] = (uint8_t)((reg[i])&0xFF);
+  }
+  Wire.write(buffer, tot*2);
+}

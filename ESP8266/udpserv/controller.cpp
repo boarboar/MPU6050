@@ -112,20 +112,15 @@ bool Controller::process(float yaw, uint32_t dt) {
     return false;
   }
 */
-  float mov, rot;
-  float dist0=dist;
-  dist=(float)(act_advance[0]+act_advance[1])*0.5f; // in mm;
-  mov=dist-dist0;
-  run_dist+=fabs(mov);
    
   if(abs(act_advance[0]-act_advance_0[0])>512 || abs(act_advance[1]-act_advance_0[1])>512) {
-    /*
+    
         Serial.print(F("ADV=")); 
         Serial.print(act_advance[0]); Serial.print(F("\t ")); Serial.println(act_advance[1]);
         Serial.print(F("\t ADV0=\t ")); 
         Serial.print(act_advance_0[0]); Serial.print(F("\t ")); Serial.println(act_advance_0[1]);
-  */
-    Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OVF, buf[0], buf[1], buf[2], buf[3]);  
+  
+    Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OVF, act_advance[0], act_advance[1], act_advance_0[0], act_advance_0[1]);  
   
     //act_advance_0[0]=act_advance[0];
     //act_advance_0[1]=act_advance[1];
@@ -134,7 +129,13 @@ bool Controller::process(float yaw, uint32_t dt) {
     act_advance[1]=act_advance_0[1];
     return false;
   }
-    
+
+  float mov, rot;
+  float dist0=dist;
+  dist=(float)(act_advance[0]+act_advance[1])*0.5f; // in mm;
+  mov=dist-dist0;
+  run_dist+=fabs(mov);
+
   rot=(float)((act_advance[0]-act_advance_0[0])-(act_advance[1]-act_advance_0[1]))/(float)WHEEL_BASE_MM;  
   angle+=rot;  
   if(angle>PI) angle-=PI*2.0f;
@@ -391,7 +392,7 @@ uint8_t Controller::_getNumSensors() {
     Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL, Logger::UMP_LOGGER_ALARM, CTL_FAIL_RD, REG_SENSORS_CNT);
     return 0;
   }
-  if(buf[0]>8) buf[0]=8;   
+  if(buf[0]>10) buf[0]=10;   
   return buf[0];
 }
 
@@ -450,8 +451,19 @@ bool Controller::getActPower() {
 }
 
 bool Controller::getSensors() {
-  bool res = readInt16_N(REG_SENSORS_ALL, 8, sensors); 
-  if(!res) Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL, Logger::UMP_LOGGER_ALARM, CTL_FAIL_RD, REG_SENSORS_ALL);
+  ////bool res = readInt16_N(REG_SENSORS_ALL, 10, sensors);
+  //bool res = readInt16_N(REG_SENSORS_ALL, nsens, sensors); 
+  //if(!res) Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL, Logger::UMP_LOGGER_ALARM, CTL_FAIL_RD, REG_SENSORS_ALL);
+  bool res = readInt16_N(REG_SENSORS_1H, nsens/2, sensors); 
+  if(!res) {
+    Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL, Logger::UMP_LOGGER_ALARM, CTL_FAIL_RD, REG_SENSORS_1H);
+    return false;
+  }
+  res = readInt16_N(REG_SENSORS_2H, nsens/2, sensors+nsens/2); 
+  if(!res) {
+    Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL, Logger::UMP_LOGGER_ALARM, CTL_FAIL_RD, REG_SENSORS_2H);
+    return false;
+  }
   return res;
 }
 

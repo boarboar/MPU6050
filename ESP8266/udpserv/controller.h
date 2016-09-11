@@ -11,12 +11,14 @@
 #define REG_TARG_POW         0x0B  // 2 signed ints (4 bytes)
 #define REG_STEERING         0x0C  // 1 signed int (2 bytes)
 #define REG_SENSORS_CNT      0x20  // 8 unsigned ints
+#define REG_SENSORS_1H       0x21  // up to 6 unsigned ints
+#define REG_SENSORS_2H       0x22  // up to 6 unsigned ints
 #define REG_SENSORS_ALL      0x28  // 8 unsigned ints
 
 #define M_OWN_ID 0x53
 //#define M_MAGIC_ID 0x4C
 
-#define SENS_SIZE 8
+#define SENS_SIZE 10
 #define SPEED_R_SZ 8
 #define V_NORM 10000
 
