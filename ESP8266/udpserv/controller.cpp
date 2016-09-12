@@ -98,20 +98,7 @@ uint8_t Controller::testConnection() {
 bool Controller::process(float yaw, uint32_t dt) {
   if(!pready) return false;
   curr_yaw=yaw;
-  
- // if(!getControllerStatus()) return false;
-
- //Serial.print(F("CTRL STAT: ")); Serial.print(sta[0]); Serial.print(F(" \t ")); Serial.println(sta[1]);
-
   if(!getActAdvance()) return false;
-
-/*
-  if(sta[1]) { // experimental
-    // Serial.print(F("CTRL STAT ALR: ")); Serial.print(sta[0]); Serial.print(F(" \t ")); Serial.println(sta[1]);
-    raiseFail(CTL_FAIL_ALR, sta[0], sta[1], 0, 0);
-    return false;
-  }
-*/
    
   if(abs(act_advance[0]-act_advance_0[0])>512 || abs(act_advance[1]-act_advance_0[1])>512) {
     
@@ -206,8 +193,24 @@ bool Controller::process(float yaw, uint32_t dt) {
       delta_pow=-(int16_t)((err_bearing_p*CfgDrv::Cfg.bear_pid.gain_p+err_bearing_d*CfgDrv::Cfg.bear_pid.gain_d+err_bearing_i*CfgDrv::Cfg.bear_pid.gain_i)/CfgDrv::Cfg.bear_pid.gain_div);
       
       int16_t cur_pow[2];
-      cur_pow[0]=base_pow+delta_pow;
-      cur_pow[1]=base_pow-delta_pow;
+      if(targ_speed) {
+        cur_pow[0]=base_pow+delta_pow;
+        cur_pow[1]=base_pow-delta_pow;
+      } else {
+        cur_pow[0]=base_pow+delta_pow;
+        cur_pow[1]=base_pow+delta_pow;
+        float a=targ_bearing-curr_yaw;
+        if(a>PI) a-=PI*2.0f;
+        else if(a<-PI) a+=PI*2.0f;    
+        if((a>0.01 && rot_speed<0) || (a<-0.01 && rot_speed>0)) { 
+          rot_speed=-rot_speed;
+          Serial.print(F("<< ROT >>"));     
+        }
+        if(fabs(a)<0.02) {
+          rot_speed=0;
+          Serial.print(F("!! ROT !!"));     
+        }
+      }
       
 /*
       int16_t ss=0;
