@@ -177,8 +177,8 @@ bool Controller::process(float yaw, uint32_t dt) {
       else if(err_bearing_d<-180) err_bearing_d+=360;
       // note: it should rather be (err_bearing_p-err_bearing_p_0)/dt; 
       // or if normed to 100ms: (int32_t)(err_bearing_p-err_bearing_p_0)*100/dt;
-
-      err_bearing_i=err_bearing_i+err_bearing_p;
+      if(targ_speed)
+        err_bearing_i=err_bearing_i+err_bearing_p;
       // note: it should rather be +err_bearing_p*dt; 
       // or if normed to 100ms: (int32_t)(err_bearing_p)*dt/100;
 
