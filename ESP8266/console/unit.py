@@ -62,8 +62,11 @@ class Unit:
         self.__r_x, self.__r_y = x, y # simulated crd
         self.isInside=self.map.isInsideTest(x+self.start[0], y+self.start[1]) is not None
 
-        print("Unit Mov: Rot %s Dist %s in %s s" %
-              (str(move_rot*180.0/math.pi), move_dist, str(round(timeit.default_timer() - start_time, 2))))
+        print("Unit Mov: Rot %s Dist %s (%s, %s, %s) vs (%s, %s, %s) in %s s" %
+              (str(move_rot*180.0/math.pi), move_dist,
+               x+self.map.start[0], y+self.map.start[1], angle,
+               self.x_mean, self.y_mean, self.a_mean,
+               str(round(timeit.default_timer() - start_time, 2))))
 
     def GetSim(self):
         return self.__r_x+self.start[0], self.__r_y+self.start[1], self.__angle

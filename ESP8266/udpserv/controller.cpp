@@ -102,7 +102,7 @@ bool Controller::process(float yaw, uint32_t dt) {
    
   if(abs(act_advance[0]-act_advance_0[0])>512 || abs(act_advance[1]-act_advance_0[1])>512) {
     
-        Serial.print(F("ADV=")); 
+        Serial.print(F("! ADV=")); 
         Serial.print(act_advance[0]); Serial.print(F("\t ")); Serial.println(act_advance[1]);
         Serial.print(F("\t ADV0=\t ")); 
         Serial.print(act_advance_0[0]); Serial.print(F("\t ")); Serial.println(act_advance_0[1]);
@@ -152,12 +152,14 @@ bool Controller::process(float yaw, uint32_t dt) {
   getActPower();
   getSensors();
 
-  if(dt>0 &&(targ_speed || rot_speed)) {
+  if(dt>0 && (targ_speed || rot_speed)) {
 
-    Serial.print(F("PCNT=")); Serial.print(pid_cnt); 
-    Serial.print(F("\t\t ADV=")); Serial.print(act_advance[0]); Serial.print(F("\t ")); Serial.print(act_advance[1]);
-    Serial.print(F("\t\t V=")); Serial.println(speed); 
-
+    Serial.print(F("PCNT=")); Serial.print(pid_cnt);  Serial.print(F("\t TRG=")); Serial.print(targ_bearing);  Serial.print(F("\t YAW=")); Serial.println(yaw);  
+    /*
+    Serial.print(F("PCNT=")); Serial.print(pid_cnt);  Serial.print(F("\t TRG=")); Serial.print(targ_bearing); 
+    Serial.print(F("\t ADV=")); Serial.print(act_advance[0]); Serial.print(F("\t ")); Serial.print(act_advance[1]);
+    Serial.print(F("\t V=")); Serial.println(speed); 
+*/
     if(pid_cnt>0) {
       
       int16_t limit=CfgDrv::Cfg.bear_pid.limit_i;
@@ -248,7 +250,9 @@ bool Controller::process(float yaw, uint32_t dt) {
  
       //yield();
 
-      Serial.print(F("BErr: ")); Serial.print(err_bearing_p); Serial.print(F("\t ")); Serial.print(err_bearing_d);  Serial.print(F("\t ")); Serial.print(err_bearing_i);
+      if(targ_speed) Serial.print(F("S BErr: ")); 
+      else Serial.print(F("R BErr: ")); 
+      Serial.print(err_bearing_p); Serial.print(F("\t ")); Serial.print(err_bearing_d);  Serial.print(F("\t ")); Serial.print(err_bearing_i);
       Serial.print(F("\t => ")); Serial.print(delta_pow); Serial.print(F("\t : ")); Serial.print(cur_pow[0]); Serial.print(F("\t : ")); Serial.println(cur_pow[1]); 
 
       yield();
@@ -372,7 +376,8 @@ bool Controller::startRotate(int16_t tspeed) {
     Serial.print(F("Start ROT <<")); 
     }
   else Serial.print(F("No ROT")); 
-  err_bearing_p_0=err_bearing_i=0;    
+  err_bearing_p_0=((curr_yaw-targ_bearing)*180.0f/PI);      
+  err_bearing_i=0;    
   base_pow=(int32_t)abs(rot_speed)*M_POW_NORM/M_SPEED_NORM; // temp
   delta_pow=0;  
   pid_cnt=0;    

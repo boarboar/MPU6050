@@ -2,6 +2,24 @@ import math
 import random
 import copy
 import timeit
+from operator import attrgetter
+import bisect
+
+class WeightedDistribution(object):
+    def __init__(self, state):
+        accum = 0.0
+        self.state = [p for p in state if p.w > 0]
+        self.distribution = []
+        for x in self.state:
+            accum += x.w
+            self.distribution.append(accum)
+
+    def pick(self):
+        try:
+            return self.state[bisect.bisect_left(self.distribution, random.uniform(0, 1))]
+        except IndexError:
+            # Happens when all particles are improbable w=0
+            return None
 
 class Particle:
     def __init__(self, x=150, y=200, a=0.0, w=1.0, id=0):
@@ -26,14 +44,17 @@ class PFilter:
         self.map=umap
         self.particles=[]
         self.fwd_noise=5
-        self.rot_noise=0.5
-        self.sense_noise=20
+        #self.rot_noise=0.5
+        self.rot_noise=0.05
+        #self.sense_noise=20
+        self.sense_noise=200
+
         self.gauss_denom=math.sqrt(2.0 * math.pi * (self.sense_noise ** 2))
         self.gauss_exp_denom=(self.sense_noise ** 2) * 2.0
 
     def InitParticles(self):
-        N_D=20
-        #N_D=12
+        #N_D=20
+        N_D=4
         W=1.0/(N_D*N_D)
         #LOC_VAR=150
         LOC_VAR=100
@@ -48,6 +69,12 @@ class PFilter:
                 y=(random.random()-0.5)*LOC_VAR+self.map.start[1]
                 self.particles.append(Particle(a=a, x=x, y=y, id=i*N_D+j, w=W))
 
+    def printParticles(self, header=None):
+        if header is not None: print(header)
+        psorted=sorted(self.particles, key=attrgetter('w'), reverse=True)
+        for p in psorted :
+            print("C=(%s,%s), A=%s, W=%s" % (round(p.x,0), round(p.y,0), round(p.a,0), p.w) )
+
     def updateParticles(self, mov, rot, scans, scan_angles, scan_max_dist, loc_x, loc_y):
         if len(self.particles)==0 : return
 
@@ -58,22 +85,40 @@ class PFilter:
             scan_angles_sin.append(math.sin(a))
 
 
+        self.printParticles("Before")
+
         #print (self.map.getSortedWalls((0,0)))
 
-        sorted_walls_base=self.map.getSortedWalls((loc_x, loc_y), scan_max_dist)
+        #sorted_walls_base=self.map.getSortedWalls((loc_x, loc_y), scan_max_dist)
+
+
         start_time = timeit.default_timer()
         for p in self.particles :
+            sorted_walls_base=self.map.getSortedWalls((loc_x, loc_y), scan_max_dist)
             p.move_d(mov+random.gauss(0, self.fwd_noise), rot+random.gauss(0, self.rot_noise))
             if self.map.isInsideTest(p.x, p.y) is not None :
                 sorted_walls=self.map.getReSortedWalls(sorted_walls_base, (p.x, p.y), scan_max_dist)
-                #self.updateParticleProbabilities(p, scans, scan_angles, scan_max_dist, sorted_walls)
-                self.updateParticleProbabilities1(p, scans, scan_angles_cos, scan_angles_sin, scan_max_dist, sorted_walls)
+                ############ just for tests, moved it here
+                self.updateParticleProbabilities(p, scans, scan_angles, scan_max_dist, sorted_walls)
+                ############ just for tests, replaced with old version
+                #self.updateParticleProbabilities1(p, scans, scan_angles_cos, scan_angles_sin, scan_max_dist, sorted_walls)
             else : p.w=0.0
 
         t=timeit.default_timer() - start_time
         print ('Particle update (%s) in %s s, %s per particle' %
                (len(self.particles), round(t, 2), round(t/len(self.particles), 4))
                )
+
+        wsum=sum(p.w for p in self.particles)
+        if wsum>0 :
+            for p in self.particles :
+                p.w = p.w/wsum
+
+        self.printParticles("After W update")
+        #mw=min(p.w for p in self.particles)
+        #for p in self.particles : p.w=math.log10(p.w/mw)
+        #self.printParticles("After W log")
+
 
         mw=max(p.w for p in self.particles)
 #        if self.__move < 5 or self.__move%5==0 :
@@ -92,13 +137,28 @@ class PFilter:
             self.particles = p3
             #print self.particles
 
+
+        """
+        dist = WeightedDistribution(self.particles)
+        p3 = []
+        for _ in self.particles:
+            p = dist.pick()
+            if p is None:  # No pick b/c all totally improbable
+                pass
+            else:
+                p3.append(copy.copy(p))
+        self.particles = p3
+        """
+
+        self.printParticles("After Rsample")
+
         #normalize
         wsum=sum(p.w for p in self.particles)
         if wsum>0 :
             for p in self.particles :
                 p.w = p.w/wsum
 
-        #print self.particles
+        self.printParticles("Normed")
         #self.x_mean, self.y_mean, self.p_var, self.a_mean, self.a_var = self.getMeanDistribution()
 
     def getMeanDistribution(self):
@@ -181,8 +241,12 @@ class PFilter:
             else :
                 dist2=math.sqrt((intrs[0]-p0[0])*(intrs[0]-p0[0])+(intrs[1]-p0[1])*(intrs[1]-p0[1]))
             #scan_dist.append(dist2)
+
             prob*=self.Gaussian1(dist2, meas[i], scan_max_dist)
+            #prob*=self.Gaussian(dist2, self.sense_noise, meas[i], scan_max_dist)
+
         p.w=prob
+        #p.w=math.log10(prob)
         #print(scan_dist)
 
     """
