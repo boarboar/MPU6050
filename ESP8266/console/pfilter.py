@@ -54,7 +54,7 @@ class PFilter:
 
     def InitParticles(self):
         #N_D=20
-        N_D=4
+        N_D=10
         W=1.0/(N_D*N_D)
         #LOC_VAR=150
         LOC_VAR=100

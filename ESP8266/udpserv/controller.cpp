@@ -97,6 +97,7 @@ uint8_t Controller::testConnection() {
 
 bool Controller::process(float yaw, uint32_t dt) {
   if(!pready) return false;
+  float delta_yaw=yaw - curr_yaw;
   curr_yaw=yaw;
   if(!getActAdvance()) return false;
    
@@ -154,7 +155,7 @@ bool Controller::process(float yaw, uint32_t dt) {
 
   if(dt>0 && (targ_speed || rot_speed)) {
 
-    Serial.print(F("PCNT=")); Serial.print(pid_cnt);  Serial.print(F("\t TRG=")); Serial.print(targ_bearing);  Serial.print(F("\t YAW=")); Serial.println(yaw);  
+    //Serial.print(F("PCNT=")); Serial.print(pid_cnt);  Serial.print(F("\t TRG=")); Serial.print(targ_bearing);  Serial.print(F("\t YAW=")); Serial.println(yaw);  
     /*
     Serial.print(F("PCNT=")); Serial.print(pid_cnt);  Serial.print(F("\t TRG=")); Serial.print(targ_bearing); 
     Serial.print(F("\t ADV=")); Serial.print(act_advance[0]); Serial.print(F("\t ")); Serial.print(act_advance[1]);
@@ -199,8 +200,8 @@ bool Controller::process(float yaw, uint32_t dt) {
         cur_pow[0]=base_pow+delta_pow;
         cur_pow[1]=base_pow-delta_pow;
       } else {
-        cur_pow[0]=base_pow+delta_pow;
-        cur_pow[1]=base_pow+delta_pow;
+        cur_pow[0]=base_pow-delta_pow;
+        cur_pow[1]=base_pow-delta_pow;
         float a=targ_bearing-curr_yaw;
         if(a>PI) a-=PI*2.0f;
         else if(a<-PI) a+=PI*2.0f;    
