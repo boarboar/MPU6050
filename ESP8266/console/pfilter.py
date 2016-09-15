@@ -98,9 +98,9 @@ class PFilter:
             p.move_d(mov+random.gauss(0, self.fwd_noise), rot+random.gauss(0, self.rot_noise))
             if self.map.isInsideTest(p.x, p.y) is not None :
                 sorted_walls=self.map.getReSortedWalls(sorted_walls_base, (p.x, p.y), scan_max_dist)
-                #self.updateParticleProbabilities(p, scans, scan_angles, scan_max_dist, sorted_walls)
+                self.updateParticleProbabilities(p, scans, scan_angles, scan_max_dist, sorted_walls)
                 ############ just for tests, replaced with old version
-                self.updateParticleProbabilities1(p, scans, scan_angles_cos, scan_angles_sin, scan_max_dist, sorted_walls)
+                #self.updateParticleProbabilities1(p, scans, scan_angles_cos, scan_angles_sin, scan_max_dist, sorted_walls)
             else : p.w=0.0
 
         t=timeit.default_timer() - start_time
