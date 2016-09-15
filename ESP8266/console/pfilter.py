@@ -54,7 +54,7 @@ class PFilter:
 
     def InitParticles(self):
         #N_D=20
-        N_D=10
+        N_D=12
         W=1.0/(N_D*N_D)
         #LOC_VAR=150
         LOC_VAR=100
@@ -85,23 +85,22 @@ class PFilter:
             scan_angles_sin.append(math.sin(a))
 
 
-        self.printParticles("Before")
+        #self.printParticles("Before")
 
         #print (self.map.getSortedWalls((0,0)))
 
-        #sorted_walls_base=self.map.getSortedWalls((loc_x, loc_y), scan_max_dist)
+        sorted_walls_base=self.map.getSortedWalls((loc_x, loc_y), scan_max_dist)
 
 
         start_time = timeit.default_timer()
         for p in self.particles :
-            sorted_walls_base=self.map.getSortedWalls((loc_x, loc_y), scan_max_dist)
+            #sorted_walls_base=self.map.getSortedWalls((loc_x, loc_y), scan_max_dist)
             p.move_d(mov+random.gauss(0, self.fwd_noise), rot+random.gauss(0, self.rot_noise))
             if self.map.isInsideTest(p.x, p.y) is not None :
                 sorted_walls=self.map.getReSortedWalls(sorted_walls_base, (p.x, p.y), scan_max_dist)
-                ############ just for tests, moved it here
-                self.updateParticleProbabilities(p, scans, scan_angles, scan_max_dist, sorted_walls)
+                #self.updateParticleProbabilities(p, scans, scan_angles, scan_max_dist, sorted_walls)
                 ############ just for tests, replaced with old version
-                #self.updateParticleProbabilities1(p, scans, scan_angles_cos, scan_angles_sin, scan_max_dist, sorted_walls)
+                self.updateParticleProbabilities1(p, scans, scan_angles_cos, scan_angles_sin, scan_max_dist, sorted_walls)
             else : p.w=0.0
 
         t=timeit.default_timer() - start_time
@@ -114,11 +113,7 @@ class PFilter:
             for p in self.particles :
                 p.w = p.w/wsum
 
-        self.printParticles("After W update")
-        #mw=min(p.w for p in self.particles)
-        #for p in self.particles : p.w=math.log10(p.w/mw)
-        #self.printParticles("After W log")
-
+        #self.printParticles("After W update")
 
         mw=max(p.w for p in self.particles)
 #        if self.__move < 5 or self.__move%5==0 :
@@ -150,7 +145,7 @@ class PFilter:
         self.particles = p3
         """
 
-        self.printParticles("After Rsample")
+        #self.printParticles("After Rsample")
 
         #normalize
         wsum=sum(p.w for p in self.particles)
@@ -158,7 +153,7 @@ class PFilter:
             for p in self.particles :
                 p.w = p.w/wsum
 
-        self.printParticles("Normed")
+        #self.printParticles("Normed")
         #self.x_mean, self.y_mean, self.p_var, self.a_mean, self.a_var = self.getMeanDistribution()
 
     def getMeanDistribution(self):

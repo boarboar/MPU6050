@@ -59,7 +59,8 @@ bool Controller::init() {
 }
 
 void Controller::resetIntegrator() {
-  dist=angle=0.0f;
+  dist=0.0f;
+  //angle=0.0f;
   r[0]=r[1]=0.0f;
   speed=0;
   for(int i=0; i<SPEED_R_SZ; i++) speed_r[i]=0;
@@ -118,16 +119,18 @@ bool Controller::process(float yaw, uint32_t dt) {
     return false;
   }
 
-  float mov, rot;
+  float mov;
   float dist0=dist;
   dist=(float)(act_advance[0]+act_advance[1])*0.5f; // in mm;
   mov=dist-dist0;
   run_dist+=fabs(mov);
-
+/*
+  float rot;  
   rot=(float)((act_advance[0]-act_advance_0[0])-(act_advance[1]-act_advance_0[1]))/(float)WHEEL_BASE_MM;  
   angle+=rot;  
   if(angle>PI) angle-=PI*2.0f;
   else if(angle<-PI) angle+=PI*2.0f;
+*/
 
   act_advance_0[0]=act_advance[0];
   act_advance_0[1]=act_advance[1];
@@ -136,8 +139,14 @@ bool Controller::process(float yaw, uint32_t dt) {
   r[0]+=mov*sin(yaw);
   r[1]+=mov*cos(yaw);
 
-  //differnitaite
-  if(dt) {
+  getSensors();
+  //getActPower();
+
+  if(!dt) return true;
+  
+  
+  {
+    //differnitaite
     // LPF
     int16_t raw_speed=(int16_t)(mov/(float)dt*1000.0f);
     int16_t sum_speed=0;
@@ -150,10 +159,8 @@ bool Controller::process(float yaw, uint32_t dt) {
     speed=sum_speed/SPEED_R_SZ;
   }
 
-  getActPower();
-  getSensors();
-
-  if(dt>0 && (targ_speed || rot_speed)) {
+  
+  if((targ_speed || rot_speed)) { // movement
 
     //Serial.print(F("PCNT=")); Serial.print(pid_cnt);  Serial.print(F("\t TRG=")); Serial.print(targ_bearing);  Serial.print(F("\t YAW=")); Serial.println(yaw);  
     /*
@@ -167,55 +174,49 @@ bool Controller::process(float yaw, uint32_t dt) {
       int16_t err_bearing_p, err_bearing_d;
 
       //float err_bearing_p, err_bearing_d;
-      err_bearing_p = ((yaw-targ_bearing)*180.0f/PI);
-      if(targ_speed<0) err_bearing_p=-err_bearing_p; 
-      
+      err_bearing_p = (int16_t)((yaw-targ_bearing)*180.0f/PI);
       if(err_bearing_p>180) err_bearing_p-=360;
       else if(err_bearing_p<-180) err_bearing_p+=360;
+      
+      if(targ_speed) { // straight 
+        if(targ_speed<0) err_bearing_p=-err_bearing_p;               
+        err_bearing_i=err_bearing_i+err_bearing_p;
+        // note: it should rather be +err_bearing_p*dt; 
+        // or if normed to 100ms: (int32_t)(err_bearing_p)*dt/100;
+        if(err_bearing_i>limit) err_bearing_i=limit;
+        if(err_bearing_i<-limit) err_bearing_i=-limit;      
+        if(run_dist>=100) //100mm
+          qsum_err+=err_bearing_p*err_bearing_p;
+      } else { // rot
+        if((err_bearing_p<0 && rot_speed<0) || (err_bearing_p>0 && rot_speed>0)) { 
+          rot_speed=-rot_speed;
+          Serial.print(F("<< ROT >>"));     
+        }
+        if(err_bearing_p<0) err_bearing_p=-err_bearing_p;        
+        if(err_bearing_p<5) { // at the moment - 5 degrees
+          rot_speed=0;
+          Serial.print(F("!! ROT !!"));     
+        }        
+
+      }
       
       err_bearing_d=err_bearing_p-err_bearing_p_0;      
       if(err_bearing_d>180) err_bearing_d-=360;
       else if(err_bearing_d<-180) err_bearing_d+=360;
       // note: it should rather be (err_bearing_p-err_bearing_p_0)/dt; 
       // or if normed to 100ms: (int32_t)(err_bearing_p-err_bearing_p_0)*100/dt;
-      if(targ_speed)
-        err_bearing_i=err_bearing_i+err_bearing_p;
-      // note: it should rather be +err_bearing_p*dt; 
-      // or if normed to 100ms: (int32_t)(err_bearing_p)*dt/100;
+        
 
-      if(err_bearing_i>limit) err_bearing_i=limit;
-      if(err_bearing_i<-limit) err_bearing_i=-limit;
       err_bearing_p_0=err_bearing_p;
-
-      if(run_dist>=100) //100mm
-        qsum_err+=err_bearing_p*err_bearing_p;
-
       // use 32 bit math?
-      //int16_t s=-(int16_t)((err_bearing_p*CfgDrv::Cfg.bear_pid.gain_p+err_bearing_d*CfgDrv::Cfg.bear_pid.gain_d+err_bearing_i*CfgDrv::Cfg.bear_pid.gain_i)/CfgDrv::Cfg.bear_pid.gain_div);
-      //delta_pow=s;
       delta_pow=-(int16_t)((err_bearing_p*CfgDrv::Cfg.bear_pid.gain_p+err_bearing_d*CfgDrv::Cfg.bear_pid.gain_d+err_bearing_i*CfgDrv::Cfg.bear_pid.gain_i)/CfgDrv::Cfg.bear_pid.gain_div);
       
       int16_t cur_pow[2];
       if(targ_speed) {
         cur_pow[0]=base_pow+delta_pow;
         cur_pow[1]=base_pow-delta_pow;
-      } else {
-        cur_pow[0]=base_pow-delta_pow;
-        cur_pow[1]=base_pow-delta_pow;
-        float a=targ_bearing-curr_yaw;
-        if(a>PI) a-=PI*2.0f;
-        else if(a<-PI) a+=PI*2.0f;    
-        if((a>0.01 && rot_speed<0) || (a<-0.01 && rot_speed>0)) { 
-          rot_speed=-rot_speed;
-          Serial.print(F("<< ROT >>"));     
-        }
-        if(fabs(a)<0.02) {
-          rot_speed=0;
-          Serial.print(F("!! ROT !!"));     
-        }
-      }
-      
-/*
+
+        /*
       int16_t ss=0;
       
       if(pid_cnt>=(SPEED_R_SZ*3/2)) {
@@ -236,6 +237,25 @@ bool Controller::process(float yaw, uint32_t dt) {
       cur_pow[0]+=ss;
       cur_pow[1]+=ss;
   */
+  
+      } else {
+        cur_pow[0]=base_pow-delta_pow;
+        cur_pow[1]=base_pow-delta_pow;
+        /*
+        float a=targ_bearing-curr_yaw;
+        if(a>PI) a-=PI*2.0f;
+        else if(a<-PI) a+=PI*2.0f;    
+        if((a>0.01 && rot_speed<0) || (a<-0.01 && rot_speed>0)) { 
+          rot_speed=-rot_speed;
+          Serial.print(F("<< ROT >>"));     
+        }
+        if(fabs(a)<0.02) {
+          rot_speed=0;
+          Serial.print(F("!! ROT !!"));     
+        }
+        */
+      }
+      
       // what if reverse or rot ???????
       for(int i=0; i<2; i++) {
         if(cur_pow[i]<M_POW_MIN) cur_pow[i]=M_POW_MIN; 
@@ -247,7 +267,7 @@ bool Controller::process(float yaw, uint32_t dt) {
       else 
         setPowerRotate(rot_speed, cur_pow);      
       //Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_EVENT, CTL_LOG_PID, dt, round(err_bearing_p), round(err_bearing_d), round(err_bearing_i), s, cur_pow[0], cur_pow[1]);  
-      Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_EVENT, CTL_LOG_PID, dt, err_bearing_p, err_bearing_d, err_bearing_i, delta_pow, cur_pow[0], cur_pow[1]);  
+      Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_EVENT, CTL_LOG_PID, dt, err_bearing_p, err_bearing_d, err_bearing_i, delta_pow, cur_pow[0], cur_pow[1], rot_speed);  
  
       //yield();
 
@@ -258,10 +278,9 @@ bool Controller::process(float yaw, uint32_t dt) {
 
       yield();
     
-    } 
-    pid_cnt++;    
-    
-  }
+    } // pid_cnt
+    pid_cnt++;        
+  } 
    
 /*
   Serial.print(F("CTRL: ")); Serial.print(mov/10.0f); Serial.print(F(" \t ")); Serial.print(yaw);
@@ -284,7 +303,7 @@ int16_t *Controller::getStoredSensors() { return sensors;}
 //float Controller::getRotation() { return rot;}
 float Controller::getDistance() { return dist*0.1f;} //cm
 int16_t Controller::getSpeed() { return speed/10;} // cm/s
-float Controller::getAngle() { return angle;}
+//float Controller::getAngle() { return angle;}
 //float *Controller::getCoords() { return r;}
 float Controller::getX() { return r[0]*0.1f;}
 float Controller::getY() { return r[1]*0.1f;}

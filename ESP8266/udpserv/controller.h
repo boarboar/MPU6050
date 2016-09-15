@@ -54,7 +54,7 @@ public:
   //float getRotation();
   float getDistance();
   int16_t getSpeed();
-  float getAngle();
+  //float getAngle();
   float getX();
   float getY();
   bool getActPower();   
@@ -101,7 +101,7 @@ private:
   int16_t rot_speed; //mm_s
   
   float dist;
-  float angle;
+  //float angle;
   float curr_yaw;
   float r[2];
   float targ_bearing;
