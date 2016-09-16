@@ -43,9 +43,10 @@ class PFilter:
     def __init__(self, umap):
         self.map=umap
         self.particles=[]
-        self.fwd_noise=5
-        #self.rot_noise=0.5
-        self.rot_noise=0.05
+        #self.fwd_noise=5
+        self.fwd_noise=20
+        self.rot_noise=0.1
+        #self.rot_noise=0.05
         #self.sense_noise=20
         self.sense_noise=200
 
@@ -54,7 +55,7 @@ class PFilter:
 
     def InitParticles(self):
         #N_D=20
-        N_D=12
+        N_D=14
         W=1.0/(N_D*N_D)
         #LOC_VAR=150
         LOC_VAR=100

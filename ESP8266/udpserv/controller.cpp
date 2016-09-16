@@ -190,12 +190,14 @@ bool Controller::process(float yaw, uint32_t dt) {
       } else { // rot
         if((err_bearing_p<0 && rot_speed<0) || (err_bearing_p>0 && rot_speed>0)) { 
           rot_speed=-rot_speed;
-          Serial.print(F("<< ROT >>"));     
+          Serial.print(F("<< ROT >>"));  
+          Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_EVENT, CTL_LOG_PID+1, rot_speed);     
         }
         if(err_bearing_p<0) err_bearing_p=-err_bearing_p;        
         if(err_bearing_p<5) { // at the moment - 5 degrees
           rot_speed=0;
           Serial.print(F("!! ROT !!"));     
+          Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_EVENT, CTL_LOG_PID+2);     
         }        
 
       }
@@ -264,8 +266,10 @@ bool Controller::process(float yaw, uint32_t dt) {
       }
       if(targ_speed)
         setPowerStraight(targ_speed, cur_pow);      
-      else 
-        setPowerRotate(rot_speed, cur_pow);      
+      else {
+        if(!rot_speed) startRotate(0); // stop rotate
+        else setPowerRotate(rot_speed, cur_pow);      
+      }
       //Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_EVENT, CTL_LOG_PID, dt, round(err_bearing_p), round(err_bearing_d), round(err_bearing_i), s, cur_pow[0], cur_pow[1]);  
       Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_EVENT, CTL_LOG_PID, dt, err_bearing_p, err_bearing_d, err_bearing_i, delta_pow, cur_pow[0], cur_pow[1]);  
  
@@ -279,6 +283,9 @@ bool Controller::process(float yaw, uint32_t dt) {
       yield();
     
     } // pid_cnt
+    else 
+      Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_EVENT, CTL_LOG_PID, dt, err_bearing_p_0);  
+      
     pid_cnt++;        
   } 
    
@@ -389,13 +396,13 @@ bool Controller::startRotate(int16_t tspeed) {
   else if(a<-PI) a+=PI*2.0f;    
   if(a>0.01) { 
     rot_speed=tspeed;  
-    Serial.print(F("Start ROT >>"));     
+    Serial.println(F("Start ROT >>"));     
   }
   else if(a<-0.01) { 
     rot_speed=-tspeed;
-    Serial.print(F("Start ROT <<")); 
+    Serial.println(F("Start ROT <<")); 
     }
-  else Serial.print(F("No ROT")); 
+  else Serial.println(F("No ROT")); 
   err_bearing_p_0=((curr_yaw-targ_bearing)*180.0f/PI);      
   err_bearing_i=0;    
   base_pow=(int32_t)abs(rot_speed)*M_POW_NORM/M_SPEED_NORM; // temp
