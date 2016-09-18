@@ -283,9 +283,12 @@ bool Controller::process(float yaw, uint32_t dt) {
       yield();
     
     } // pid_cnt
-    else 
+    else {
+      if(targ_speed) Serial.print(F("S BErr: ")); 
+      else Serial.print(F("R BErr: ")); 
+      Serial.println(err_bearing_p_0); 
       Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_EVENT, CTL_LOG_PID, dt, err_bearing_p_0);  
-      
+    }
     pid_cnt++;        
   } 
    
@@ -402,8 +405,10 @@ bool Controller::startRotate(int16_t tspeed) {
     rot_speed=-tspeed;
     Serial.println(F("Start ROT <<")); 
     }
-  else Serial.println(F("No ROT")); 
-  err_bearing_p_0=((curr_yaw-targ_bearing)*180.0f/PI);      
+  else Serial.println(F("No ROT"));
+  if(tspeed==0)  Serial.println(F("Stop RROT"));
+  err_bearing_p_0=((curr_yaw-targ_bearing)*180.0f/PI);     
+  if(err_bearing_p_0<0) err_bearing_p_0=-err_bearing_p_0; 
   err_bearing_i=0;    
   base_pow=(int32_t)abs(rot_speed)*M_POW_NORM/M_SPEED_NORM; // temp
   delta_pow=0;  
