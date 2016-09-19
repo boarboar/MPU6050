@@ -43,8 +43,8 @@ class MyForm(wx.Frame):
         self.btn_st = wx.Button(panel, wx.ID_ANY, 'Status')
         self.btn_pos = wx.Button(panel, wx.ID_ANY, 'Pos')
         self.btn_upl = wx.Button(panel, wx.ID_ANY, 'Upload')
-        self.btn_rst_mpu = wx.Button(panel, wx.ID_ANY, 'ResetMPU')
-        self.btn_rst_int = wx.Button(panel, wx.ID_ANY, 'ResetINT')
+        self.btn_rst_mpu = wx.Button(panel, wx.ID_ANY, 'ResetIMU')
+        self.btn_rst_int = wx.Button(panel, wx.ID_ANY, 'ResetCTRL')
         #self.btn_hist = wx.Button(panel, wx.ID_ANY, 'Measmts')
         #self.btn_dump = wx.Button(panel, wx.ID_ANY, 'Dump')
         self.btn_sim = wx.Button(panel, wx.ID_ANY, 'Track')
@@ -60,6 +60,7 @@ class MyForm(wx.Frame):
         self.btn_map_up = wx.Button(panel, wx.ID_ANY, u"\u25B2", size=( bsz,  bsz))
         self.btn_map_dn = wx.Button(panel, wx.ID_ANY, u"\u25BC", size=( bsz,  bsz))
         self.btn_map_fit = wx.Button(panel, wx.ID_ANY, u"\u25AD", size=( bsz,  bsz))
+        self.btn_map_ref = wx.ToggleButton(panel, wx.ID_ANY, u"\u2020", size=( bsz,  bsz))
         self.btn_map_pos = wx.ToggleButton(panel, wx.ID_ANY, u"\u25C9", size=( bsz,  bsz))
         self.btn_map_targ = wx.ToggleButton(panel, wx.ID_ANY, u"\u2605", size=( bsz,  bsz))
 
@@ -106,10 +107,13 @@ class MyForm(wx.Frame):
         self.Bind(wx.EVT_BUTTON, lambda evt, move='dn': self.map.onButtonMove(evt, move), self.btn_map_dn)
         self.Bind(wx.EVT_BUTTON, self.map.onFit, self.btn_map_fit)
         self.Bind(wx.EVT_TOGGLEBUTTON,
-                  lambda evt : self.map.onPosToggle(evt, 1, self.btn_map_pos.GetValue()) and self.btn_map_targ.SetValue(False),
+                  lambda evt : self.map.onPosToggle(evt, 0, self.btn_map_ref.GetValue()) and self.ToggleGroup1(self.btn_map_ref),
+                  self.btn_map_ref)
+        self.Bind(wx.EVT_TOGGLEBUTTON,
+                  lambda evt : self.map.onPosToggle(evt, 1, self.btn_map_pos.GetValue())  and self.ToggleGroup1(self.btn_map_pos),
                   self.btn_map_pos)
         self.Bind(wx.EVT_TOGGLEBUTTON,
-                  lambda evt : self.map.onPosToggle(evt, 2, self.btn_map_targ.GetValue()) and self.btn_map_pos.SetValue(False),
+                  lambda evt : self.map.onPosToggle(evt, 2, self.btn_map_targ.GetValue())  and self.ToggleGroup1(self.btn_map_targ),
                   self.btn_map_targ)
         self.txt_cmd.Bind(wx.EVT_KEY_DOWN, self.onEnterCmdText)
 
@@ -171,6 +175,7 @@ class MyForm(wx.Frame):
         sizer_map_ctrls.Add(self.btn_map_up, 0, wx.LEFT|wx.BOTTOM, 0)
         sizer_map_ctrls.Add(self.btn_map_dn, 0, wx.LEFT|wx.BOTTOM, 0)
         sizer_map_ctrls.Add(self.btn_map_fit, 0, wx.LEFT|wx.BOTTOM, 0)
+        sizer_map_ctrls.Add(self.btn_map_ref, 0, wx.LEFT|wx.BOTTOM, 0)
         sizer_map_ctrls.Add(self.btn_map_pos, 0, wx.LEFT|wx.BOTTOM, 0)
         sizer_map_ctrls.Add(self.btn_map_targ, 0, wx.LEFT|wx.BOTTOM, 0)
 
@@ -203,6 +208,10 @@ class MyForm(wx.Frame):
         panel.Layout()
         sizer.Fit(panel)
 
+    def ToggleGroup1(self, sel):
+        group = [self.btn_map_ref, self.btn_map_pos, self.btn_map_targ]
+        for but in group :
+            if but != sel : but.SetValue(False)
 
     def AddLine(self, msg, color=None) :
         logging.info(msg)
@@ -257,12 +266,12 @@ class MyForm(wx.Frame):
         self.controller.reqUpload()
 
     def onResetMPUReq(self, event):
-        self.controller.reqResetMPU(action="MPU", pos=self.map.start)
+        self.controller.reqResetMPU(action="MPU", pos=self.map.init_start)
         self.map.Reset()
         self.map.UpdateDrawing()
 
     def onResetMPUIntReq(self, event):
-        self.controller.reqResetMPU(action="MPU_INT") # reset integrator
+        self.controller.reqResetMPU(action="MPU_INT", pos=self.map.init_start) # reset integrator
         self.map.Reset()
         self.map.UpdateDrawing()
 

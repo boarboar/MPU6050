@@ -66,8 +66,8 @@ class PFilter:
         for i in range(N_D) :
             for j in range(N_D) :
                 a=(random.random()-0.5)*ANG_VAR*2
-                x=(random.random()-0.5)*LOC_VAR+self.map.start[0]
-                y=(random.random()-0.5)*LOC_VAR+self.map.start[1]
+                x=(random.random()-0.5)*LOC_VAR+self.map.init_start[0]
+                y=(random.random()-0.5)*LOC_VAR+self.map.init_start[1]
                 self.particles.append(Particle(a=a, x=x, y=y, id=i*N_D+j, w=W))
 
     def printParticles(self, header=None):

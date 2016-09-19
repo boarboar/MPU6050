@@ -83,9 +83,13 @@ class MapPanel(wx.Window, UnitMap):
                 #print("Start")
                 self.SetStartPoint(self.tm(X, Y))
                 self.UpdateDrawing()
-            else :
+            elif self.__pos_set_end==2:
                 #print("Target")
                 self.SetTargetPoint(self.tm(X, Y))
+                self.UpdateDrawing()
+            elif self.__pos_set_end==0:
+                #print("Reference")
+                self.init_start= self.tm(X, Y)
                 self.UpdateDrawing()
         self.__dragged=False
         event.Skip()
@@ -134,7 +138,8 @@ class MapPanel(wx.Window, UnitMap):
     def Reset(self):
         #self.InitUnitPos()
         if self.__controller==None : return
-        self.__controller.unit.InitUnitPos(self.start)
+        #self.__controller.unit.InitUnitPos(self.start)
+        self.__controller.unit.InitUnitPos(self.init_start)
         self.__controller.pfilter.InitParticles()
 
     def Scale(self, scale_factor):
@@ -190,6 +195,7 @@ class MapPanel(wx.Window, UnitMap):
         dc.SetBackgroundMode(wx.SOLID)
         dc.SetBrush(wx.Brush(wx.BLUE))
         dc.SetPen(wx.Pen(wx.BLACK, 1))
+
         planner=self.__controller.planner
         for step in planner.path :
             cell=planner.grid[step[0]][step[1]]
@@ -236,6 +242,15 @@ class MapPanel(wx.Window, UnitMap):
             p0=p
 
     def DrawAreas(self, dc):
+
+
+       # reference
+        dc.SetPen(wx.Pen(wx.BLACK, 1))
+        #dc.DrawLinePoint(self.tc(self.init_start[0], self.init_start[1]), self.tc(self.init_start[0]+10, self.init_start[1]))
+        #dc.DrawLinePoint(self.tc(self.init_start[0], self.init_start[1]), self.tc(self.init_start[0], self.init_start[1]+10))
+        dc.DrawPolygon([self.tc(self.init_start[0], self.init_start[1]),
+                       self.tc(self.init_start[0]+10, self.init_start[1]),
+                       self.tc(self.init_start[0], self.init_start[1]+10)])
 
         dc.SetTextForeground(wx.BLACK)
         dc.SetTextBackground(wx.WHITE)

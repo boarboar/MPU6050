@@ -242,7 +242,9 @@ void loop()
       case REG_START:     
         if(sp.p[0])  {
           ST_SET_START_ON();
-          //uscount=M_SENS_CNT-1;
+          act_adv_accu_mm[0]=0;
+          act_adv_accu_mm[1]=0;
+          // reset counters
           Serial.println("Start"); 
         }  
         break;
@@ -269,7 +271,6 @@ void startDrivePow() {
   
   uint8_t chg=0;
   uint8_t new_dir=0;
-  //Serial.print("St drv pow: "); 
    
   for(int i=0; i<2; i++) {
     if(targ_new_param[i]==0) new_dir=0;
@@ -283,31 +284,12 @@ void startDrivePow() {
     
     drv_dir[i] = new_dir;
     cur_power[i]=targ_new_param[i];
-    targ_new_param[i]=0;
-    
-    /*  
-    Serial.print(i==0 ? "\t L: " : "\t R: ");
-    //Serial.print(changeDir ? " RST" : " PID"); Serial.print(", ");
-    Serial.print(drv_dir[i]); Serial.print("\t "); Serial.print(cur_power[i]);
-    Serial.print("\t ;"); 
-    */
+    targ_new_param[i]=0;    
   }
   
    if(chg || !ST_IS_DRIVING()) {     
-    //readEnc(0);
     Drive(drv_dir[0], cur_power[0], drv_dir[1], cur_power[1]); 
     ST_SET_DRIVE_ON();
-    /*
-    //Serial.print(" >>RST");    
-    for(int i=0; i<2; i++) {
-      Serial.print(i==0 ? "\t L: " : "\t R: ");
-      //Serial.print(changeDir ? " RST" : " PID"); Serial.print(", ");
-      //Serial.print(drv_dir[i]); Serial.print("\t "); 
-      Serial.print(cur_power[i]);
-      Serial.print("\t ;"); 
-    }
-    Serial.println();
-    */
    }  
 }
 
@@ -405,59 +387,6 @@ void Drive_s1(uint8_t dir, uint8_t pow, int16_t p_en, uint8_t p1)
 }
 
 /*
-void readUSDist() {
-  if(sens_step==0) {
-    if(uscount==0) {
-      Serial.print("S0 "); Serial.print(sservo_pos); Serial.print("\t "); Serial.println(sservo_step);
-
-      if((sservo_step>0 && sservo_pos>=SERVO_NSTEPS) || (sservo_step<0 && sservo_pos<=-SERVO_NSTEPS)) sservo_step=-sservo_step;
-      sservo_pos+=sservo_step;
-      int16_t sservo_angle=90-SERVO_ZERO_SHIFT+sservo_pos*SERVO_STEP;
-      sservo.write(sservo_angle);
-      Serial.print("S1 "); Serial.print(sservo_pos); Serial.print("\t "); Serial.println(sservo_step);
-#ifdef _US_DEBUG_      
-      Serial.print("Servo "); Serial.println(sservo_pos);
-      for(int i=0; i<M_SENS_N; i++) { Serial.print(sens[i]); Serial.print("\t "); }
-      Serial.println();
-#endif    
-    } else {
-#ifdef _US_DEBUG_      
-      Serial.println("Servo wait");
-#endif          
-    }
-    uscount++;
-    if(uscount<M_SENS_CNT) return;
-    uscount=0;
-  } else {
-    uint8_t out_port=sens_step==1 ? US_1_OUT : US_2_OUT;
-    uint8_t in_port=sens_step==1 ? US_1_IN : US_2_IN;
-    if(digitalRead(in_port)==HIGH) {
-#ifdef _US_DEBUG_            
-      Serial.print("US read abort: "); Serial.println(sens_step);      
-#endif
-      //ignore=true;
-      return; // TODO reset here ?
-    }
-    digitalWrite(out_port, LOW);
-    delayMicroseconds(2); // or 5?
-    digitalWrite(out_port, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(out_port, LOW);
-  
-    // actual constant should be 58.138
-    int16_t tmp =(int16_t)(pulseIn(in_port, HIGH, 40000)/58);  //play with timing ?
-    if(tmp==0) tmp=-1;
-    int8_t current_sens=-sservo_pos+1+(sens_step-1)*3;
-#ifdef _US_DEBUG_  
-    Serial.print(current_sens); Serial.print("\t "); Serial.println(tmp);
-#endif  
-
-    sens[current_sens] = tmp;
-  }
- sens_step=(sens_step+1)%3;  
-}
-*/
-/*
 N=6:  (NSTEPS=1)
       Sens_s |
 Servo_p      | 0  | 1  |
@@ -528,8 +457,6 @@ void readUSDist() {
     // actual constant should be 58.138
     int16_t tmp =(int16_t)(pulseIn(in_port, HIGH, 40000)/58);  //play with timing ?
     if(tmp==0) tmp=-1;
-    //int8_t current_sens=-sservo_pos+1+(sens_step-1)*3;
-    //int8_t current_sens=-sservo_pos+1+sens_step*3; //!!!! That's IT!!!
     int8_t current_sens=-sservo_pos+SERVO_NSTEPS+sens_step*(SERVO_NSTEPS*2+1); //!!!! That's IT!!!
 #ifdef _US_DEBUG_  
     Serial.print("SRead"); Serial.print(sens_step); Serial.print("\t "); Serial.print(current_sens); Serial.print("\t "); Serial.println(tmp);
@@ -537,7 +464,6 @@ void readUSDist() {
 
     sens[current_sens] = tmp;
   }
- //sens_step=(sens_step+1)%M_SENS_CNT;  
  sens_step++;
  if(sens_step==M_SENS_CNT) sens_step=0;
 }

@@ -180,7 +180,7 @@ class UnitMap:
         return None
 
     def getIntersectionMapRefl(self, p0, p1, scan_max_dist, sorted_walls):
-        intrs0, ref=self.getIntersectionMap1(p0, p1, True, scan_max_dist, sorted_walls)
+        intrs0, ref, dumped =self.getIntersectionMap1(p0, p1, True, scan_max_dist, sorted_walls)
         refState = False
         pr = None
         intrs1 = None
@@ -193,7 +193,7 @@ class UnitMap:
                 pr, dummy, refState = ref
             if refState :
                 # secondary intersect if any
-                intrs1, ref=self.getIntersectionMap1(intrs0, pr, False, scan_max_dist, sorted_walls)
+                intrs1, ref, dumped=self.getIntersectionMap1(intrs0, pr, False, scan_max_dist, sorted_walls)
                 intrs=intrs1
         return (intrs0, pr, intrs1, refState, intrs)
 
@@ -204,6 +204,8 @@ class UnitMap:
         ref=None
         dist2=0
         reff=0
+        density=1
+        dumped=False
         for walls in sorted_walls :
             if dist2 > 0 and walls[5] > dist2 : break
             isect=None
@@ -225,14 +227,20 @@ class UnitMap:
         #return intrs, ref
 
         if intrs!=None and findRefl :
-            # find reflection vector
-            if (scan_max_dist-50)*(scan_max_dist-50) > dist2 :
-                ref=self.getReflection(p0, intrs, wsect[0], wsect[1], math.sqrt(dist2), reff)
-            #rl=scan_max_dist-math.sqrt(dist2)
-            #if rl>50 : # calculate refections only if remaining length exceed this length
-            #    ref=self.getReflection(p0, intrs, wsect[0], wsect[1], rl, reff)
 
-        return intrs, ref
+            if density<0.0 :
+                ref=self.getReflection(p0, intrs, wsect[0], wsect[1], math.sqrt(dist2), density)
+                if ref is not None :
+                    pr, dummy, refState = ref
+                    if refState :
+                        dumped=True
+                        intrs=None #- if to make transparent
+
+            # find reflection vector
+            elif (scan_max_dist-50)*(scan_max_dist-50) > dist2 :
+                ref=self.getReflection(p0, intrs, wsect[0], wsect[1], math.sqrt(dist2), reff)
+
+        return intrs, ref, dumped
 
     def getIntersectionMap(self, p0, p1, findRefl, scan_max_dist):
         """
