@@ -179,26 +179,31 @@ class UnitMap:
             if left%2==1 and right%2==1 : return area
         return None
 
-    def getIntersectionMapRefl(self, p0, p1, scan_max_dist, sorted_walls):
-        intrs0, ref, dumped =self.getIntersectionMap1(p0, p1, True, scan_max_dist, sorted_walls)
+    def getIntersectionMapRefl(self, p0, p1, scan_max_dist, sorted_walls, for_draw=False):
+        intrs0, ref, dumped =self.getIntersectionMap1(p0, p1, True, scan_max_dist, sorted_walls, for_draw)
+        """
+        if for_draw and dumped :
+            print('Dumped')
+            print(intrs0)
+        """
         refState = False
         pr = None
         intrs1 = None
         intrs = None
-        if intrs0 != None :
-            refState = False
-            intrs=intrs0
+        cosa2= None
+        if intrs0 != None:
             if ref != None :
-                #pr, cosa, refState = ref
-                pr, dummy, refState = ref
-            if refState :
-                # secondary intersect if any
-                intrs1, ref, dumped=self.getIntersectionMap1(intrs0, pr, False, scan_max_dist, sorted_walls)
-                intrs=intrs1
-        return (intrs0, pr, intrs1, refState, intrs)
+                pr, cosa2, refState = ref
+            if not dumped:
+                intrs=intrs0
+                if refState:
+                    # secondary intersect if any
+                    intrs1, ref, dumped=self.getIntersectionMap1(intrs0, pr, False, scan_max_dist, sorted_walls)
+                    intrs=intrs1
+        return (intrs0, pr, intrs1, refState, intrs, cosa2)
 
 
-    def getIntersectionMap1(self, p0, p1, findRefl, scan_max_dist, sorted_walls):
+    def getIntersectionMap1(self, p0, p1, findRefl, scan_max_dist, sorted_walls, for_draw=False):
         # line p0->p1 in absolute map coords (world)
         intrs = None
         ref=None
@@ -206,14 +211,15 @@ class UnitMap:
         reff=0
         density=1
         dumped=False
+        iwall=None
         for walls in sorted_walls :
             if dist2 > 0 and walls[5] > dist2 : break
             isect=None
             p2=walls[0]
             p3=walls[1]
             movable=walls[2]
-            reffw=walls[3]
-            density=walls[4]
+            #reffw=walls[3]
+            #density=walls[4]
             if movable==0 or (movable==2 and random.random()>0.5):
                 isect=self.find_intersection(p0, p1, p2, p3)
             if isect!=None :
@@ -222,19 +228,23 @@ class UnitMap:
                     intrs=isect
                     dist2=d2
                     wsect=(p2, p3)
-                    reff=reffw
+                    reff=walls[3]
+                    density=walls[4]
 
         #return intrs, ref
 
         if intrs!=None and findRefl :
-
-            if density<0.0 :
+            #if density<0.99 and for_draw:
+            if density<0.99:
                 ref=self.getReflection(p0, intrs, wsect[0], wsect[1], math.sqrt(dist2), density)
                 if ref is not None :
-                    pr, dummy, refState = ref
+                    pr, cc, refState = ref
+                    cosa=math.sqrt(cc)
+                    #print(cosa)
                     if refState :
                         dumped=True
-                        intrs=None #- if to make transparent
+                        #print()
+                        #intrs=None #- if to make transparent
 
             # find reflection vector
             elif (scan_max_dist-50)*(scan_max_dist-50) > dist2 :
@@ -357,7 +367,7 @@ class UnitMap:
         cosa2=prod*prod/(nn*refl*refl)
         ref_state=cosa2<reff*reff
         #return ((p1[0]+rl*ref[0]/refl, p1[1]+rl*ref[1]/refl), cosa, ref_state)
-        return ((p1[0]+rl*ref[0]/refl, p1[1]+rl*ref[1]/refl), None, ref_state)
+        return ((p1[0]+rl*ref[0]/refl, p1[1]+rl*ref[1]/refl), cosa2, ref_state)
 
     def find_intersection(self,  p0, p1, p2, p3 ) :
         s10_x = p1[0] - p0[0]

@@ -425,6 +425,12 @@ class MapPanel(wx.Window, UnitMap):
             inters_pen_cr=wx.Pen('GRAY', 2)
             if self.dist_sim : sorted_walls=self.getSortedWalls(unit.UnitToMapSim(0,0), unit.scan_max_dist)
             else : sorted_walls=self.getSortedWalls(unit.UnitToMapLoc(0,0), unit.scan_max_dist)
+            """
+            print("======")
+            for wall in sorted_walls:
+                if wall[4] < 0.99:
+                    print wall
+            """
 
             for ray in unit.scan_rays:
                 dc.SetPen(ray_pen)
@@ -445,16 +451,16 @@ class MapPanel(wx.Window, UnitMap):
                 # draw calculate intersections
 
                 if self.dist_sim :
-                    intrs0, pr, intrs1, refstate, intrs=self.getIntersectionMapRefl(
+                    intrs0, pr, intrs1, refstate, intrs, cosa2 =self.getIntersectionMapRefl(
                         unit.UnitToMapSim(0,0),
                         unit.UnitToMapSim(ray[0]*unit.scan_max_dist, ray[1]*unit.scan_max_dist),
-                        unit.scan_max_dist, sorted_walls
+                        unit.scan_max_dist, sorted_walls, True
                     )
                 else :
-                    intrs0, pr, intrs1, refstate, intrs=self.getIntersectionMapRefl(
+                    intrs0, pr, intrs1, refstate, intrs, cosa2 =self.getIntersectionMapRefl(
                         unit.UnitToMapLoc(0,0),
                         unit.UnitToMapLoc(ray[0]*unit.scan_max_dist, ray[1]*unit.scan_max_dist),
-                        unit.scan_max_dist, sorted_walls
+                        unit.scan_max_dist, sorted_walls, True
                     )
                 if intrs0 != None :
                     if pr != None :
@@ -463,9 +469,12 @@ class MapPanel(wx.Window, UnitMap):
                     if refstate :
                         dc.SetPen(inters_pen_cr)
                         dc.DrawCirclePoint(self.tc(intrs0[0], intrs0[1]), 5)
+                    if cosa2 != None:
+                        dc.DrawTextPoint(str(round(math.sqrt(cosa2), 2)), self.tc(intrs0[0], intrs0[1]))
                 if intrs!=None :
                     dc.SetPen(inters_pen_c)
                     dc.DrawCirclePoint(self.tc(intrs[0], intrs[1]), 5)
+
 
 
     def UpdateDrawing(self) :

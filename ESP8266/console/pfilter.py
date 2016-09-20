@@ -216,7 +216,7 @@ class PFilter:
             cospa=cosa*cosp-sina*sinp
             sinpa=cosa*sinp+sina*cosp
             p1=(p.x+sinpa*scan_max_dist, p.y+cospa*scan_max_dist)
-            intrs0, pr, intrs1, refstate, intrs = self.map.getIntersectionMapRefl(p0, p1, scan_max_dist, sorted_walls)
+            intrs0, pr, intrs1, refstate, intrs, cosa2 = self.map.getIntersectionMapRefl(p0, p1, scan_max_dist, sorted_walls)
             if intrs==None : dist2 = -1
             else :
                 dist2=math.sqrt((intrs[0]-p0[0])*(intrs[0]-p0[0])+(intrs[1]-p0[1])*(intrs[1]-p0[1]))
@@ -232,7 +232,7 @@ class PFilter:
         for i in range(len(scan_angles)) :
             a=scan_angles[i]
             p1=(p.x+math.sin(p.a+a)*scan_max_dist, p.y+math.cos(p.a+a)*scan_max_dist)
-            intrs0, pr, intrs1, refstate, intrs = self.map.getIntersectionMapRefl(p0, p1, scan_max_dist, sorted_walls)
+            intrs0, pr, intrs1, refstate, intrs, cosa2 = self.map.getIntersectionMapRefl(p0, p1, scan_max_dist, sorted_walls)
             if intrs==None : dist2 = -1
             else :
                 dist2=math.sqrt((intrs[0]-p0[0])*(intrs[0]-p0[0])+(intrs[1]-p0[1])*(intrs[1]-p0[1]))
