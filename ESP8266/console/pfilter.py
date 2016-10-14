@@ -264,15 +264,22 @@ class PFilter:
             intersects.append(intrs)
         return intersects
     """
-
+    """
     def Gaussian(self, mu, sigma, x, scan_max_dist):
         # calculates the probability of x for 1-dim Gaussian with mean mu and var. sigma
         if mu < 0 : mu=scan_max_dist
         if x < 0 : x=scan_max_dist
         return math.exp(- ((mu - x) ** 2) / (sigma ** 2) / 2.0) / math.sqrt(2.0 * math.pi * (sigma ** 2))
+    """
 
     def Gaussian1(self, mu, x, scan_max_dist):
         # calculates the probability of x for 1-dim Gaussian with mean mu and var. sigma
         if mu < 0 : mu=scan_max_dist
         if x < 0 : x=scan_max_dist
-        return math.exp(- ((mu - x) ** 2) / self.gauss_exp_denom) / self.gauss_denom
+        #dist=abs(mu-x)
+        #if x>scan_max_dist/2 : dist=dist/2
+        #if x>1 : dist=dist/x
+        dist2=(mu-x)**2
+        #if x>1 : dist2*=(x+mu)/2
+        if x>1 : dist2/=(x+mu)/2
+        return math.exp(-dist2/ self.gauss_exp_denom) / self.gauss_denom
