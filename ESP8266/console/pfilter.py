@@ -281,5 +281,5 @@ class PFilter:
         #if x>1 : dist=dist/x
         dist2=(mu-x)**2
         #if x>1 : dist2*=(x+mu)/2
-        if x>1 : dist2/=(x+mu)/2
+        #if x>1 : dist2/=(x+mu)/2
         return math.exp(-dist2/ self.gauss_exp_denom) / self.gauss_denom
