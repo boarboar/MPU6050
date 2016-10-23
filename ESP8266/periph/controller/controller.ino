@@ -97,7 +97,8 @@
 #define M_SENS_N      10 // number of redings
 
 
-#define M_SENS_CNT    8 // 5 idle loops  
+//#define M_SENS_CNT    8 // 5 idle loops
+#define M_SENS_CNT    4 // 1 idle loop
 
 Servo sservo;
 
