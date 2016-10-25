@@ -39,7 +39,10 @@
 
 #define   SERVO_IN P1_3
 
-#define  CYCLE_TIMEOUT 100
+//#define  CYCLE_TIMEOUT 100
+
+#define  CYCLE_TIMEOUT 50 // will it work?
+
 #define  CMD_TIMEOUT 1000 // !!!! 
 
 
@@ -219,7 +222,7 @@ void loop()
     if(cycleTime < lastEvTime) lastEvTime=0; // wraparound, not correct   
     if(cycleTime - lastEvTime >= CMD_TIMEOUT) {
       // comm lost!
-      Serial.println("Comm lost!");
+      //Serial.println("Comm lost!");
       lastEvTime = cycleTime;
       if(ST_IS_DRIVING()) stopDrive();
     } 
@@ -238,7 +241,7 @@ void loop()
  
   if(qsz) {
     //setQuPrint();   
-    Serial.print("SetReg "); Serial.print(sp.r); Serial.print("\t: "); Serial.print(sp.p[0]); Serial.print("\t, "); Serial.println(sp.p[1]);
+    //Serial.print("SetReg "); Serial.print(sp.r); Serial.print("\t: "); Serial.print(sp.p[0]); Serial.print("\t, "); Serial.println(sp.p[1]);
     switch(sp.r) {
       case REG_START:     
         if(sp.p[0])  {
@@ -246,7 +249,7 @@ void loop()
           act_adv_accu_mm[0]=0;
           act_adv_accu_mm[1]=0;
           // reset counters
-          Serial.println("Start"); 
+          //Serial.println("Start"); 
         }  
         break;
       case REG_TARG_POW:         
@@ -263,9 +266,7 @@ void loop()
     Serial.println();
   }
  
- //if(getOverflow) {Serial.println("===========Get overflow!"); getOverflow=0;}     
- //if(setOverflow) {Serial.println("===========Set overflow!"); setOverflow=0;}
- if(qsz>1) {Serial.print("===========QSZ "); Serial.println(qsz);} 
+ //if(qsz>1) {Serial.print("===========QSZ "); Serial.println(qsz);} 
 }
 
 void startDrivePow() {
@@ -300,7 +301,7 @@ void stopDrive() {
   Drive(0, 0, 0, 0);
   cur_power[0]=cur_power[1]=0;
   ST_SET_DRIVE_OFF();
-  Serial.println("Stop drive"); 
+  //Serial.println("Stop drive"); 
 }
 
 void readEnc(uint16_t ctime)
