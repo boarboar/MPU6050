@@ -12,6 +12,7 @@ import map
 LogEvent, EVT_LOG_EVENT = wx.lib.newevent.NewEvent()
 UpdEvent, EVT_UPD_EVENT = wx.lib.newevent.NewEvent()
 UpdStatusEvent, EVT_UPD_STAT_EVENT = wx.lib.newevent.NewEvent()
+InfoEvent, EVT_INFO_EVENT = wx.lib.newevent.NewEvent()
 
 class MyForm(wx.Frame):
     def __init__(self):
@@ -88,6 +89,7 @@ class MyForm(wx.Frame):
         self.Bind(EVT_LOG_EVENT, self.onLogEvent)
         self.Bind(EVT_UPD_EVENT, self.onUpdEvent)
         self.Bind(EVT_UPD_STAT_EVENT, self.onUpdStatEvent)
+        self.Bind(EVT_INFO_EVENT, self.onInfoEvent)
         self.Bind(wx.EVT_BUTTON, self.onStatusReq, self.btn_st)
         self.Bind(wx.EVT_BUTTON, self.onPositionReq, self.btn_pos)
         self.Bind(wx.EVT_BUTTON, self.onUploadReq, self.btn_upl)
@@ -225,7 +227,11 @@ class MyForm(wx.Frame):
 
     def LogErrorString(self, message) :
         self.LogString(message, color='RED')
-        self.statusbar.SetStatusText(message, 2)
+        #self.statusbar.SetStatusText(message, 2)
+
+    def InfoString(self, message, color='BLACK') :
+        event = InfoEvent(msg=message, color=color)
+        wx.PostEvent(self, event)
 
     def UpdatePos(self, **kwargs) :
         event = UpdEvent(**kwargs)
@@ -329,6 +335,9 @@ class MyForm(wx.Frame):
                 self.history_ptr+=1;
                 self.txt_cmd.SetValue(self.history[self.history_ptr])
         event.Skip()
+
+    def onInfoEvent(self, evt):
+        self.statusbar.SetStatusText(evt.msg, 2)
 
     def onLogEvent(self, evt):
         self.AddLine(evt.msg, evt.color)

@@ -5,6 +5,8 @@ import json
 import socket
 import time
 import math
+import timeit
+
 
 class CommandThread(threading.Thread):
     # device command-resp communication
@@ -167,8 +169,13 @@ class SimulationThread(threading.Thread):
         #self.__controller.reqResetMPU()
 
         while not self.__stop :
-            time.sleep(0.4)
-            self.__controller.reqPosition()
+            start_time = timeit.default_timer()
+            self.__controller.reqPositionSync()
+            t=timeit.default_timer() - start_time
+            if t>0.8 : time.sleep(0.2)
+            else : time.sleep(1-t)
+            self.__controller.log().InfoString(str(round(t, 2)))
+            #time.sleep(1.0)
 
         self.__controller.log().LogString("Stop tracking")
 
