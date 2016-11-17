@@ -44,11 +44,13 @@ class PFilter:
         self.map=umap
         self.particles=[]
         #self.fwd_noise=5
-        self.fwd_noise=20
-        self.rot_noise=0.1
-        #self.rot_noise=0.05
+        #self.fwd_noise=20
+        self.fwd_noise=1
+        #self.rot_noise=0.1
+        self.rot_noise=0.05
         #self.sense_noise=20
-        self.sense_noise=200
+        #self.sense_noise=200
+        self.sense_noise=400
 
         self.gauss_denom=math.sqrt(2.0 * math.pi * (self.sense_noise ** 2))
         self.gauss_exp_denom=(self.sense_noise ** 2) * 2.0
