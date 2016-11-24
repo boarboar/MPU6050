@@ -4,6 +4,7 @@
 //#define _SIMULATION_ 1
 //#define _US_DEBUG_ 
 //#define _US_DEBUG_1_ 
+//#define _US_DEBUG_2_ 
 
 #define _US_M_WIRE_  // multiple input wires 
 
@@ -39,9 +40,9 @@
 
 #define   SERVO_IN P1_3
 
-//#define  CYCLE_TIMEOUT 100
+#define  CYCLE_TIMEOUT 100
 
-#define  CYCLE_TIMEOUT 50 // will it work?
+//#define  CYCLE_TIMEOUT 50 // will it work?
 
 #define  CMD_TIMEOUT 1000 // !!!! 
 
@@ -100,8 +101,8 @@
 #define M_SENS_N      10 // number of redings
 
 
-//#define M_SENS_CNT    8 // 5 idle loops
-#define M_SENS_CNT    4 // 1 idle loop
+#define M_SENS_CNT    8 // 5 idle loops
+//#define M_SENS_CNT    4 // 1 idle loop
 
 Servo sservo;
 
@@ -207,7 +208,10 @@ void setup()
   setQuPrint();
   
   Serial.println("Ready");
-  
+
+#ifdef   _US_DEBUG_2_  
+  ST_SET_START_ON();
+#endif  
   //uscount=0;
   
   lastEvTime = lastPidTime = millis();  
@@ -460,8 +464,8 @@ void readUSDist() {
     int16_t tmp =(int16_t)(pulseIn(in_port, HIGH, 40000)/58);  //play with timing ?
     if(tmp==0) tmp=-1;
     int8_t current_sens=-sservo_pos+SERVO_NSTEPS+sens_step*(SERVO_NSTEPS*2+1); //!!!! That's IT!!!
-#ifdef _US_DEBUG_  
-    Serial.print("SRead"); Serial.print(sens_step); Serial.print("\t "); Serial.print(current_sens); Serial.print("\t "); Serial.println(tmp);
+#ifdef _US_DEBUG_2_  
+    Serial.print(current_sens); Serial.print("\t "); Serial.println(tmp);
 #endif  
 
     sens[current_sens] = tmp;
