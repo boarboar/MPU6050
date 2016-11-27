@@ -40,8 +40,8 @@
 
 #define   SERVO_IN P1_3
 
-#define  CYCLE_TIMEOUT 100
-
+//#define  CYCLE_TIMEOUT 500
+#define  CYCLE_TIMEOUT 75
 //#define  CYCLE_TIMEOUT 50 // will it work?
 
 #define  CMD_TIMEOUT 1000 // !!!! 
@@ -97,12 +97,15 @@
 
 #define SERVO_NSTEPS  2
 #define SERVO_STEP    36
-#define SERVO_ZERO_SHIFT    5
-#define M_SENS_N      10 // number of redings
+//#define SERVO_ZERO_SHIFT    5
+#define SERVO_ZERO_SHIFT    3
+#define SERVO_CORR    2
 
+#define M_SENS_N      10 // number of readings
 
-#define M_SENS_CNT    8 // 5 idle loops
+//#define M_SENS_CNT    8 // 5 idle loops
 //#define M_SENS_CNT    4 // 1 idle loop
+#define M_SENS_CNT    5 // 2 idle loops
 
 Servo sservo;
 
@@ -427,7 +430,7 @@ void readUSDist() {
       //Serial.print("S0 "); Serial.print(sservo_pos); Serial.print("\t "); Serial.println(sservo_step);
       if((sservo_step>0 && sservo_pos>=SERVO_NSTEPS) || (sservo_step<0 && sservo_pos<=-SERVO_NSTEPS)) sservo_step=-sservo_step;
       sservo_pos+=sservo_step;
-      int16_t sservo_angle=90-SERVO_ZERO_SHIFT+sservo_pos*SERVO_STEP;
+      int16_t sservo_angle=90-SERVO_ZERO_SHIFT+sservo_pos*SERVO_STEP+abs(sservo_pos)*SERVO_CORR;
       sservo.write(sservo_angle);
       //Serial.print("S1 "); Serial.print(sservo_pos); Serial.print("\t "); Serial.println(sservo_step);
 #ifdef _US_DEBUG_      
