@@ -10,16 +10,16 @@ class Unit:
         #scan_n=3
         #scan_d=(-scan_a0*2)/(scan_n-1)
         #scan_a0, scan_n, scan_d = -60, 6, 60
+        self.bfa=30*math.pi/180 # beamform angle (30 at the moment), but more realistic is 60 deg
         scan_a0, scan_n, scan_d = -72, 10, 36
         self.scan_angles=[]
         self.scan_rays=[]
         for i in range(scan_n) :
             a=(scan_a0+i*scan_d)*math.pi/180.0
             self.scan_angles.append(a)
-            self.scan_rays.append((math.sin(a),math.cos(a)))
-
+            self.scan_rays.append((math.sin(a),math.cos(a),math.sin(a-self.bfa/2),math.cos(a-self.bfa/2),math.sin(a+self.bfa/2),math.cos(a+self.bfa/2)))
         self.scan_max_dist=400
-        self.bfa=30*math.pi/180 # beamform angle (30 at the moment), but more realistic is 60 deg
+
         pass
 
     def InitUnitPos(self, start):

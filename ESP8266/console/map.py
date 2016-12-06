@@ -435,33 +435,29 @@ class MapPanel(wx.Window, UnitMap):
             for ray in unit.scan_rays:
                 dc.SetPen(ray_pen)
                 if self.dist_sim :
-                    dc.DrawLinePoint(self.tspu(wx.Point(0, 0)), self.tspu(wx.Point(ray[0]*unit.scan_max_dist, ray[1]*unit.scan_max_dist)))
-                else  :
-                    dc.DrawLinePoint(self.tpu(wx.Point(0, 0)), self.tpu(wx.Point(ray[0]*unit.scan_max_dist, ray[1]*unit.scan_max_dist)))
+                    crd_conv=self.tspu
+                    crd_conv_unit=unit.UnitToMapSim
+                else :
+                    crd_conv=self.tpu
+                    crd_conv_unit=unit.UnitToMapLoc
+
+                dc.DrawLinePoint(crd_conv(wx.Point(0, 0)), crd_conv(wx.Point(ray[0]*unit.scan_max_dist, ray[1]*unit.scan_max_dist)))
+                #dc.DrawLinePoint(crd_conv(wx.Point(0, 0)), crd_conv(wx.Point(ray[2]*unit.scan_max_dist, ray[3]*unit.scan_max_dist)))
+                #dc.DrawLinePoint(crd_conv(wx.Point(0, 0)), crd_conv(wx.Point(ray[4]*unit.scan_max_dist, ray[5]*unit.scan_max_dist)))
                 # draw measured intersection
                 idist=unit.scans[i]
                 i=i+1
                 if idist>0 :
                     dc.SetPen(inters_pen)
-                    if self.dist_sim :
-                        intrs = self.tspu(wx.Point(ray[0]*idist, ray[1]*idist))
-                    else :
-                        intrs = self.tpu(wx.Point(ray[0]*idist, ray[1]*idist))
+                    intrs = crd_conv(wx.Point(ray[0]*idist, ray[1]*idist))
                     dc.DrawCirclePoint(intrs, 10)
                 # draw calculate intersections
+                intrs0, pr, intrs1, refstate, intrs, cosa2 =self.getIntersectionMapRefl(
+                        crd_conv_unit(0,0),
+                        crd_conv_unit(ray[0]*unit.scan_max_dist, ray[1]*unit.scan_max_dist),
+                        unit.scan_max_dist, sorted_walls, True
+                    )
 
-                if self.dist_sim :
-                    intrs0, pr, intrs1, refstate, intrs, cosa2 =self.getIntersectionMapRefl(
-                        unit.UnitToMapSim(0,0),
-                        unit.UnitToMapSim(ray[0]*unit.scan_max_dist, ray[1]*unit.scan_max_dist),
-                        unit.scan_max_dist, sorted_walls, True
-                    )
-                else :
-                    intrs0, pr, intrs1, refstate, intrs, cosa2 =self.getIntersectionMapRefl(
-                        unit.UnitToMapLoc(0,0),
-                        unit.UnitToMapLoc(ray[0]*unit.scan_max_dist, ray[1]*unit.scan_max_dist),
-                        unit.scan_max_dist, sorted_walls, True
-                    )
                 if intrs0 != None :
                     if pr != None :
                         dc.SetPen(ray_pen_ref)
