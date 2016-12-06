@@ -78,7 +78,7 @@ class PFilter:
         for p in psorted :
             print("C=(%s,%s), A=%s, W=%s" % (round(p.x,0), round(p.y,0), round(p.a,0), p.w) )
 
-    def updateParticles(self, mov, rot, scans, scan_angles, scan_max_dist, loc_x, loc_y):
+    def updateParticles(self, mov, rot, scans, scan_angles, scan_max_dist, loc_x, loc_y, bfa):
         if len(self.particles)==0 : return
 
         scan_angles_cos=[]
@@ -102,7 +102,8 @@ class PFilter:
             if self.map.isInsideTest(p.x, p.y) is not None :
                 #sorted_walls=self.map.getReSortedWalls(sorted_walls_base, (p.x, p.y), scan_max_dist)
                 sorted_walls=self.map.getSortedWalls((p.x, p.y), scan_max_dist) ### - 08.11.2016
-                self.updateParticleProbabilities(p, scans, scan_angles, scan_max_dist, sorted_walls)
+                ############ self.updateParticleProbabilities(p, scans, scan_angles, scan_max_dist, sorted_walls)
+                self.updateParticleProbabilities3(p, scans, scan_angles, scan_max_dist, sorted_walls, bfa)
                 ############ just for tests, replaced with old version
                 #self.updateParticleProbabilities1(p, scans, scan_angles_cos, scan_angles_sin, scan_max_dist, sorted_walls)
             else : p.w=0.0
@@ -236,6 +237,29 @@ class PFilter:
             a=scan_angles[i]
             p1=(p.x+math.sin(p.a+a)*scan_max_dist, p.y+math.cos(p.a+a)*scan_max_dist)
             intrs0, pr, intrs1, refstate, intrs, cosa2 = self.map.getIntersectionMapRefl(p0, p1, scan_max_dist, sorted_walls)
+            if intrs==None : dist2 = -1
+            else :
+                dist2=math.sqrt((intrs[0]-p0[0])*(intrs[0]-p0[0])+(intrs[1]-p0[1])*(intrs[1]-p0[1]))
+            #scan_dist.append(dist2)
+
+            prob*=self.Gaussian1(dist2, meas[i], scan_max_dist)
+            #prob*=self.Gaussian(dist2, self.sense_noise, meas[i], scan_max_dist)
+
+        p.w=prob
+        #p.w=math.log10(prob)
+        #print(scan_dist)
+
+    def updateParticleProbabilities3(self, p, meas, scan_angles, scan_max_dist, sorted_walls, dw):
+        #scan_dist=[]
+        prob = 1.0
+        p0=(p.x, p.y)
+        for i in range(len(scan_angles)) :
+            # should be more dense starting from the center anf=d unwinding, with sub-beam at each 1 degree
+            for a in [scan_angles[i], scan_angles[i]-dw/2, scan_angles[i]+dw/2 ] :
+                p1=(p.x+math.sin(p.a+a)*scan_max_dist, p.y+math.cos(p.a+a)*scan_max_dist)
+                intrs0, pr, intrs1, refstate, intrs, cosa2 = self.map.getIntersectionMapRefl(p0, p1, scan_max_dist, sorted_walls)
+                if intrs is not None: break
+
             if intrs==None : dist2 = -1
             else :
                 dist2=math.sqrt((intrs[0]-p0[0])*(intrs[0]-p0[0])+(intrs[1]-p0[1])*(intrs[1]-p0[1]))

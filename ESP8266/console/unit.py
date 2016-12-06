@@ -19,6 +19,7 @@ class Unit:
             self.scan_rays.append((math.sin(a),math.cos(a)))
 
         self.scan_max_dist=400
+        self.bfa=30*math.pi/180 # beamform angle (30 at the moment), but more realistic is 60 deg
         pass
 
     def InitUnitPos(self, start):
@@ -54,7 +55,7 @@ class Unit:
         if self.pfilter is not None :
             loc_x=self.x_mean+dist*math.sin(angle)
             loc_y=self.y_mean+dist*math.cos(angle)
-            self.pfilter.updateParticles(move_dist, move_rot, scans, self.scan_angles, self.scan_max_dist, loc_x, loc_y)
+            self.pfilter.updateParticles(move_dist, move_rot, scans, self.scan_angles, self.scan_max_dist, loc_x, loc_y, self.bfa)
             self.x_mean, self.y_mean, self.p_var, self.a_mean, self.a_var = self.pfilter.getMeanDistribution()
         self.__l_cos=math.cos(self.a_mean)
         self.__l_sin=math.sin(self.a_mean)
