@@ -97,10 +97,9 @@ class PFilter:
 
         start_time = timeit.default_timer()
         for p in self.particles :
-            #sorted_walls_base=self.map.getSortedWalls((loc_x, loc_y), scan_max_dist)
             p.move_d(mov+random.gauss(0, self.fwd_noise), rot+random.gauss(0, self.rot_noise))
             if self.map.isInsideTest(p.x, p.y) is not None :
-                #sorted_walls=self.map.getReSortedWalls(sorted_walls_base, (p.x, p.y), scan_max_dist)
+                #sorted_walls=self.map.getReSortedWalls(sorted_walls_base, (p.x, p.y), scan_max_dist)  ### rev back - 15.12.2016 - no imp
                 sorted_walls=self.map.getSortedWalls((p.x, p.y), scan_max_dist) ### - 08.11.2016
                 ############ self.updateParticleProbabilities(p, scans, scan_angles, scan_max_dist, sorted_walls)
                 self.updateParticleProbabilities3(p, scans, scan_angles, scan_max_dist, sorted_walls, bfa)
@@ -255,8 +254,11 @@ class PFilter:
         p0=(p.x, p.y)
         for i in range(len(scan_angles)) :
             # should be more dense starting from the center anf=d unwinding, with sub-beam at each 1 degree
-            for a in [scan_angles[i], scan_angles[i]-dw/2, scan_angles[i]+dw/2 ] :
-                p1=(p.x+math.sin(p.a+a)*scan_max_dist, p.y+math.cos(p.a+a)*scan_max_dist)
+            ba=p.a+scan_angles[i]
+            #for a in [scan_angles[i], scan_angles[i]-dw/4, scan_angles[i]+dw/4, scan_angles[i]-dw/2, scan_angles[i]+dw/2 ] :
+            for da in [0, -dw/4, dw/4, -dw/2, dw/2 ] :
+                #p1=(p.x+math.sin(p.a+a)*scan_max_dist, p.y+math.cos(p.a+a)*scan_max_dist)
+                p1=(p.x+math.sin(ba+da)*scan_max_dist, p.y+math.cos(ba+da)*scan_max_dist)
                 intrs0, pr, intrs1, refstate, intrs, cosa2 = self.map.getIntersectionMapRefl(p0, p1, scan_max_dist, sorted_walls)
                 if intrs is not None: break
 
