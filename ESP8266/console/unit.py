@@ -3,23 +3,44 @@ import timeit
 
 class Unit:
     " Unit"
-    def __init__(self, umap, pfilter):
+    def __init__(self, umap, pfilter, scan_max_dist):
         self.map=umap
         self.pfilter=pfilter
         #scan_a0=-90
         #scan_n=3
         #scan_d=(-scan_a0*2)/(scan_n-1)
         #scan_a0, scan_n, scan_d = -60, 6, 60
-        self.bfa=30*math.pi/180 # beamform angle (30 at the moment), but more realistic is 60 deg
         scan_a0, scan_n, scan_d = -72, 10, 36
+        self.bfa=30*math.pi/180 # beamform angle (30 at the moment), but more realistic is 60 deg
         self.scan_angles=[]
         self.scan_rays=[]
         for i in range(scan_n) :
             a=(scan_a0+i*scan_d)*math.pi/180.0
             self.scan_angles.append(a)
             self.scan_rays.append((math.sin(a),math.cos(a),math.sin(a-self.bfa/2),math.cos(a-self.bfa/2),math.sin(a+self.bfa/2),math.cos(a+self.bfa/2)))
-        self.scan_max_dist=400
+        self.scan_max_dist=scan_max_dist
 
+        # beamform
+        # https://www.robot-electronics.co.uk/htm/srf05tech.htm
+        #
+
+        self.beamdelta=3*math.pi/180 #3 degree
+        #self.beam_att=0.9
+        self.beam_att=0.75
+        self.beamform=[]
+        maxdist=scan_max_dist
+        na=int(self.bfa/self.beamdelta)
+        att=pow(self.beam_att, 1.0/na)
+        for i in range(na+1) :
+            nda=int((i+1)/2)
+            if i%2==0 : nda=-nda
+            da=nda*self.beamdelta
+            self.beamform.append((da, maxdist))
+            print '(', da*180/math.pi, maxdist, ')',
+            #maxdist = maxdist*self.beam_att
+            maxdist = maxdist*att
+
+        print
         pass
 
     def InitUnitPos(self, start):
@@ -55,7 +76,7 @@ class Unit:
         if self.pfilter is not None :
             loc_x=self.x_mean+dist*math.sin(angle)
             loc_y=self.y_mean+dist*math.cos(angle)
-            self.pfilter.updateParticles(move_dist, move_rot, scans, self.scan_angles, self.scan_max_dist, loc_x, loc_y, self.bfa)
+            self.pfilter.updateParticles(move_dist, move_rot, scans, self.scan_angles, loc_x, loc_y, self.beamform)
             self.x_mean, self.y_mean, self.p_var, self.a_mean, self.a_var = self.pfilter.getMeanDistribution()
         self.__l_cos=math.cos(self.a_mean)
         self.__l_sin=math.sin(self.a_mean)

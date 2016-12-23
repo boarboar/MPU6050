@@ -40,8 +40,11 @@ class Particle:
 
 class PFilter:
     " Particle filter"
-    def __init__(self, umap):
+    def __init__(self, umap, scan_max_dist):
         self.map=umap
+        self.scan_max_dist=scan_max_dist
+        #self.beamdelta=5*math.pi/180
+        #self.beam_att=0.85
         self.particles=[]
         #self.fwd_noise=5
         #self.fwd_noise=20
@@ -49,11 +52,12 @@ class PFilter:
         #self.rot_noise=0.1
         self.rot_noise=0.05
         #self.sense_noise=20
-        self.sense_noise=200
+        self.sense_noise=scan_max_dist/2
         #self.sense_noise=400
 
         self.gauss_denom=math.sqrt(2.0 * math.pi * (self.sense_noise ** 2))
         self.gauss_exp_denom=(self.sense_noise ** 2) * 2.0
+
 
     def InitParticles(self):
         #N_D=20
@@ -78,7 +82,7 @@ class PFilter:
         for p in psorted :
             print("C=(%s,%s), A=%s, W=%s" % (round(p.x,0), round(p.y,0), round(p.a,0), p.w) )
 
-    def updateParticles(self, mov, rot, scans, scan_angles, scan_max_dist, loc_x, loc_y, bfa):
+    def updateParticles(self, mov, rot, scans, scan_angles, loc_x, loc_y, beamform):
         if len(self.particles)==0 : return
 
         scan_angles_cos=[]
@@ -92,7 +96,7 @@ class PFilter:
 
         #print (self.map.getSortedWalls((0,0)))
 
-        sorted_walls_base=self.map.getSortedWalls((loc_x, loc_y), scan_max_dist)
+        #sorted_walls_base=self.map.getSortedWalls((loc_x, loc_y), self.scan_max_dist)
 
 
         start_time = timeit.default_timer()
@@ -100,9 +104,9 @@ class PFilter:
             p.move_d(mov+random.gauss(0, self.fwd_noise), rot+random.gauss(0, self.rot_noise))
             if self.map.isInsideTest(p.x, p.y) is not None :
                 #sorted_walls=self.map.getReSortedWalls(sorted_walls_base, (p.x, p.y), scan_max_dist)  ### rev back - 15.12.2016 - no imp
-                sorted_walls=self.map.getSortedWalls((p.x, p.y), scan_max_dist) ### - 08.11.2016
+                sorted_walls=self.map.getSortedWalls((p.x, p.y), self.scan_max_dist) ### - 08.11.2016
                 ############ self.updateParticleProbabilities(p, scans, scan_angles, scan_max_dist, sorted_walls)
-                self.updateParticleProbabilities3(p, scans, scan_angles, scan_max_dist, sorted_walls, bfa)
+                self.updateParticleProbabilities3(p, scans, scan_angles, sorted_walls, beamform)
                 ############ just for tests, replaced with old version
                 #self.updateParticleProbabilities1(p, scans, scan_angles_cos, scan_angles_sin, scan_max_dist, sorted_walls)
             else : p.w=0.0
@@ -248,26 +252,28 @@ class PFilter:
         #p.w=math.log10(prob)
         #print(scan_dist)
 
-    def updateParticleProbabilities3(self, p, meas, scan_angles, scan_max_dist, sorted_walls, dw):
-        #scan_dist=[]
+    def updateParticleProbabilities3(self, p, meas, scan_angles, sorted_walls, beamform):
         prob = 1.0
         p0=(p.x, p.y)
         for i in range(len(scan_angles)) :
             # should be more dense starting from the center anf=d unwinding, with sub-beam at each 1 degree
             ba=p.a+scan_angles[i]
-            #for a in [scan_angles[i], scan_angles[i]-dw/4, scan_angles[i]+dw/4, scan_angles[i]-dw/2, scan_angles[i]+dw/2 ] :
-            for da in [0, -dw/4, dw/4, -dw/2, dw/2 ] :
+            for bf in beamform:
+                da=bf[0]
+                max_dist=bf[1]
                 #p1=(p.x+math.sin(p.a+a)*scan_max_dist, p.y+math.cos(p.a+a)*scan_max_dist)
-                p1=(p.x+math.sin(ba+da)*scan_max_dist, p.y+math.cos(ba+da)*scan_max_dist)
-                intrs0, pr, intrs1, refstate, intrs, cosa2 = self.map.getIntersectionMapRefl(p0, p1, scan_max_dist, sorted_walls)
+                p1=(p.x+math.sin(ba+da)*self.scan_max_dist, p.y+math.cos(ba+da)*max_dist)
+                intrs0, pr, intrs1, refstate, intrs, cosa2 = self.map.getIntersectionMapRefl(p0, p1, max_dist, sorted_walls)
                 if intrs is not None: break
 
-            if intrs==None : dist2 = -1
+            if intrs==None :
+                dist2 = -1
+                max_dist=self.scan_max_dist
             else :
                 dist2=math.sqrt((intrs[0]-p0[0])*(intrs[0]-p0[0])+(intrs[1]-p0[1])*(intrs[1]-p0[1]))
             #scan_dist.append(dist2)
 
-            prob*=self.Gaussian1(dist2, meas[i], scan_max_dist)
+            prob*=self.Gaussian1(dist2, meas[i], max_dist)
             #prob*=self.Gaussian(dist2, self.sense_noise, meas[i], scan_max_dist)
 
         p.w=prob

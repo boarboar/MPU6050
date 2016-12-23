@@ -27,10 +27,10 @@ class Controller():
         self.__comm_scan_thread = None
         self.__comm_sim_thread = None
         self.__comm_path_thread = None
-
+        scan_max_dist=400
         self.planner=Planner(map, LogString, LogErrorString)
-        self.pfilter=PFilter(map)
-        self.unit=Unit(map, self.pfilter)
+        self.pfilter=PFilter(map, scan_max_dist)
+        self.unit=Unit(map, self.pfilter, scan_max_dist)
 
         self.__tstart()
 
