@@ -48,7 +48,7 @@ class PFilter:
         self.particles=[]
         #self.fwd_noise=5
         #self.fwd_noise=20
-        self.fwd_noise=1
+        self.fwd_noise=10
         #self.rot_noise=0.1
         self.rot_noise=0.05
         #self.sense_noise=20
