@@ -195,6 +195,7 @@ int16_t c_info(JsonObject& /*root*/, JsonObject& rootOut) {
   rootOut["CST"]=Controller::ControllerProc.getStatus() ? 0 : 6; // tmp
   rootOut["FHS"]=ESP.getFreeHeap();
   rootOut["FSS"]=ESP.getFreeSketchSpace();
+  rootOut["VCC"]=ESP.getVcc();  
   rootOut["MDC"]=Stat::StatStore.cycle_mpu_dry_cnt;
   rootOut["MOC"]=Stat::StatStore.mpu_owfl_cnt;
   rootOut["MGC"]=Stat::StatStore.mpu_gup_cnt;

@@ -31,7 +31,8 @@ uint32_t last_med_cycle;
 uint32_t last_slow_cycle;
 
 CmdProc& cmd = CmdProc::Cmd;
- 
+
+ADC_MODE(ADC_VCC);
 //void pcf_test();
 
 void setup() {
