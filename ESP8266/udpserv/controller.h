@@ -27,7 +27,7 @@
 
 class Controller {
 public:
-  enum FailReason {CTL_FAIL_NONE=0, CTL_FAIL_INIT=1, CTL_FAIL_WRT=2, CTL_FAIL_RD=3, CTL_FAIL_OVF=4, CTL_FAIL_ALR=5, CTL_LOG_PID=100, CTL_LOG_POW=101, CTL_LOG_PBPID=102};
+  enum FailReason {CTL_FAIL_NONE=0, CTL_FAIL_INIT=1, CTL_FAIL_WRT=2, CTL_FAIL_RD=3, CTL_FAIL_OVF=4, CTL_FAIL_ALR=5, CTL_FAIL_OBST=6, CTL_LOG_PID=100, CTL_LOG_POW=101, CTL_LOG_PBPID=102};
   static Controller ControllerProc; // singleton  
   bool init();
   bool start();
@@ -73,6 +73,7 @@ protected:
   bool setPowerRotate(int16_t dir, int16_t *p);
   bool setPowerStraight(int16_t dir, int16_t *p);
   void adjustTargBearing(int16_t s, bool absolute);
+  uint8_t checkObastacle();
   bool writeInt16(uint16_t reg, int16_t val);
   bool writeInt16_2(uint16_t reg, int16_t left, int16_t right);
   bool readInt16_2(uint16_t reg, int16_t *left, int16_t *right);  
