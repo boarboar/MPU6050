@@ -73,7 +73,7 @@ protected:
   bool setPowerRotate(int16_t dir, int16_t *p);
   bool setPowerStraight(int16_t dir, int16_t *p);
   void adjustTargBearing(int16_t s, bool absolute);
-  uint8_t checkObastacle();
+  int8_t checkObastacle();
   bool writeInt16(uint16_t reg, int16_t val);
   bool writeInt16_2(uint16_t reg, int16_t left, int16_t right);
   bool readInt16_2(uint16_t reg, int16_t *left, int16_t *right);  
@@ -89,6 +89,7 @@ private:
   //float mov, rot;
   uint8_t pready;
   uint8_t nsens;
+  uint8_t last_obst;
   //float act_rot_rate[2];
   //int16_t targ_rot_rate[2];
   int32_t act_advance[2];
@@ -114,6 +115,7 @@ private:
   uint32_t pid_cnt;
   float qsum_err;
   float run_dist;
+  
 };
 
 #endif //_UMP_CONTROLLER_H_

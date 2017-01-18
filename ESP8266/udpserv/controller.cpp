@@ -12,6 +12,11 @@ const int M_POW_MAX=200;
 const int M_POW_NORM=100;
 const int M_SPEED_NORM=200;
 
+const int M_CTR_OBST_WARN_ON_DIST=30; //cm 
+const int M_CTR_OBST_WARN_OFF_DIST=35; //cm 
+const int M_CTR_OBST_STOP_DIST=15; //cm 
+//const int M_CTR_OBST_WARN_NREP=2;
+
 /*
 const int gain_p=20;
 const int gain_d=320;
@@ -44,6 +49,7 @@ bool Controller::init() {
   delta_pow=0;
   targ_speed=0;
   rot_speed=0;
+  last_obst=0xFF;
   for(int i=0; i<SENS_SIZE; i++) sensors[i]=0;
   resetIntegrator();
   pready=testConnection();
@@ -98,7 +104,7 @@ uint8_t Controller::testConnection() {
 
 bool Controller::process(float yaw, uint32_t dt) {
   if(!pready) return false;
-  float delta_yaw=yaw - curr_yaw;
+  //float delta_yaw=yaw - curr_yaw;
   curr_yaw=yaw;
   if(!getActAdvance()) return false;
    
@@ -140,9 +146,14 @@ bool Controller::process(float yaw, uint32_t dt) {
   r[1]+=mov*cos(yaw);
 
   if(getSensors()) {
-    uint8_t obst=checkObastacle();
-    if(obst !=0xFF) {
-      Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OBST, (uint16_t)obst);  
+    int8_t turn=checkObastacle();
+    if(turn!=0) {
+      if(turn==8) {
+        setTargSpeed(0); // stop
+      } else {
+        Serial.print(F("Obst avoid turn: ")); Serial.println(turn);
+        adjustTargBearing(turn*10, false); // 10 degrees
+      }
     }
   }
   
@@ -428,22 +439,61 @@ bool Controller::startRotate(int16_t tspeed) {
 }
 
 
-uint8_t Controller::checkObastacle() {
+int8_t Controller::checkObastacle() {
   uint8_t obst=0xFF;
   uint8_t schk;
+  uint8_t odist;
+  uint8_t turn=0;
   if(targ_speed==0) return obst; // turning. nocheck
 
   // check head sens for straight 
   // else rear for back
   if(targ_speed>0) schk = nsens/4;
   else schk = nsens-1-nsens/4;
-  
-  if(sensors[schk]>=0 && sensors[schk]<=20) {
-    obst=schk; // 20cm - just for now
-    Serial.print(F("Obstacle at ")); Serial.println(obst); 
+
+  if(this->last_obst==schk) odist=M_CTR_OBST_WARN_OFF_DIST; //debounce 
+  else odist=M_CTR_OBST_WARN_ON_DIST; //if we move in other dir or no obst yet, to on_dist
+    
+  // check 3 readings
+  uint8_t prox_count=0, stop_count=0;
+  for(uint8_t i=0; i<3; i++) {
+    uint8_t iss=schk-1+i;
+    if(sensors[iss]>=0)  {
+      if(sensors[iss]<=odist) prox_count++;
+      if(sensors[iss]<=M_CTR_OBST_STOP_DIST) stop_count++;     
+    } 
   }
 
-  return obst;
+  if(stop_count>2) {
+    Serial.println(F("Stop!!!")); 
+    Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OBST, (uint16_t)obst, M_CTR_OBST_STOP_DIST, this->speed, 8);  
+    return 9;      
+  }
+  
+  if(prox_count>2) obst=schk; 
+    
+  if(obst !=0xFF) {
+    int16_t left=0, right=0;
+    for(uint8_t i=0; i<nsens/4; i++) {
+      if(sensors[obst-nsens/4+i+1]>=0) left++;
+      if(sensors[obst+i]>=0) right++;
+    }
+    if(left<right) turn=-1;
+    else turn =1;  
+    if(this->last_obst!=obst) {
+        Serial.print(F("Obstacle at ")); Serial.println(obst); 
+        Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OBST, (uint16_t)obst, M_CTR_OBST_WARN_ON_DIST, this->speed, turn);        
+      }          
+    Serial.print(F("Obstacle turn ")); Serial.println(turn);   
+    } 
+  else {    
+    if(this->last_obst!=obst) {
+      Serial.println(F("Clear obstacle")); 
+     }
+   }
+  this->last_obst=obst;
+    
+  return turn;
 }
 
 /*
