@@ -12,9 +12,9 @@ const int M_POW_MAX=200;
 const int M_POW_NORM=100;
 const int M_SPEED_NORM=200;
 
-const int M_CTR_OBST_WARN_ON_DIST=30; //cm 
-const int M_CTR_OBST_WARN_OFF_DIST=35; //cm 
-const int M_CTR_OBST_STOP_DIST=15; //cm 
+const int M_CTR_OBST_WARN_ON_DIST=50; //cm 
+const int M_CTR_OBST_WARN_OFF_DIST=55; //cm 
+const int M_CTR_OBST_STOP_DIST=30; //cm 
 //const int M_CTR_OBST_WARN_NREP=2;
 
 /*
@@ -444,7 +444,7 @@ int8_t Controller::checkObastacle() {
   uint8_t schk;
   uint8_t odist;
   uint8_t turn=0;
-  if(targ_speed==0) return obst; // turning. nocheck
+  if(targ_speed==0) return 0; // turning. nocheck
 
   // check head sens for straight 
   // else rear for back
