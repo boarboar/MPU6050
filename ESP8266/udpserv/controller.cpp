@@ -104,7 +104,6 @@ uint8_t Controller::testConnection() {
 
 bool Controller::process(float yaw, uint32_t dt) {
   if(!pready) return false;
-  //float delta_yaw=yaw - curr_yaw;
   curr_yaw=yaw;
   if(!getActAdvance()) return false;
    
@@ -127,6 +126,7 @@ bool Controller::process(float yaw, uint32_t dt) {
 
   float mov;
   float dist0=dist;
+  int16_t avoid_obst_angle=0;
   dist=(float)(act_advance[0]+act_advance[1])*0.5f; // in mm;
   mov=dist-dist0;
   run_dist+=fabs(mov);
@@ -152,7 +152,8 @@ bool Controller::process(float yaw, uint32_t dt) {
         setTargSpeed(0); // stop
       } else {
         Serial.print(F("Obst avoid turn: ")); Serial.println(turn);
-        adjustTargBearing(turn*10, false); // 10 degrees
+        //adjustTargBearing(turn*10, false); // 10 degrees
+        avoid_obst_angle=turn; // 60 degrees
       }
     }
   }
@@ -227,6 +228,10 @@ bool Controller::process(float yaw, uint32_t dt) {
 
       err_bearing_p_0=err_bearing_p;
       // use 32 bit math?
+
+      if(avoid_obst_angle)
+        err_bearing_p-=avoid_obst_angle; // avoid obstacle
+        
       delta_pow=-(int16_t)((err_bearing_p*CfgDrv::Cfg.bear_pid.gain_p+err_bearing_d*CfgDrv::Cfg.bear_pid.gain_d+err_bearing_i*CfgDrv::Cfg.bear_pid.gain_i)/CfgDrv::Cfg.bear_pid.gain_div);
       
       int16_t cur_pow[2];
@@ -466,8 +471,9 @@ int8_t Controller::checkObastacle() {
 
   if(stop_count>2) {
     Serial.println(F("Stop!!!")); 
-    Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OBST, (uint16_t)obst, M_CTR_OBST_STOP_DIST, this->speed, 8);  
-    return 9;      
+    //Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OBST, (uint16_t)obst, M_CTR_OBST_STOP_DIST, this->speed, 8);  
+    Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OBST, "OSTOP");  
+    return 8;      
   }
   
   if(prox_count>2) obst=schk; 
@@ -482,13 +488,15 @@ int8_t Controller::checkObastacle() {
     else turn =1;  
     if(this->last_obst!=obst) {
         Serial.print(F("Obstacle at ")); Serial.println(obst); 
-        Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OBST, (uint16_t)obst, M_CTR_OBST_WARN_ON_DIST, this->speed, turn);        
+        //Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OBST, (uint16_t)obst, M_CTR_OBST_WARN_ON_DIST, this->speed, turn);        
+        Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OBST, "OSTART");  
       }          
     Serial.print(F("Obstacle turn ")); Serial.println(turn);   
     } 
   else {    
     if(this->last_obst!=obst) {
-      Serial.println(F("Clear obstacle")); 
+      //Serial.println(F("Clear obstacle")); 
+      Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OBST, "OCLR");
      }
    }
   this->last_obst=obst;
