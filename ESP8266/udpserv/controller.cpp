@@ -12,8 +12,8 @@ const int M_POW_MAX=200;
 const int M_POW_NORM=100;
 const int M_SPEED_NORM=200;
 
-const int M_CTR_OBST_WARN_ON_DIST=50; //cm 
-const int M_CTR_OBST_WARN_OFF_DIST=55; //cm 
+const int M_CTR_OBST_WARN_ON_DIST=75; //cm 
+const int M_CTR_OBST_WARN_OFF_DIST=90; //cm 
 const int M_CTR_OBST_STOP_DIST=30; //cm 
 //const int M_CTR_OBST_WARN_NREP=2;
 
@@ -469,14 +469,14 @@ int8_t Controller::checkObastacle() {
     } 
   }
 
-  if(stop_count>2) {
+  if(stop_count>0) {
     Serial.println(F("Stop!!!")); 
     //Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OBST, (uint16_t)obst, M_CTR_OBST_STOP_DIST, this->speed, 8);  
     Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OBST, "OSTOP");  
     return 8;      
   }
   
-  if(prox_count>2) obst=schk; 
+  if(prox_count>0) obst=schk; 
     
   if(obst !=0xFF) {
     int16_t left=0, right=0;
