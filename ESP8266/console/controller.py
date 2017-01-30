@@ -176,8 +176,9 @@ class Controller():
             resp_json = json.loads(js)
             if req_json is None : # syslog
                 if resp_json["C"]=="A" :
-                    #self.__form.LogString("ALR: "+js, 'RED') #alarm
-                    self.__form.LogErrorString('ALR: '+js) #alarm
+                    ##self.__form.LogString("ALR: "+js, 'RED') #alarm
+                    #self.__form.LogErrorString('ALR: '+js) #alarm
+                    self.__form.LogErrorString(self.decodeEvent(resp_json)) #alarm
                 else :
                     self.__form.LogString("LOG: "+js, 'BLUE') #event
             #elif req_json is not None : #cmd-rsp
@@ -240,3 +241,43 @@ class Controller():
     def movePathRunning(self):
         pass
 
+    def decodeEvent(self, js):
+        mods = ['SYS', 'IMU', 'CTL']
+        DELIM = ' : '
+        codes=[
+            [], #sys
+            [(0,"NONE"), (1,"FAIL_INIT"), (2,"CVTTMO"), (3, "CYCLE"), (128, "INITOK")], #mpu
+            [(0,'NONE'), (1,'FAIL_INIT'), (2, 'FAIL_WRT'), (3, 'FAIL_RD'), (4, 'OVF'), (5, 'ALR'), (6, 'OBST'),
+             (100, 'LOG_PID'), (101, 'LOG_POW'), (102, 'LOG_PBPID0')]
+        ]
+
+        s=''
+        if "C" in js and js["C"]=="A" : s+='ALR'
+        else : s+='EVT'
+        m=-1
+        if "M" in js and js["M"]>=0 and js["M"]<len(mods) :
+            m=js["M"]
+            s+=DELIM+mods[m]
+        else : s+=DELIM+str(m)
+
+        if "F" in js :
+            f=js["F"]
+            fdecoded=None
+            if m<>-1:
+                codemap=codes[m]
+                for cm in codemap:
+                    if cm[0]==f :
+                        fdecoded=cm[1]
+                        break
+            if fdecoded is not None:
+                s+=DELIM+fdecoded
+            else :
+                s+=DELIM+str(f)
+
+        if "S" in js :
+            s+=DELIM+str(js["S"])
+
+        if "P" in js :
+            s+=DELIM+str(js["P"])
+
+        return s

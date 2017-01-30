@@ -10,7 +10,7 @@ const int BUF_SZ = 255;
 class CmdProc {
 public:  
   //static const int8_t ALR_MPU_RESET=10;
-  enum Alarms {ALR_RESET=1, ALR_MPU_RESET=10, ALR_MPU_FAILURE=11, ALR_CTL_RESET=20, ALR_CTL_FAILURE=21, ALR_CTL_LOG=100}; 
+  //enum Alarms {ALR_RESET=1, ALR_MPU_RESET=10, ALR_MPU_FAILURE=11, ALR_CTL_RESET=20, ALR_CTL_FAILURE=21, ALR_CTL_LOG=100}; 
   enum AlarmsLevels {CMD_LLEVEL_ALR=1,CMD_LLEVEL_LOG=2};  
 public:  
   static CmdProc Cmd; // singleton  
