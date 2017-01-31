@@ -8,6 +8,7 @@ import config
 import history
 import draw
 import map
+import camera
 
 LogEvent, EVT_LOG_EVENT = wx.lib.newevent.NewEvent()
 UpdEvent, EVT_UPD_EVENT = wx.lib.newevent.NewEvent()
@@ -78,6 +79,7 @@ class MyForm(wx.Frame):
 
         self.unitPan = draw.UnitPanel(panel)
         self.chart = draw.ChartPanel(panel)
+        self.camera = camera.CameraPanel(panel)
         self.map = map.MapPanel(panel, self.model, "map.json", self.LogString, self.LogErrorString)
         self.controller=controller.Controller(self, self.model, self.map, self.LogString, self.LogErrorString)
         self.map.AddController(self.controller)
@@ -161,6 +163,7 @@ class MyForm(wx.Frame):
         ##sizer_pan.Add(self.unitPan, 1, wx.ALL|wx.EXPAND, 5)
         sizer_charts.Add(self.unitPan, 1, wx.ALL|wx.EXPAND, border=0)
         sizer_charts.Add(self.chart, 1, wx.ALL|wx.EXPAND, border=0)
+        sizer_charts.Add(self.camera, 1, wx.ALL|wx.EXPAND, border=0)
         sizer_pan.Add(sizer_charts, 1, wx.ALL|wx.EXPAND, border=0)
 
         sizer_logs.Add(self.log, 2, wx.ALL|wx.EXPAND, 5)

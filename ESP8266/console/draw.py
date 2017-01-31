@@ -129,7 +129,7 @@ class ChartPanel(wx.Window):
     " draw panel"
     SCALE_MSEC=5.0/1000.0
     def __init__(self, parent):
-        wx.Window.__init__(self, parent, wx.ID_ANY, style=wx.SIMPLE_BORDER, size=(240,240))
+        wx.Window.__init__(self, parent, wx.ID_ANY, style=wx.SIMPLE_BORDER, size=(160,160))
         self.SetBackgroundColour('BLACK')
         self.Bind(wx.EVT_PAINT, self.OnPaint)
         self.Bind(wx.EVT_SIZE, self.OnSize)
