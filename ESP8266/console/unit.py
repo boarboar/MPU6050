@@ -11,6 +11,7 @@ class Unit:
         #scan_d=(-scan_a0*2)/(scan_n-1)
         #scan_a0, scan_n, scan_d = -60, 6, 60
         scan_a0, scan_n, scan_d = -72, 10, 36
+        self.scan_base = 5
         self.bfa=30*math.pi/180 # beamform angle (30 at the moment), but more realistic is 60 deg
         self.scan_angles=[]
         self.scan_rays=[]
@@ -72,7 +73,22 @@ class Unit:
         self.__r_sin=math.sin(angle)
         self.__angle=angle
         self.__dist=dist
-        self.scans=scans
+        #self.scans=scans
+
+        print('Scans:')
+        print(scans)
+        self.scans=[s-10 for s in scans]
+        self.scans=[]
+        for i in range(len(scans)) :
+            s=scans[i]
+            if s>=0 :
+                beta=math.pi-self.scan_angles[i]
+                s=s*s+self.scan_base*self.scan_base-2.0*s*self.scan_base*math.cos(beta)
+                if s>0 : s=math.sqrt(s)
+            self.scans.append(s)
+
+        print(self.scans)
+
         if self.pfilter is not None :
             loc_x=self.x_mean+dist*math.sin(angle)
             loc_y=self.y_mean+dist*math.cos(angle)

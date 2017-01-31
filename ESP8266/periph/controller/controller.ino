@@ -107,6 +107,10 @@
 //#define M_SENS_CNT    4 // 1 idle loop
 #define M_SENS_CNT    5 // 2 idle loops
 
+// actual USENS_DIVISOR constant should be 58.138, but we make correction for angle
+#define USENS_DIVISOR 57
+#define USENS_BASE    3
+
 Servo sservo;
 
 uint32_t lastEvTime, lastPidTime;
@@ -463,9 +467,12 @@ void readUSDist() {
     delayMicroseconds(10);
     digitalWrite(out_port, LOW);
   
-    // actual constant should be 58.138
-    int16_t tmp =(int16_t)(pulseIn(in_port, HIGH, 40000)/58);  //play with timing ?
+    //int16_t tmp =(int16_t)(pulseIn(in_port, HIGH, 40000)/58);  //play with timing ?
+    
+    int16_t tmp =(int16_t)pulseIn(in_port, HIGH, 40000);
     if(tmp==0) tmp=-1;
+    else tmp=tmp/USENS_DIVISOR+USENS_BASE;
+  
     int8_t current_sens=-sservo_pos+SERVO_NSTEPS+sens_step*(SERVO_NSTEPS*2+1); //!!!! That's IT!!!
 #ifdef _US_DEBUG_2_  
     Serial.print(current_sens); Serial.print("\t "); Serial.println(tmp);
