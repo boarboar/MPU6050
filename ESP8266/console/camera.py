@@ -13,4 +13,6 @@ class CameraPanel(wx.Window):
         #self.browser.LoadURL("http://www.google.com")
         #self.browser.LoadURL("http://88.53.197.250/axis-cgi/mjpg/video.cgi?resolution=320x240")
         #self.browser.LoadURL("http://192.168.1.120:8080/")
-        self.browser.LoadURL("http://192.168.1.120:8080/?action=stream")
+        self.browser.LoadURL("http://192.168.1.120/")
+        #self.browser.LoadURL("http://192.168.1.1/")
+

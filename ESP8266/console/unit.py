@@ -11,7 +11,7 @@ class Unit:
         #scan_d=(-scan_a0*2)/(scan_n-1)
         #scan_a0, scan_n, scan_d = -60, 6, 60
         scan_a0, scan_n, scan_d = -72, 10, 36
-        self.scan_base = 5
+        self.scan_base = 3
         self.bfa=30*math.pi/180 # beamform angle (30 at the moment), but more realistic is 60 deg
         self.scan_angles=[]
         self.scan_rays=[]
