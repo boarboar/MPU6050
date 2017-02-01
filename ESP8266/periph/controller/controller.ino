@@ -209,6 +209,15 @@ void setup()
   sservo.attach(SERVO_IN);  // attaches the servo on pin 9 to the servo object
   delay(500);
   sservo.write(90-SERVO_ZERO_SHIFT);
+  delay(500);
+  for(int8_t i=-SERVO_NSTEPS; i<=SERVO_NSTEPS; i++) {
+    sservo.write(90-SERVO_ZERO_SHIFT+i*SERVO_STEP+abs(i)*SERVO_CORR);
+    delay(CYCLE_TIMEOUT);
+  }
+  delay(500);
+  sservo.write(90-SERVO_ZERO_SHIFT);
+  delay(500);
+  
   // init Q
   setQuInit();
   
@@ -473,7 +482,7 @@ void readUSDist() {
     if(tmp==0) tmp=-1;
     else tmp=tmp/USENS_DIVISOR+USENS_BASE;
   
-    int8_t current_sens=-sservo_pos+SERVO_NSTEPS+sens_step*(SERVO_NSTEPS*2+1); //!!!! That's IT!!!
+    int8_t current_sens=-sservo_pos+SERVO_NSTEPS+sens_step*(SERVO_NSTEPS*2+1); 
 #ifdef _US_DEBUG_2_  
     Serial.print(current_sens); Serial.print("\t "); Serial.println(tmp);
 #endif  
