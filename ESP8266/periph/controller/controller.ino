@@ -105,7 +105,8 @@
 
 //#define M_SENS_CNT    8 // 5 idle loops
 //#define M_SENS_CNT    4 // 1 idle loop
-#define M_SENS_CNT    5 // 2 idle loops
+#define M_SENS_IDLE_CNT 3
+#define M_SENS_CNT    (3+M_SENS_IDLE_CNT) // 3 idle loops
 
 // actual USENS_DIVISOR constant should be 58.138, but we make correction for angle
 #define USENS_DIVISOR 57
@@ -212,7 +213,7 @@ void setup()
   delay(500);
   for(int8_t i=-SERVO_NSTEPS; i<=SERVO_NSTEPS; i++) {
     sservo.write(90-SERVO_ZERO_SHIFT+i*SERVO_STEP+abs(i)*SERVO_CORR);
-    delay(CYCLE_TIMEOUT);
+    delay(CYCLE_TIMEOUT*M_SENS_IDLE_CNT);
   }
   delay(500);
   sservo.write(90-SERVO_ZERO_SHIFT);
