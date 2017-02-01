@@ -230,7 +230,7 @@ bool Controller::process(float yaw, uint32_t dt) {
       // use 32 bit math?
 
       if(avoid_obst_angle)
-        delta_pow=avoid_obst_angle*M_POW_MIN;
+        delta_pow=avoid_obst_angle*M_POW_MIN/2;
       else  
         delta_pow=-(int16_t)((err_bearing_p*CfgDrv::Cfg.bear_pid.gain_p+err_bearing_d*CfgDrv::Cfg.bear_pid.gain_d+err_bearing_i*CfgDrv::Cfg.bear_pid.gain_i)/CfgDrv::Cfg.bear_pid.gain_div);
       
@@ -447,7 +447,7 @@ bool Controller::startRotate(int16_t tspeed) {
 int8_t Controller::checkObastacle() {
   uint8_t obst=0xFF;
   uint8_t schk;
-  uint8_t odist;
+  uint16_t odist;
   uint8_t turn=0;
   if(targ_speed==0) return 0; // turning. nocheck
 
@@ -464,7 +464,7 @@ int8_t Controller::checkObastacle() {
   for(uint8_t i=0; i<3; i++) {
     uint8_t iss=schk-1+i;
     if(sensors[iss]>=0)  {
-      if(sensors[iss]<=odist) prox_count++;
+      if(sensors[iss]<=odist*(2+abs(i))/2) prox_count++; // 
       if(sensors[iss]<=M_CTR_OBST_STOP_DIST) stop_count++;     
     } 
   }
@@ -483,7 +483,7 @@ int8_t Controller::checkObastacle() {
     for(uint8_t i=0; i<nsens/4; i++) {
       int16_t t;
       t=sensors[obst-nsens/4+i+1];      
-      if(t>=0) left+=sensors[obst-nsens/4+i+1];
+      if(t>=0) left+=t;
       t=sensors[obst+i];
       if(t>=0) right+=t;
     }
