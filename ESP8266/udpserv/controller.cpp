@@ -228,12 +228,17 @@ bool Controller::process(float yaw, uint32_t dt) {
 
       err_bearing_p_0=err_bearing_p;
       // use 32 bit math?
-
+      /*
       if(avoid_obst_angle)
         delta_pow=avoid_obst_angle*M_POW_MIN/2;
       else  
-        delta_pow=-(int16_t)((err_bearing_p*CfgDrv::Cfg.bear_pid.gain_p+err_bearing_d*CfgDrv::Cfg.bear_pid.gain_d+err_bearing_i*CfgDrv::Cfg.bear_pid.gain_i)/CfgDrv::Cfg.bear_pid.gain_div);
+      */
       
+        delta_pow=-(int16_t)((err_bearing_p*CfgDrv::Cfg.bear_pid.gain_p+err_bearing_d*CfgDrv::Cfg.bear_pid.gain_d+err_bearing_i*CfgDrv::Cfg.bear_pid.gain_i)/CfgDrv::Cfg.bear_pid.gain_div);
+
+      if(avoid_obst_angle)
+        delta_pow+=avoid_obst_angle;
+        
       int16_t cur_pow[2];
       if(targ_speed) {              
         cur_pow[0]=base_pow+delta_pow;
@@ -448,8 +453,9 @@ int8_t Controller::checkObastacle() {
   uint8_t obst=0xFF;
   uint8_t schk;
   uint16_t odist;
-  uint8_t turn=0;
-  if(targ_speed==0) return 0; // turning. nocheck
+  uint16_t turn=0;
+  //if(targ_speed==0) return 0; // turning. nocheck
+  if(targ_speed<=0) return 0; // for fwd only
 
   // check head sens for straight 
   // else rear for back
@@ -464,7 +470,7 @@ int8_t Controller::checkObastacle() {
   for(uint8_t i=0; i<3; i++) {
     uint8_t iss=schk-1+i;
     if(sensors[iss]>=0)  {
-      if(sensors[iss]<=odist*(2+abs(i))/2) prox_count++; // 
+      if(sensors[iss]<=odist*(10+abs(i))/10) prox_count++; // 
       if(sensors[iss]<=M_CTR_OBST_STOP_DIST) stop_count++;     
     } 
   }
@@ -480,26 +486,36 @@ int8_t Controller::checkObastacle() {
     
   if(obst !=0xFF) {
     int16_t left=0, right=0;
-    for(uint8_t i=0; i<nsens/4; i++) {
+    uint8_t nhsens=nsens/4;
+    uint8_t dir=0;
+    for(uint8_t i=0; i<nhsens; i++) {
       int16_t t;
-      t=sensors[obst-nsens/4+i+1];      
+      t=sensors[obst-nhsens+i+1];      
       if(t>=0) left+=t;
       t=sensors[obst+i];
       if(t>=0) right+=t;
     }
-    if(left<right) turn=-1;
-    else turn =1;  
-    if(this->last_obst!=obst) {
+    if(left<right) { dir=-1; turn=left;}
+    else { dir=1; turn=right;}  
+    turn/=nhsens;
+    if(turn<=M_CTR_OBST_STOP_DIST) turn=90;
+    else {
+      turn=90/(turn-M_CTR_OBST_STOP_DIST);
+    }
+    turn*=dir;
+    
+    //if(this->last_obst!=obst) 
+    {
         Serial.print(F("Obstacle at ")); Serial.println(obst); 
         //Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OBST, (uint16_t)obst, M_CTR_OBST_WARN_ON_DIST, this->speed, turn);        
-        Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OBST, "OSTART");  
+        Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OBST, turn);  
       }          
-    Serial.print(F("Obstacle turn ")); Serial.println(turn);   
+    //Serial.print(F("Obstacle turn ")); Serial.println(turn);   
     } 
   else {    
     if(this->last_obst!=obst) {
       //Serial.println(F("Clear obstacle")); 
-      Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OBST, "OCLR");
+      Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OBST, "CLR");
      }
    }
   this->last_obst=obst;
