@@ -453,7 +453,7 @@ int8_t Controller::checkObastacle() {
   uint8_t obst=0xFF;
   uint8_t schk;
   uint16_t odist;
-  uint16_t turn=0;
+  int16_t turn=0;
   //if(targ_speed==0) return 0; // turning. nocheck
   if(targ_speed<=0) return 0; // for fwd only
 
@@ -508,7 +508,7 @@ int8_t Controller::checkObastacle() {
     {
         Serial.print(F("Obstacle at ")); Serial.println(obst); 
         //Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OBST, (uint16_t)obst, M_CTR_OBST_WARN_ON_DIST, this->speed, turn);        
-        Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OBST, turn);  
+        Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OBST, turn, left, right, obst);  
       }          
     //Serial.print(F("Obstacle turn ")); Serial.println(turn);   
     } 
