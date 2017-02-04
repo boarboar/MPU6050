@@ -454,6 +454,7 @@ int8_t Controller::checkObastacle() {
   uint8_t schk;
   uint16_t odist;
   int16_t turn=0;
+  int16_t mdist=9999;
   //if(targ_speed==0) return 0; // turning. nocheck
   if(targ_speed<=0) return 0; // for fwd only
 
@@ -471,7 +472,9 @@ int8_t Controller::checkObastacle() {
     uint8_t iss=schk-1+i;
     if(sensors[iss]>=0)  {
       if(sensors[iss]<=odist*(10+abs(i))/10) prox_count++; // 
-      if(sensors[iss]<=M_CTR_OBST_STOP_DIST) stop_count++;     
+      if(sensors[iss]<=M_CTR_OBST_STOP_DIST) stop_count++;  
+      if(sensors[iss]<mdist)
+        mdist=sensors[iss];   
     } 
   }
 
@@ -481,8 +484,10 @@ int8_t Controller::checkObastacle() {
     Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OBST, "OSTOP");  
     return 8;      
   }
+
+  if(prox_count==0) return 0;
   
-  if(prox_count>0) obst=schk; 
+  obst=schk; 
     
   if(obst !=0xFF) {
     int16_t left=0, right=0;
@@ -495,20 +500,24 @@ int8_t Controller::checkObastacle() {
       t=sensors[obst+i];
       if(t>=0) right+=t;
     }
-    if(left<right) { dir=-1; turn=left;}
+    /*
+    if(left>right) { dir=-1; turn=left;}
     else { dir=1; turn=right;}  
     turn/=nhsens;
-    if(turn<=M_CTR_OBST_STOP_DIST) turn=90;
+    */
+    if(mdist<=M_CTR_OBST_STOP_DIST) turn=90;
     else {
-      turn=90/(turn-M_CTR_OBST_STOP_DIST);
+      //turn=90/(mdist-M_CTR_OBST_STOP_DIST);
+      turn=90-mdist+M_CTR_OBST_STOP_DIST;
+      if(turn<0) turn = 10;
     }
-    turn*=dir;
+    if(left>right) turn=-turn;
     
     //if(this->last_obst!=obst) 
     {
         Serial.print(F("Obstacle at ")); Serial.println(obst); 
         //Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OBST, (uint16_t)obst, M_CTR_OBST_WARN_ON_DIST, this->speed, turn);        
-        Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OBST, turn, left, right, obst);  
+        Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OBST, turn, left, right, obst, mdist);  
       }          
     //Serial.print(F("Obstacle turn ")); Serial.println(turn);   
     } 
