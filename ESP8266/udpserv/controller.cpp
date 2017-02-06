@@ -15,6 +15,7 @@ const int M_SPEED_NORM=200;
 const int M_CTR_OBST_WARN_ON_DIST=75; //cm 
 const int M_CTR_OBST_WARN_OFF_DIST=90; //cm 
 const int M_CTR_OBST_STOP_DIST=30; //cm 
+const int M_CTR_OBST_MAX_TURN=120;
 //const int M_CTR_OBST_WARN_NREP=2;
 
 /*
@@ -472,7 +473,11 @@ int8_t Controller::checkObastacle() {
     uint8_t iss=schk-1+i;
     if(sensors[iss]>=0)  {
       if(sensors[iss]<=odist*(10+abs(i))/10) prox_count++; // 
-      if(sensors[iss]<=M_CTR_OBST_STOP_DIST) stop_count++;  
+      if(sensors[iss]<=M_CTR_OBST_STOP_DIST) { 
+        stop_count++;  
+        Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OBST, 0,0,0, iss, sensors[iss]);  
+        //break;
+        }
       if(sensors[iss]<mdist)
         mdist=sensors[iss];   
     } 
@@ -505,11 +510,10 @@ int8_t Controller::checkObastacle() {
     else { dir=1; turn=right;}  
     turn/=nhsens;
     */
-    if(mdist<=M_CTR_OBST_STOP_DIST) turn=90;
+    if(mdist<=M_CTR_OBST_STOP_DIST) turn=M_CTR_OBST_MAX_TURN;
     else {
-      //turn=90/(mdist-M_CTR_OBST_STOP_DIST);
-      turn=90-mdist+M_CTR_OBST_STOP_DIST;
-      if(turn<0) turn = 10;
+      turn=M_CTR_OBST_MAX_TURN-mdist+M_CTR_OBST_STOP_DIST;
+      if(turn<0) turn = 0;
     }
     if(left>right) turn=-turn;
     
