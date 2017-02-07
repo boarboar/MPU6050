@@ -50,7 +50,6 @@ bool Controller::init() {
   delta_pow=0;
   targ_speed=0;
   rot_speed=0;
-  last_obst=0xFF;
   for(int i=0; i<SENS_SIZE; i++) sensors[i]=0;
   resetIntegrator();
   pready=testConnection();
@@ -80,6 +79,9 @@ void Controller::resetIntegrator() {
   pid_cnt=0;
   qsum_err=0;
 
+  last_obst=0xFF;
+  sens_alarmed=false;
+  
   Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_EVENT, CTL_LOG_PBPID, CfgDrv::Cfg.bear_pid.gain_p, CfgDrv::Cfg.bear_pid.gain_d, CfgDrv::Cfg.bear_pid.gain_i, CfgDrv::Cfg.bear_pid.gain_div, CfgDrv::Cfg.bear_pid.limit_i);  
   /*
   Serial.print(F("CTRL INIT PID B: ")); Serial.print(CfgDrv::Cfg.bear_pid.gain_p); Serial.print(F(" \t ")); Serial.print(CfgDrv::Cfg.bear_pid.gain_d); Serial.print(F(" \t ")); 
@@ -475,7 +477,7 @@ int8_t Controller::checkObastacle() {
       if(sensors[iss]<=odist*(10+abs(i))/10) prox_count++; // 
       if(sensors[iss]<=M_CTR_OBST_STOP_DIST) { 
         stop_count++;  
-        Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OBST, 0,0,0, iss, sensors[iss]);  
+        Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OBST, 0,0,0, iss, 0, sensors[schk-1], sensors[schk], sensors[schk+1]);  
         //break;
         }
       if(sensors[iss]<mdist)
@@ -521,7 +523,7 @@ int8_t Controller::checkObastacle() {
     {
         Serial.print(F("Obstacle at ")); Serial.println(obst); 
         //Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OBST, (uint16_t)obst, M_CTR_OBST_WARN_ON_DIST, this->speed, turn);        
-        Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OBST, turn, left, right, obst, mdist);  
+        Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OBST, turn, left, right, obst, mdist, sensors[schk-1], sensors[schk], sensors[schk+1]);  
       }          
     //Serial.print(F("Obstacle turn ")); Serial.println(turn);   
     } 
@@ -622,6 +624,30 @@ bool Controller::getSensors() {
     Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL, Logger::UMP_LOGGER_ALARM, CTL_FAIL_RD, REG_SENSORS_2H);
     return false;
   }
+
+  uint8_t zero_count=0;
+  for(uint8_t i=0; i<nsens; i++) {
+    int16_t s=sensors[i];
+    if(s<-2 || s>600) {
+      if(!sens_alarmed) {
+        Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL, Logger::UMP_LOGGER_ALARM, CTL_FAIL_SENS_CHECK, i, s);
+        sens_alarmed=true;
+      }
+      res=false;
+      break;
+    }
+    if(s==0) zero_count++;
+  }
+  if(zero_count>3) {
+    if(!sens_alarmed) {
+        Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL, Logger::UMP_LOGGER_ALARM, CTL_FAIL_SENS_CHECK);
+        sens_alarmed=true;
+      }
+    res=false;  
+  }
+
+  if(res) sens_alarmed=false;
+  
   return res;
 }
 

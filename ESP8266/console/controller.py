@@ -249,7 +249,7 @@ class Controller():
             [(0,"NONE"), (1,"FAIL_INIT"), (2,"CVTTMO"),
              (3, "NODATA"), (4, "FIFO_OVF"), (5, "FIFO_TMO"), (6, "FIFO_EXCS"),
              (128, "INITOK")], #mpu
-            [(0,'NONE'), (1,'FAIL_INIT'), (2, 'FAIL_WRT'), (3, 'FAIL_RD'), (4, 'OVF'), (5, 'ALR'), (6, 'OBST'),
+            [(0,'NONE'), (1,'FAIL_INIT'), (2, 'FAIL_WRT'), (3, 'FAIL_RD'), (4, 'OVF'), (5, 'ALR'), (6, 'OBST'),  (7, 'SENS_FAIL'),
              (100, 'LOG_PID'), (101, 'LOG_POW'), (102, 'LOG_PBPID0')]
         ]
 

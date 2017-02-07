@@ -27,7 +27,8 @@
 
 class Controller {
 public:
-  enum FailReason {CTL_FAIL_NONE=0, CTL_FAIL_INIT=1, CTL_FAIL_WRT=2, CTL_FAIL_RD=3, CTL_FAIL_OVF=4, CTL_FAIL_ALR=5, CTL_FAIL_OBST=6, CTL_LOG_PID=100, CTL_LOG_POW=101, CTL_LOG_PBPID=102};
+  enum FailReason {CTL_FAIL_NONE=0, CTL_FAIL_INIT=1, CTL_FAIL_WRT=2, CTL_FAIL_RD=3, CTL_FAIL_OVF=4, CTL_FAIL_ALR=5, CTL_FAIL_OBST=6, CTL_FAIL_SENS_CHECK=7,
+    CTL_LOG_PID=100, CTL_LOG_POW=101, CTL_LOG_PBPID=102};
   static Controller ControllerProc; // singleton  
   bool init();
   bool start();
@@ -115,6 +116,8 @@ private:
   uint32_t pid_cnt;
   float qsum_err;
   float run_dist;
+
+  bool sens_alarmed;
   
 };
 

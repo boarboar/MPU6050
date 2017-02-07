@@ -44,7 +44,7 @@ class PFilter:
         self.map=umap
         self.scan_max_dist=scan_max_dist
         #self.beamdelta=5*math.pi/180
-        #self.beam_att=0.85
+        # self.beam_att=0.85
         self.particles=[]
         #self.fwd_noise=5
         #self.fwd_noise=20
@@ -68,7 +68,7 @@ class PFilter:
         #ANG_VAR=math.pi/2
         ANG_VAR=math.pi/4
         #ANG_VAR=math.pi
-        self.particles = [] #clean
+        self.particles = []  # clean
         for i in range(N_D) :
             for j in range(N_D) :
                 a=(random.random()-0.5)*ANG_VAR*2
