@@ -477,7 +477,7 @@ int8_t Controller::checkObastacle() {
       if(sensors[iss]<=odist*(10+abs(i))/10) prox_count++; // 
       if(sensors[iss]<=M_CTR_OBST_STOP_DIST) { 
         stop_count++;  
-        Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OBST, 0,0,0, iss, 0, sensors[schk-1], sensors[schk], sensors[schk+1]);  
+        Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OBST, 0, sensors[schk-1], sensors[schk], sensors[schk+1]);  
         //break;
         }
       if(sensors[iss]<mdist)
@@ -523,7 +523,7 @@ int8_t Controller::checkObastacle() {
     {
         Serial.print(F("Obstacle at ")); Serial.println(obst); 
         //Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OBST, (uint16_t)obst, M_CTR_OBST_WARN_ON_DIST, this->speed, turn);        
-        Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OBST, turn, left, right, obst, mdist, sensors[schk-1], sensors[schk], sensors[schk+1]);  
+        Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OBST, turn, left, right, sensors[schk-1], sensors[schk], sensors[schk+1]);  
       }          
     //Serial.print(F("Obstacle turn ")); Serial.println(turn);   
     } 
