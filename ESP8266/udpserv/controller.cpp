@@ -14,7 +14,7 @@ const int M_SPEED_NORM=200;
 
 const int M_CTR_OBST_WARN_ON_DIST=75; //cm 
 const int M_CTR_OBST_WARN_OFF_DIST=90; //cm 
-const int M_CTR_OBST_STOP_DIST=30; //cm 
+const int M_CTR_OBST_STOP_DIST=20; //cm 
 const int M_CTR_OBST_MAX_TURN=120;
 //const int M_CTR_OBST_WARN_NREP=2;
 
@@ -196,8 +196,14 @@ bool Controller::process(float yaw, uint32_t dt) {
 
       //float err_bearing_p, err_bearing_d;
       err_bearing_p = (int16_t)((yaw-targ_bearing)*180.0f/PI);
+      err_bearing_p -= avoid_obst_angle; //!!!!
+      /*
       if(err_bearing_p>180) err_bearing_p-=360;
       else if(err_bearing_p<-180) err_bearing_p+=360;
+      */
+
+      while(err_bearing_p>180) err_bearing_p-=360;
+      while(err_bearing_p<-180) err_bearing_p+=360;
       
       if(targ_speed) { // straight 
         if(targ_speed<0) err_bearing_p=-err_bearing_p;               
@@ -231,16 +237,12 @@ bool Controller::process(float yaw, uint32_t dt) {
 
       err_bearing_p_0=err_bearing_p;
       // use 32 bit math?
-      /*
-      if(avoid_obst_angle)
-        delta_pow=avoid_obst_angle*M_POW_MIN/2;
-      else  
-      */
-      
-        delta_pow=-(int16_t)((err_bearing_p*CfgDrv::Cfg.bear_pid.gain_p+err_bearing_d*CfgDrv::Cfg.bear_pid.gain_d+err_bearing_i*CfgDrv::Cfg.bear_pid.gain_i)/CfgDrv::Cfg.bear_pid.gain_div);
+      delta_pow=-(int16_t)((err_bearing_p*CfgDrv::Cfg.bear_pid.gain_p+err_bearing_d*CfgDrv::Cfg.bear_pid.gain_d+err_bearing_i*CfgDrv::Cfg.bear_pid.gain_i)/CfgDrv::Cfg.bear_pid.gain_div);
 
+/*
       if(avoid_obst_angle)
         delta_pow+=avoid_obst_angle;
+*/
         
       int16_t cur_pow[2];
       if(targ_speed) {              
@@ -614,21 +616,21 @@ bool Controller::getSensors() {
   ////bool res = readInt16_N(REG_SENSORS_ALL, 10, sensors);
   //bool res = readInt16_N(REG_SENSORS_ALL, nsens, sensors); 
   //if(!res) Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL, Logger::UMP_LOGGER_ALARM, CTL_FAIL_RD, REG_SENSORS_ALL);
-  bool res = readInt16_N(REG_SENSORS_1H, nsens/2, sensors); 
+  bool res = readInt16_N(REG_SENSORS_1H, nsens/2, sensors_buf); 
   if(!res) {
     Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL, Logger::UMP_LOGGER_ALARM, CTL_FAIL_RD, REG_SENSORS_1H);
     return false;
   }
-  res = readInt16_N(REG_SENSORS_2H, nsens/2, sensors+nsens/2); 
+  res = readInt16_N(REG_SENSORS_2H, nsens/2, sensors_buf+nsens/2); 
   if(!res) {
     Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL, Logger::UMP_LOGGER_ALARM, CTL_FAIL_RD, REG_SENSORS_2H);
     return false;
   }
-
+  // check for validity
   uint8_t zero_count=0;
   for(uint8_t i=0; i<nsens; i++) {
-    int16_t s=sensors[i];
-    if(s<-2 || s>600) {
+    int16_t s=sensors_buf[i];
+    if(s<-2 || s>511) {
       if(!sens_alarmed) {
         Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL, Logger::UMP_LOGGER_ALARM, CTL_FAIL_SENS_CHECK, i, s);
         sens_alarmed=true;
@@ -638,15 +640,19 @@ bool Controller::getSensors() {
     }
     if(s==0) zero_count++;
   }
-  if(zero_count>3) {
+  
+  if(zero_count>=2) {
     if(!sens_alarmed) {
-        Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL, Logger::UMP_LOGGER_ALARM, CTL_FAIL_SENS_CHECK);
+        Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL, Logger::UMP_LOGGER_ALARM, CTL_FAIL_SENS_CHECK, 0, 0, zero_count);
         sens_alarmed=true;
       }
     res=false;  
   }
 
-  if(res) sens_alarmed=false;
+  if(res) {
+    for(uint8_t i=0; i<nsens; i++) sensors[i]= sensors_buf[i];
+    sens_alarmed=false;
+  }
   
   return res;
 }

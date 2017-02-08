@@ -97,6 +97,7 @@ private:
   int32_t act_advance_0[2];
   int16_t act_power[2];
   int16_t sensors[SENS_SIZE];
+  int16_t sensors_buf[SENS_SIZE];
   //int16_t cur_pow[2];
   int16_t base_pow;
   int16_t delta_pow;
