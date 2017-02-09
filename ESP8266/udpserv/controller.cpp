@@ -12,8 +12,8 @@ const int M_POW_MAX=200;
 const int M_POW_NORM=100;
 const int M_SPEED_NORM=200;
 
-const int M_CTR_OBST_WARN_ON_DIST=75; //cm 
-const int M_CTR_OBST_WARN_OFF_DIST=90; //cm 
+const int M_CTR_OBST_WARN_ON_DIST=70; //cm 
+const int M_CTR_OBST_WARN_OFF_DIST=80; //cm 
 const int M_CTR_OBST_STOP_DIST=20; //cm 
 const int M_CTR_OBST_MAX_TURN=120;
 //const int M_CTR_OBST_WARN_NREP=2;
@@ -499,21 +499,21 @@ int8_t Controller::checkObastacle() {
   obst=schk; 
     
   if(obst !=0xFF) {
-    int16_t left=0, right=0;
+    //int16_t left=0, right=0;
+    int16_t left=400, right=400;
     uint8_t nhsens=nsens/4;
     uint8_t dir=0;
     for(uint8_t i=0; i<nhsens; i++) {
       int16_t t;
       t=sensors[obst-nhsens+i+1];      
-      if(t>=0) left+=t;
+      //if(t>=0) left+=t; 
+      if(t>=0 && t<left) left=t; 
       t=sensors[obst+i];
-      if(t>=0) right+=t;
+      //if(t>=0) right+=t; 
+      if(t>=0 && t<right) right=t; 
     }
-    /*
-    if(left>right) { dir=-1; turn=left;}
-    else { dir=1; turn=right;}  
-    turn/=nhsens;
-    */
+
+    
     if(mdist<=M_CTR_OBST_STOP_DIST) turn=M_CTR_OBST_MAX_TURN;
     else {
       turn=M_CTR_OBST_MAX_TURN-mdist+M_CTR_OBST_STOP_DIST;
