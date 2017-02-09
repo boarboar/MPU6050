@@ -214,8 +214,8 @@ class PathThread(threading.Thread):
             resp_json = self.__controller.reqPositionSync()
             try:
                 if resp_json is not None and resp_json["C"]=="POS":
-                    #x, y, a = self.__unit.x_mean, self.__unit.y_mean, self.__unit.a_mean # by localization
-                    x, y, a =self.__unit.GetSim() #by dead reckoning
+                    x, y, a = self.__unit.x_mean, self.__unit.y_mean, self.__unit.a_mean # by localization
+                    #x, y, a =self.__unit.GetSim() #by dead reckoning
 
                     self.__planner.RePlanOnMove((x,y), False)
 

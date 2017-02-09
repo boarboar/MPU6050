@@ -1,23 +1,32 @@
 import wx
-import wx.html2
+import vlc
+import sys
 
 class CameraPanel(wx.Window):
     " camera panel"
     def __init__(self, parent):
         wx.Window.__init__(self, parent, wx.ID_ANY, style=wx.SIMPLE_BORDER, size=(160,120))
-        self.SetBackgroundColour('BLACK')
+        self.videopanel = wx.Panel(self, -1)
+        self.videopanel.SetBackgroundColour(wx.BLACK)
         sizer = wx.BoxSizer(wx.VERTICAL)
-        self.browser = wx.html2.WebView.New(self)
-        sizer.Add(self.browser, 1, wx.EXPAND, 10)
+        sizer.Add(self.videopanel, 1, flag=wx.EXPAND)
         self.SetSizer(sizer)
-        #self.browser.LoadURL("http://www.google.com")
-        #self.browser.LoadURL("http://192.168.1.120:8080/")
-        self.browser.LoadURL("http://root:tombaz@192.168.1.120/")
+        # VLC player controls
+        try :
+            self.Instance = vlc.Instance()
+            self.player = self.Instance.media_player_new()
+            self.Media = self.Instance.media_new(unicode('http://192.168.1.120:8080/?action=stream'))
+            self.player.set_media(self.Media)
+            # set the window id where to render VLC's video output
+            handle = self.videopanel.GetHandle()
+            if sys.platform.startswith('linux'): # for Linux using the X Server
+                self.player.set_xwindow(handle)
+            elif sys.platform == "win32": # for Windows
+                self.player.set_hwnd(handle)
+            elif sys.platform == "darwin": # for MacOS
+                self.player.set_nsobject(handle)
+            if self.player.play() == -1:
+                print("Unable to play.")
 
-
-        #self.browser.LoadURL("http://192.168.1.1/")
-        self.Bind(wx.html2.EVT_WEBVIEW_LOADED, self.OnPageLoaded, self.browser)
-
-    def OnPageLoaded(self, evt):
-        print("loaded")
-        self.Bind(wx.html2.EVT_WEBVIEW_LOADED, None, self.browser)
+        except:
+            print(sys.exc_info()[0])
