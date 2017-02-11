@@ -41,7 +41,8 @@
 #define   SERVO_IN P1_3
 
 //#define  CYCLE_TIMEOUT 500
-#define  CYCLE_TIMEOUT 75
+//#define  CYCLE_TIMEOUT 75
+#define  CYCLE_TIMEOUT 60
 //#define  CYCLE_TIMEOUT 50 // will it work?
 
 #define  CMD_TIMEOUT 1000 // !!!! 
