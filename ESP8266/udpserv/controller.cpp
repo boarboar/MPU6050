@@ -12,10 +12,10 @@ const int M_POW_MAX=200;
 const int M_POW_NORM=100;
 const int M_SPEED_NORM=200;
 
-const int M_CTR_OBST_WARN_ON_DIST=70; //cm 
-const int M_CTR_OBST_WARN_OFF_DIST=80; //cm 
-const int M_CTR_OBST_STOP_DIST=20; //cm 
-const int M_CTR_OBST_MAX_TURN=120;
+const int M_CTR_OBST_WARN_ON_DIST=45; //cm 
+const int M_CTR_OBST_WARN_OFF_DIST=50; //cm 
+const int M_CTR_OBST_STOP_DIST=12; //cm 
+const int M_CTR_OBST_MAX_TURN=45;
 //const int M_CTR_OBST_WARN_NREP=2;
 
 /*

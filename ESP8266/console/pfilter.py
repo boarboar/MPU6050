@@ -46,9 +46,9 @@ class PFilter:
         #self.beamdelta=5*math.pi/180
         # self.beam_att=0.85
         self.particles=[]
-        self.fwd_noise=1
+        self.fwd_noise=5
         #self.fwd_noise=10
-        self.rot_noise=0.01
+        self.rot_noise=0.02
         #self.rot_noise=0.05
         #self.sense_noise=20
         #self.sense_noise=scan_max_dist/2
