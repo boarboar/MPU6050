@@ -13,7 +13,10 @@ class CameraPanel(wx.Window):
         self.SetSizer(sizer)
         # VLC player controls
         try :
-            self.Instance = vlc.Instance()
+            self.Instance = vlc.Instance('--network-caching=0')
+
+            #--live-caching=
+
             self.player = self.Instance.media_player_new()
             self.Media = self.Instance.media_new(unicode('http://192.168.1.120:8080/?action=stream'))
             self.player.set_media(self.Media)
@@ -25,8 +28,18 @@ class CameraPanel(wx.Window):
                 self.player.set_hwnd(handle)
             elif sys.platform == "darwin": # for MacOS
                 self.player.set_nsobject(handle)
+
+            self.event_manager = self.Media.event_manager()
+            #self.event_manager.event_attach(vlc.EventType.VlmMediaInstanceStatusError, self.http_error, None)
+
             if self.player.play() == -1:
                 print("Unable to play.")
 
         except:
             print(sys.exc_info()[0])
+
+
+    @vlc.callbackmethod
+    def http_error(self, event):
+        print('VLC ERR')
+        return 0
