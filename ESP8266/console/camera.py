@@ -13,7 +13,7 @@ class CameraPanel(wx.Window):
         self.SetSizer(sizer)
         # VLC player controls
         try :
-            self.Instance = vlc.Instance('--network-caching=0')
+            self.Instance = vlc.Instance('--live-caching=0 --live-caching=0')
 
             #--live-caching=
 
