@@ -4,6 +4,7 @@ import copy
 import timeit
 from operator import attrgetter
 import bisect
+import multiprocessing
 
 class WeightedDistribution(object):
     def __init__(self, state):
@@ -57,6 +58,9 @@ class PFilter:
 
         self.gauss_denom=math.sqrt(2.0 * math.pi * (self.sense_noise ** 2))
         self.gauss_exp_denom=(self.sense_noise ** 2) * 2.0
+        #ncpu=multiprocessing.cpu_count()/2
+        #self.pool = multiprocessing.Pool(ncpu)
+        #print("Pool created, CPU count %s" % (ncpu))
 
 
     def InitParticles(self):
@@ -82,6 +86,19 @@ class PFilter:
         for p in psorted :
             print("C=(%s,%s), A=%s, W=%s" % (round(p.x,0), round(p.y,0), round(p.a,0), p.w) )
 
+    def updateOneParticle(self, p, mov, rot, scans, scan_angles, beamform):
+        p.move_d(mov+random.gauss(0, self.fwd_noise), rot+random.gauss(0, self.rot_noise))
+        if self.map.isInsideTest(p.x, p.y) is not None :
+            sorted_walls=self.map.getSortedWalls((p.x, p.y), self.scan_max_dist)
+            self.updateParticleProbabilities3(p, scans, scan_angles, sorted_walls, beamform)
+        else : p.w=0.0
+        #print("IN WORKER: C=(%s,%s), A=%s, W=%s" % (round(p.x,0), round(p.y,0), round(p.a,0), p.w) )
+        return (p)
+
+    def testParticle(self, p) :
+        print("IN TEST: C=(%s,%s), A=%s, W=%s" % (round(p.x,0), round(p.y,0), round(p.a,0), p.w) )
+        return p
+
     def updateParticles(self, mov, rot, scans, scan_angles, loc_x, loc_y, beamform):
         if len(self.particles)==0 : return
 
@@ -92,29 +109,50 @@ class PFilter:
             scan_angles_sin.append(math.sin(a))
 
 
-        #self.printParticles("Before")
-
-        #print (self.map.getSortedWalls((0,0)))
-
-        #sorted_walls_base=self.map.getSortedWalls((loc_x, loc_y), self.scan_max_dist)
-
-
         start_time = timeit.default_timer()
+
+        #sorted_walls=self.map.getSortedWalls((self.particles[0].x, self.particles[0].y), self.scan_max_dist)
+        sorted_walls=None
+        p0=None
+        resorted=0
         for p in self.particles :
             p.move_d(mov+random.gauss(0, self.fwd_noise), rot+random.gauss(0, self.rot_noise))
             if self.map.isInsideTest(p.x, p.y) is not None :
-                #sorted_walls=self.map.getReSortedWalls(sorted_walls_base, (p.x, p.y), scan_max_dist)  ### rev back - 15.12.2016 - no imp
-                sorted_walls=self.map.getSortedWalls((p.x, p.y), self.scan_max_dist) ### - 08.11.2016
-                ############ self.updateParticleProbabilities(p, scans, scan_angles, scan_max_dist, sorted_walls)
+                #sorted_walls=self.map.getSortedWalls((p.x, p.y), self.scan_max_dist)
+                if sorted_walls is None or (p0.x-p.x)*(p0.x-p.x)+(p0.y-p.y)*(p0.y-p.y)<25 :
+                    sorted_walls=self.map.getSortedWalls((p.x, p.y), self.scan_max_dist)
+                    p0=p
+                    resorted=resorted+1
                 self.updateParticleProbabilities3(p, scans, scan_angles, sorted_walls, beamform)
-                ############ just for tests, replaced with old version
-                #self.updateParticleProbabilities1(p, scans, scan_angles_cos, scan_angles_sin, scan_max_dist, sorted_walls)
             else : p.w=0.0
+        """
+        p2=[]
+        for p in self.particles :
+            p2.append(self.updateOneParticle(p, mov, rot, scans, scan_angles, beamform))
+        self.particles=p2
+
+        #results = [self.pool.apply_async(PrintParticle(p)) for p in self.particles]
+
+
+        #results = [self.pool.apply_async(self.updateOneParticle(p, mov, rot, scans, scan_angles, beamform)) for p in self.particles]
+
+        #self.particles=[]
+        #for result in results:
+        #    print(result._value)
+
+
+        p2 = self.pool.map(UpdateOneParticle, [(p, mov, rot, scans, scan_angles, beamform) for p in self.particles])
+        #p2 = self.pool.map(PrintParticle, [(p) for p in self.particles])
+        #p2 = self.pool.map(self.testParticle, [(self, p) for p in self.particles])
+        #for result in p2:
+        #    print(result)
+
+        #self.particles=p2
+        """
 
         t=timeit.default_timer() - start_time
-        print ('Particle update (%s) in %s s, %s per particle' %
-               (len(self.particles), round(t, 2), round(t/len(self.particles), 4))
-               )
+        print ('Updated %s particles in %s s, %s per particle, resorted %s' %
+               (len(self.particles), round(t, 2), round(t/len(self.particles), 4), resorted) )
 
         wsum=sum(p.w for p in self.particles)
         if wsum>0 :
@@ -274,7 +312,6 @@ class PFilter:
             #scan_dist.append(dist2)
 
             prob*=self.Gaussian1(dist2, meas[i], max_dist)
-            #prob*=self.Gaussian(dist2, self.sense_noise, meas[i], scan_max_dist)
 
         p.w=prob
         #p.w=math.log10(prob)
@@ -311,10 +348,5 @@ class PFilter:
         # calculates the probability of x for 1-dim Gaussian with mean mu and var. sigma
         if mu < 0 : mu=scan_max_dist
         if x < 0 : x=scan_max_dist
-        #dist=abs(mu-x)
-        #if x>scan_max_dist/2 : dist=dist/2
-        #if x>1 : dist=dist/x
         dist2=(mu-x)**2
-        #if x>1 : dist2*=(x+mu)/2
-        #if x>1 : dist2/=(x+mu)/2
         return math.exp(-dist2/ self.gauss_exp_denom) / self.gauss_denom

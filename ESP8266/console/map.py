@@ -418,7 +418,9 @@ class MapPanel(wx.Window, UnitMap):
         dc.DrawPolygon(self.tsu(self.__shape)) #localized
 
         # draw sensor rays
-        if unit.isInside :
+
+        #if unit.isInside :
+        if unit.scans is not None :
             i=0
             inters_pen=wx.Pen(wx.GREEN, 2)
             inters_pen_c=wx.Pen(wx.BLUE, 2)

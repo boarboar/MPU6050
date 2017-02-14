@@ -47,7 +47,7 @@ class Unit:
     def InitUnitPos(self, start):
         self.start=start
         self.isInside=False
-        self.scans=[-1,-1,-1]
+        self.scans=None
         self.__r_cos, self.__r_sin= (1.0, 0.0)    # unit cosine matrix, 'real'
         self.__r_x, self.__r_y = (0.0, 0.0)    # unit position, simulated
         self.__angle=0 #yaw
@@ -75,8 +75,8 @@ class Unit:
         self.__dist=dist
         #self.scans=scans
 
-        print('Scans:')
-        print(scans)
+        #print('Scans:')
+        #print(scans)
         self.scans=[s-10 for s in scans]
         self.scans=[]
         for i in range(len(scans)) :
@@ -87,7 +87,7 @@ class Unit:
                 if s>0 : s=math.sqrt(s)
             self.scans.append(s)
 
-        print(self.scans)
+        #print(self.scans)
 
         if self.pfilter is not None :
             loc_x=self.x_mean+dist*math.sin(angle)
@@ -98,13 +98,16 @@ class Unit:
         self.__l_sin=math.sin(self.a_mean)
 
         self.__r_x, self.__r_y = x, y # simulated crd
-        self.isInside=self.map.isInsideTest(x+self.start[0], y+self.start[1]) is not None
+        #self.isInside=self.map.isInsideTest(x+self.start[0], y+self.start[1]) is not None
+        self.isInside=self.map.isInsideTest(loc_x+self.start[0], loc_y+self.start[1]) is not None
 
+        """
         print("Unit Mov: Rot %s Dist %s (%s, %s, %s) vs (%s, %s, %s) in %s s" %
               (str(move_rot*180.0/math.pi), move_dist,
                x+self.map.start[0], y+self.map.start[1], angle,
                self.x_mean, self.y_mean, self.a_mean,
                str(round(timeit.default_timer() - start_time, 2))))
+        """
 
     def GetSim(self):
         return self.__r_x+self.start[0], self.__r_y+self.start[1], self.__angle

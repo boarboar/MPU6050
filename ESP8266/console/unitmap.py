@@ -46,14 +46,14 @@ class UnitMap:
                     density=1
                     if 'DENSITY' in obj : density=obj['DENSITY']
                     obj_walls=[]
+                    crd_p=[]
+                    obj["CS_P"]=crd_p
                     if 'CS' in obj :
-                        """
-                        crd_p=[]
                         for c in obj["CS"] :
                             p = c["C"]
                             crd_p.append((pobj0[0]+p[0], pobj0[1]+p[1]))
-                        #obj["CS_P"]=crd_p
 
+                        """
                         #if len(crd_p)<2 or density < 0.1 : continue
                         obj_walls=[]
                         op0=crd_p[-1]
@@ -87,6 +87,7 @@ class UnitMap:
                                 walls.append(( op0, op, free_pos, 0, sdensity))
                                 obj_walls.append(( op0, op, free_pos, 0, sdensity))
                                 op0=op
+                                crd_p.append((op[0], op[1]))
 
                     obj["WALLS"]=obj_walls
 
@@ -147,18 +148,20 @@ class UnitMap:
                 break
         if status != 0 : return status
 
-        # bug - it's possible that all thre points are inside, but internal wall is inside the cell...
+        # bug - it's possible that all the points are inside, but internal wall is inside the cell...
         # just for now - test a center point
         if self.isInsideTest((cell[0][0]+cell[-2][0])/2, (cell[0][1]+cell[2][1])/2) is None : return 1
 
         for area in self.map["AREAS"] :
             parea0=area["AT"]
             try:
-                for obj in area["OBJECTS"] :
-                    status=self.polyIntersects(cell, obj['CS_P'])
-                    if status!=0 : break
+                if "OBJECTS" in area :
+                    for obj in area["OBJECTS"] :
+                        if 'CS_P' in obj :
+                            status=self.polyIntersects(cell, obj['CS_P'])
+                            if status!=0 : break
             except KeyError :
-                print('Some obj attr missing')
+                print('AT: Some obj attr missing')
                 pass
 
             if status!=0 : break
@@ -323,7 +326,7 @@ class UnitMap:
                         op0=op
 
             except KeyError :
-                print('Some obj attr missing')
+                print('GIM: Some obj attr missing')
                 pass
 
 

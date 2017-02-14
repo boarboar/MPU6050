@@ -67,7 +67,7 @@ class Planner:
                           (x+self.GRID_SZ+self.GRID_DELTA, y+self.GRID_SZ+self.GRID_DELTA),
                           (x-self.GRID_DELTA, y+self.GRID_SZ+self.GRID_DELTA)]
                     cell[2]=self.map.At(area)
-                    if cell[2]!=0 : cell[7]=1
+                    if cell[2]==1 : cell[7]=1
                     else : cell[7]=0
 
             delta = [[-1, 0 ], # go down
