@@ -42,8 +42,7 @@
 
 //#define  CYCLE_TIMEOUT 500
 //#define  CYCLE_TIMEOUT 75
-#define  CYCLE_TIMEOUT 60
-//#define  CYCLE_TIMEOUT 50 // will it work?
+#define  CYCLE_TIMEOUT 50
 
 #define  CMD_TIMEOUT 1000 // !!!! 
 
@@ -223,7 +222,7 @@ void setup()
   // init Q
   setQuInit();
   
-  setQuPrint();
+  //setQuPrint();
   
   Serial.println("Ready");
 
@@ -285,7 +284,7 @@ void loop()
         break;         
       default:;    
     }
-    Serial.println();
+    //Serial.println();
   }
  
  //if(qsz>1) {Serial.print("===========QSZ "); Serial.println(qsz);} 
