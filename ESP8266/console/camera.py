@@ -20,9 +20,11 @@ class CameraPanel(wx.Window):
 
         # VLC player controls
         try :
-            #self.Instance = vlc.Instance('--live-caching=0 --network-caching=0')
-            self.Instance = vlc.Instance('--live-caching=0 --network-caching=0 --postproc-q=0 --mjpeg-fps=0 '
-                                         '--image-realtime --no-audio --quiet-synchro --clock-synchro=0 --clock-jitter=0')
+            self.Instance = vlc.Instance('--live-caching=0 --network-caching=0 --postproc-q=0'
+                                         ' --mjpeg-fps=0 --image-realtime --no-audio ')
+
+            #self.Instance = vlc.Instance('--live-caching=0 --network-caching=0 --postproc-q=0 --mjpeg-fps=0 '
+            #                             '--image-realtime --no-audio --quiet-synchro --clock-synchro=0 --clock-jitter=0')
 
             self.player = self.Instance.media_player_new()
             self.event_manager = self.player.event_manager()
