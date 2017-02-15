@@ -183,7 +183,7 @@ class UnitMap:
         return None
 
     def getIntersectionMapRefl(self, p0, p1, scan_max_dist, sorted_walls, for_draw=False):
-        intrs0, ref, dumped =self.getIntersectionMap1(p0, p1, True, scan_max_dist, sorted_walls, for_draw)
+        intrs0, ref, dumped, dist =self.getIntersectionMap1(p0, p1, True, scan_max_dist, sorted_walls, for_draw)
         """
         if for_draw and dumped :
             print('Dumped')
@@ -201,9 +201,11 @@ class UnitMap:
                 intrs=intrs0
                 if refState:
                     # secondary intersect if any
-                    intrs1, ref, dumped=self.getIntersectionMap1(intrs0, pr, False, scan_max_dist, sorted_walls)
+                    refl_sorted_walls=self.getSortedWalls(intrs, scan_max_dist-dist)
+                    intrs1, ref, dumped, dist_ref=self.getIntersectionMap1(intrs0, pr, False, scan_max_dist-dist, refl_sorted_walls)
                     intrs=intrs1
-        return (intrs0, pr, intrs1, refState, intrs, cosa2)
+                    dist=dist+dist_ref
+        return (intrs0, pr, intrs1, refState, intrs, cosa2, dist)
 
 
     def getIntersectionMap1(self, p0, p1, findRefl, scan_max_dist, sorted_walls, for_draw=False):
@@ -236,13 +238,15 @@ class UnitMap:
 
         #return intrs, ref
 
+
+        dist=math.sqrt(dist2)
         if intrs!=None and findRefl :
             #if density<0.99 and for_draw:
             if density<0.99:
-                ref=self.getReflection(p0, intrs, wsect[0], wsect[1], math.sqrt(dist2), density)
+                ref=self.getReflection(p0, intrs, wsect[0], wsect[1], dist, density)
                 if ref is not None :
                     pr, cc, refState = ref
-                    cosa=math.sqrt(cc)
+                    #cosa=math.sqrt(cc)
                     #print(cosa)
                     if refState :
                         dumped=True
@@ -250,10 +254,11 @@ class UnitMap:
                         #intrs=None #- if to make transparent
 
             # find reflection vector
-            elif (scan_max_dist-50)*(scan_max_dist-50) > dist2 :
-                ref=self.getReflection(p0, intrs, wsect[0], wsect[1], math.sqrt(dist2), reff)
+            #elif (scan_max_dist-50)*(scan_max_dist-50) > dist2 :
+            elif (scan_max_dist-50) > dist :
+                ref=self.getReflection(p0, intrs, wsect[0], wsect[1], dist, reff)
 
-        return intrs, ref, dumped
+        return intrs, ref, dumped, dist
 
     def getIntersectionMap(self, p0, p1, findRefl, scan_max_dist):
         """
@@ -389,7 +394,9 @@ class UnitMap:
         if (s_numer > denom) == denom_is_positive or (t_numer > denom) == denom_is_positive : return None # no collision
         # collision detected
         t = t_numer / denom
-        intersection_point = ( int(p0[0] + (t * s10_x)), int(p0[1] + (t * s10_y)) )
+        #print(p0[0], p0[1], s10_x, s10_y, denom, s_numer, t_numer, t)
+        #intersection_point = ( int(p0[0] + (t * s10_x)), int(p0[1] + (t * s10_y)) )
+        intersection_point = ( p0[0] + (t * s10_x), p0[1] + (t * s10_y) )
         #note: sin(angle) = denom/(|s10|*|s32|)
         #where angle is a falling angle, 90 is ortho
         #or we can use (sin(angle))^2 = denom^2/(|s10|^2*|s32|^2) to avoid sqrt

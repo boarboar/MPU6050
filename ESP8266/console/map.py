@@ -454,7 +454,7 @@ class MapPanel(wx.Window, UnitMap):
                     intrs = crd_conv(wx.Point(ray[0]*idist, ray[1]*idist))
                     dc.DrawCirclePoint(intrs, 10)
                 # draw calculate intersections
-                intrs0, pr, intrs1, refstate, intrs, cosa2 =self.getIntersectionMapRefl(
+                intrs0, pr, intrs1, refstate, intrs, cosa2, dist =self.getIntersectionMapRefl(
                         crd_conv_unit(0,0),
                         crd_conv_unit(ray[0]*unit.scan_max_dist, ray[1]*unit.scan_max_dist),
                         unit.scan_max_dist, sorted_walls, True

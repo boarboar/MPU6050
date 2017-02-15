@@ -293,25 +293,30 @@ class PFilter:
     def updateParticleProbabilities3(self, p, meas, scan_angles, sorted_walls, beamform):
         prob = 1.0
         p0=(p.x, p.y)
+        #p0=(int(p.x), int(p.y))
         for i in range(len(scan_angles)) :
             # should be more dense starting from the center anf=d unwinding, with sub-beam at each 1 degree
             ba=p.a+scan_angles[i]
+            cba=math.cos(ba)
+            sba=math.sin(ba)
             for bf in beamform:
-                da=bf[0]
-                max_dist=bf[1]
-                #p1=(p.x+math.sin(p.a+a)*scan_max_dist, p.y+math.cos(p.a+a)*scan_max_dist)
-                p1=(p.x+math.sin(ba+da)*self.scan_max_dist, p.y+math.cos(ba+da)*max_dist)
-                intrs0, pr, intrs1, refstate, intrs, cosa2 = self.map.getIntersectionMapRefl(p0, p1, max_dist, sorted_walls)
+                da, max_dist, cda, sda = bf
+                cosa=cba*cda-sba*sda
+                sina=cba*sda+cda*sba
+                #p1=(p.x+math.sin(ba+da)*self.scan_max_dist, p.y+math.cos(ba+da)*max_dist)
+                p1=(p.x+sina*self.scan_max_dist, p.y+cosa*max_dist)
+                intrs0, pr, intrs1, refstate, intrs, cosa2, dist = self.map.getIntersectionMapRefl(p0, p1, max_dist, sorted_walls)
                 if intrs is not None: break
 
             if intrs==None :
-                dist2 = -1
+                dist = -1
                 max_dist=self.scan_max_dist
-            else :
-                dist2=math.sqrt((intrs[0]-p0[0])*(intrs[0]-p0[0])+(intrs[1]-p0[1])*(intrs[1]-p0[1]))
+            #else :
+                #dist2=math.sqrt((intrs[0]-p0[0])*(intrs[0]-p0[0])+(intrs[1]-p0[1])*(intrs[1]-p0[1]))
+
             #scan_dist.append(dist2)
 
-            prob*=self.Gaussian1(dist2, meas[i], max_dist)
+            prob*=self.Gaussian1(dist, meas[i], max_dist)
 
         p.w=prob
         #p.w=math.log10(prob)
