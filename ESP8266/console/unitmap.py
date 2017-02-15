@@ -205,6 +205,8 @@ class UnitMap:
                     intrs1, ref, dumped, dist_ref=self.getIntersectionMap1(intrs0, pr, False, scan_max_dist-dist, refl_sorted_walls)
                     intrs=intrs1
                     dist=dist+dist_ref
+                    #if intrs1 is not None:
+                    #    print('intersect ', dist, dist_ref)
         return (intrs0, pr, intrs1, refState, intrs, cosa2, dist)
 
 
@@ -229,7 +231,7 @@ class UnitMap:
                 isect=self.find_intersection(p0, p1, p2, p3)
             if isect!=None :
                 d2 = (isect[0]-p0[0])*(isect[0]-p0[0])+(isect[1]-p0[1])*(isect[1]-p0[1])
-                if intrs==None or d2<dist2 :
+                if (intrs==None or d2<dist2) and d2>0.01:
                     intrs=isect
                     dist2=d2
                     wsect=(p2, p3)
