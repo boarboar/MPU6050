@@ -3,6 +3,7 @@ import sys
 import math
 import random
 from operator import itemgetter
+import geometry
 
 from pprint import pprint
 
@@ -228,7 +229,8 @@ class UnitMap:
             #reffw=walls[3]
             #density=walls[4]
             if movable==0 or (movable==2 and random.random()>0.5):
-                isect=self.find_intersection(p0, p1, p2, p3)
+                #isect=self.find_intersection(p0, p1, p2, p3)
+                isect=geometry.c_find_intersection(p0, p1, p2, p3)
             if isect!=None :
                 d2 = (isect[0]-p0[0])*(isect[0]-p0[0])+(isect[1]-p0[1])*(isect[1]-p0[1])
                 if (intrs==None or d2<dist2) and d2>0.01:
@@ -395,7 +397,7 @@ class UnitMap:
         if (t_numer < 0) == denom_is_positive : return None # no collision
         if (s_numer > denom) == denom_is_positive or (t_numer > denom) == denom_is_positive : return None # no collision
         # collision detected
-        t = t_numer / denom
+        t = float(t_numer) / denom
         #print(p0[0], p0[1], s10_x, s10_y, denom, s_numer, t_numer, t)
         #intersection_point = ( int(p0[0] + (t * s10_x)), int(p0[1] + (t * s10_y)) )
         intersection_point = ( p0[0] + (t * s10_x), p0[1] + (t * s10_y) )
