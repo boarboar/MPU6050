@@ -3,6 +3,7 @@ import sys
 import math
 import random
 from operator import itemgetter
+import timeit
 import geometry
 
 from pprint import pprint
@@ -16,9 +17,13 @@ from pprint import pprint
 # %: dist
 
 class UnitMap:
+    GRID_SZ=20 #HxW
+    #GRID_SZ=10 #HxW
+    GRID_DELTA=5 #cm
+
     def __init__(self, mapfile):
         self.boundRect=[sys.maxint, sys.maxint, -sys.maxint, -sys.maxint] #bounding rect
-
+        self.resetCounters()
         try:
             with open(mapfile) as data_file:
                 self.map = json.load(data_file)
@@ -97,12 +102,50 @@ class UnitMap:
             self.map["WALLS"]=walls
 
             self.init_start=self.map["START"]
-            print("Map loaded")
+
+            print("Map loaded, there are %s walls" % (len(walls)))
             print(self.boundRect)
         except IOError: print("IO Error")
         #except : pass
+        w=self.boundRect[2]-self.boundRect[0]
+        h=self.boundRect[3]-self.boundRect[1]
+        nx=w/self.GRID_SZ+1
+        ny=h/self.GRID_SZ+1
+        x0=self.boundRect[0]
+        y0=self.boundRect[1]
+        print('init grid NR=%s NC=%s...' % (ny, nx))
+        start_time = timeit.default_timer()
+        self.grid = [[[x0+col*self.GRID_SZ,y0+row*self.GRID_SZ, None, None] for col in range(nx)] for row in range(ny)]
+        for row in self.grid:
+            for cell in row:
+                x, y =cell[0], cell[1]
+                area=[(x-self.GRID_DELTA,y-self.GRID_DELTA),
+                      (x+self.GRID_SZ+self.GRID_DELTA, y-self.GRID_DELTA),
+                      (x+self.GRID_SZ+self.GRID_DELTA, y+self.GRID_SZ+self.GRID_DELTA),
+                      (x-self.GRID_DELTA, y+self.GRID_SZ+self.GRID_DELTA)]
+                cell[2]=self.At(area)
+                cell[3]=self._getSortedWalls((x+self.GRID_SZ/2, y+self.GRID_SZ/2), 500)
+        print('grid inited in %s s' % (round(timeit.default_timer() - start_time, 2)))
+
+    def resetCounters(self) :
+        self.counter_map_sortwalls = 0
+        self.counter_map_refl = 0
+        self.counter_map_refl_refl = 0
+
+    def getCounters(self) :
+        return (self.counter_map_sortwalls, self.counter_map_refl, self.counter_map_refl_refl)
 
     def getSortedWalls(self, p, scan_max_dist):
+        cell0=self.grid[0][0]
+        r=int((p[1]-cell0[1])/self.GRID_SZ)
+        c=int((p[0]-cell0[0])/self.GRID_SZ)
+        if r >= 0 and r < len(self.grid) and c >=0 and c < len(self.grid[r]) :
+            return self.grid[r][c][3]
+        else :
+            return []
+
+    def _getSortedWalls(self, p, scan_max_dist):
+        self.counter_map_sortwalls = self.counter_map_sortwalls +1
         wall_dist=[]
         walls_all=self.map["WALLS"]
         maxdist2=scan_max_dist*scan_max_dist
@@ -190,6 +233,7 @@ class UnitMap:
             print('Dumped')
             print(intrs0)
         """
+        self.counter_map_refl = self.counter_map_refl+1
         refState = False
         pr = None
         intrs1 = None
@@ -202,12 +246,18 @@ class UnitMap:
                 intrs=intrs0
                 if refState:
                     # secondary intersect if any
-                    refl_sorted_walls=self.getSortedWalls(intrs, scan_max_dist-dist)
-                    intrs1, ref, dumped, dist_ref=self.getIntersectionMap1(intrs0, pr, False, scan_max_dist-dist, refl_sorted_walls)
-                    intrs=intrs1
-                    dist=dist+dist_ref
-                    #if intrs1 is not None:
-                    #    print('intersect ', dist, dist_ref)
+                    # reduce max dist due to signal loss
+                    max_dist_refl=(scan_max_dist-dist)/4
+                    if max_dist_refl > 5 :
+                        if dist>10 :
+                            refl_sorted_walls=self.getSortedWalls(intrs, max_dist_refl)
+                        else :
+                            refl_sorted_walls = sorted_walls
+                        intrs1, ref, dumped, dist_ref=self.getIntersectionMap1(intrs0, pr, False, max_dist_refl, refl_sorted_walls)
+                        intrs=intrs1
+                        dist=dist+dist_ref
+                        self.counter_map_refl_refl = self.counter_map_refl_refl+1
+
         return (intrs0, pr, intrs1, refState, intrs, cosa2, dist)
 
 

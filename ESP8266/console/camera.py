@@ -29,7 +29,7 @@ class CameraPanel(wx.Window):
             self.player = self.Instance.media_player_new()
             self.event_manager = self.player.event_manager()
             self.event_manager.event_attach(vlc.EventType.MediaPlayerEncounteredError, self.http_error)
-            self.timer.Start(5000)
+            #self.timer.Start(5000)
 
             self.Media = self.Instance.media_new(unicode('http://192.168.1.120:8080/?action=stream'))
 

@@ -4,8 +4,8 @@ import timeit
 
 class Planner:
     " Path planner"
-    GRID_SZ=20 #cm
-    GRID_DELTA=5 #cm
+    #GRID_SZ=20 #HxW
+    #GRID_DELTA=5 #cm
     def __init__(self, map, LogString, LogErrorString):
         self.map=map
         self.LogString=LogString
@@ -32,22 +32,25 @@ class Planner:
             self.target_cell=None
             return False
         cell0=self.grid[0][0]
-        self.start_cell=(int((self.start_pos[1]-cell0[1])/self.GRID_SZ), int((self.start_pos[0]-cell0[0])/self.GRID_SZ))
-        self.target_cell=(int((self.target_pos[1]-cell0[1])/self.GRID_SZ), int((self.target_pos[0]-cell0[0])/self.GRID_SZ))
+        #self.start_cell=(int((self.start_pos[1]-cell0[1])/self.GRID_SZ), int((self.start_pos[0]-cell0[0])/self.GRID_SZ))
+        #self.target_cell=(int((self.target_pos[1]-cell0[1])/self.GRID_SZ), int((self.target_pos[0]-cell0[0])/self.GRID_SZ))
+        self.start_cell=(int((self.start_pos[1]-cell0[1])/self.grid_sz), int((self.start_pos[0]-cell0[0])/self.grid_sz))
+        self.target_cell=(int((self.target_pos[1]-cell0[1])/self.grid_sz), int((self.target_pos[0]-cell0[0])/self.grid_sz))
+
         #self.LogString('from (%s, %s) to (%s, %s)' % (self.start_cell[0], self.start_cell[1], self.target_cell[0], self.target_cell[1]))
         return True
 
 
     def Plan(self, verbose=True):
         if self.grid is None:
-            w=self.map.boundRect[2]-self.map.boundRect[0]
-            h=self.map.boundRect[3]-self.map.boundRect[1]
-            nx=w/self.GRID_SZ+1
-            ny=h/self.GRID_SZ+1
+            #w=self.map.boundRect[2]-self.map.boundRect[0]
+            #h=self.map.boundRect[3]-self.map.boundRect[1]
+            #nx=w/self.GRID_SZ+1
+            #ny=h/self.GRID_SZ+1
             x0=self.map.boundRect[0]
             y0=self.map.boundRect[1]
 
-            self.LogString('init grid NR=%s NC=%s...' % (ny, nx))
+            #self.LogString('init grid NR=%s NC=%s...' % (ny, nx))
             #   Cell struct:
             #   0: x
             #   1: y
@@ -57,7 +60,9 @@ class Planner:
             #   5: action
             #   6: heuristics
             #   7: weight
+
             start_time = timeit.default_timer()
+            """
             self.grid = [[[x0+col*self.GRID_SZ,y0+row*self.GRID_SZ,None,None,None,None,None,0] for col in range(nx)] for row in range(ny)]
             for row in self.grid:
                 for cell in row:
@@ -67,8 +72,22 @@ class Planner:
                           (x+self.GRID_SZ+self.GRID_DELTA, y+self.GRID_SZ+self.GRID_DELTA),
                           (x-self.GRID_DELTA, y+self.GRID_SZ+self.GRID_DELTA)]
                     cell[2]=self.map.At(area)
+            """
+            self.grid_sz = self.map.GRID_SZ
+            self.grid = []
+            for mrow in self.map.grid:
+                row = []
+                self.grid.append(row)
+                for mcell in mrow:
+                    row.append([mcell[0], mcell[1], mcell[2], None,None,None,None,None,0])
+
+            print('init grid NR=%s NC=%s...' % (len(self.grid), len(self.grid[0])))
+
+            for row in self.grid:
+                for cell in row:
                     if cell[2]==1 : cell[7]=1
                     else : cell[7]=0
+
 
             delta = [[-1, 0 ], # go down
                 [ 0, -1], # go left
@@ -78,7 +97,8 @@ class Planner:
             # ad weights to wall adjasent cells
 
             for rep in range(3) :
-                w2 = [[0 for col in range(nx)] for row in range(ny)]
+                #w2 = [[0 for col in range(nx)] for row in range(ny)]
+                w2 = [[0 for col in range(len(self.grid[0]))] for row in range(len(self.grid))]
                 for irow in range(len(self.grid)):
                     for icol in range(len(self.grid[irow])):
                         for i in range(len(delta)):
@@ -90,7 +110,7 @@ class Planner:
                     for icol in range(len(self.grid[irow])): self.grid[irow][icol][7]=w2[irow][icol]
 
 
-            if verbose : self.LogString('grid inited in %s s' % (round(timeit.default_timer() - start_time, 2)))
+            print('grid inited in %s s' % (round(timeit.default_timer() - start_time, 2)))
 
         self.SetPath()
 
@@ -124,7 +144,7 @@ class Planner:
         if self.start_cell is None or self.target_cell is None :
             return False
         cell0=self.grid[0][0]
-        new_start_cell=(int((pos[1]-cell0[1])/self.GRID_SZ), int((pos[0]-cell0[0])/self.GRID_SZ))
+        new_start_cell=(int((pos[1]-cell0[1])/self.grid_sz), int((pos[0]-cell0[0])/self.grid_sz))
         if self.start_cell is not None and self.start_cell[0]==new_start_cell[0] and self.start_cell[1]==new_start_cell[1] :
             return True
         self.SetStart(pos)
@@ -334,8 +354,8 @@ class Planner:
             cell=self.grid[step[0]][step[1]]
             x, y =cell[0], cell[1]
             #self.spath.append((x+self.GRID_SZ/2, y+self.GRID_SZ/2))
-            path.append([x+self.GRID_SZ/2, y+self.GRID_SZ/2])
-            self.spath.append([x+self.GRID_SZ/2, y+self.GRID_SZ/2])
+            path.append([x+self.grid_sz/2, y+self.grid_sz/2])
+            self.spath.append([x+self.grid_sz/2, y+self.grid_sz/2])
 
         tol = 999
         while tol>=tolerance:

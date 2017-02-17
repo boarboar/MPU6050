@@ -110,7 +110,7 @@ class PFilter:
 
 
         start_time = timeit.default_timer()
-
+        self.map.resetCounters()
         #sorted_walls=self.map.getSortedWalls((self.particles[0].x, self.particles[0].y), self.scan_max_dist)
         sorted_walls=None
         p0=None
@@ -149,10 +149,10 @@ class PFilter:
 
         #self.particles=p2
         """
-
+        counters = self.map.getCounters()
         t=timeit.default_timer() - start_time
-        print ('Updated %s particles in %s s, %s per particle, resorted %s' %
-               (len(self.particles), round(t, 2), round(t/len(self.particles), 4), resorted) )
+        print ('Updated %s particles in %s s, %s per particle, counters: Resort %s, Inters %s, Refl %s' %
+               (len(self.particles), round(t, 2), round(t/len(self.particles), 4), counters[0], counters[1], counters[2]) )
 
         wsum=sum(p.w for p in self.particles)
         if wsum>0 :

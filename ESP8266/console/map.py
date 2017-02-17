@@ -200,8 +200,8 @@ class MapPanel(wx.Window, UnitMap):
         for step in planner.path :
             cell=planner.grid[step[0]][step[1]]
             x, y =cell[0], cell[1]
-            pts=[self.tc(x,y), self.tc(x+planner.GRID_SZ, y),
-                self.tc(x+planner.GRID_SZ, y+planner.GRID_SZ), self.tc(x, y+planner.GRID_SZ)]
+            pts=[self.tc(x,y), self.tc(x+planner.grid_sz, y),
+                self.tc(x+planner.grid_sz, y+planner.grid_sz), self.tc(x, y+planner.grid_sz)]
             dc.DrawRectangle(pts[0][0], pts[0][1], pts[1][0]-pts[0][0], pts[2][1]-pts[0][1])
 
         dc.SetBackgroundMode(wx.TRANSPARENT)
@@ -214,8 +214,8 @@ class MapPanel(wx.Window, UnitMap):
                 cell=planner.grid[row][col]
                 #print cell
                 x, y =cell[0], cell[1]
-                pts=[self.tc(x,y), self.tc(x+planner.GRID_SZ, y),
-                     self.tc(x+planner.GRID_SZ, y+planner.GRID_SZ), self.tc(x, y+planner.GRID_SZ)]
+                pts=[self.tc(x,y), self.tc(x+planner.grid_sz, y),
+                     self.tc(x+planner.grid_sz, y+planner.grid_sz), self.tc(x, y+planner.grid_sz)]
                 dc.DrawPolygon(pts)
                 if cell[2] != 0 :
                     dc.DrawLinePoint(pts[0], pts[2])
