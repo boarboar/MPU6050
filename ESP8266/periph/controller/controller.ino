@@ -42,7 +42,8 @@
 
 //#define  CYCLE_TIMEOUT 500
 //#define  CYCLE_TIMEOUT 75
-#define  CYCLE_TIMEOUT 50
+//#define  CYCLE_TIMEOUT 50 // too low
+#define  CYCLE_TIMEOUT 60
 
 #define  CMD_TIMEOUT 1000 // !!!! 
 
