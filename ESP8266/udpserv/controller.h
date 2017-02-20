@@ -89,6 +89,7 @@ private:
   //uint8_t sta[2];
   //float mov, rot;
   uint8_t pready;
+  uint8_t proc_step;
   uint8_t nsens;
   uint8_t last_obst;
   //float act_rot_rate[2];

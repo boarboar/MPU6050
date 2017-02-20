@@ -50,6 +50,7 @@ bool Controller::init() {
   delta_pow=0;
   targ_speed=0;
   rot_speed=0;
+  proc_step=0;
   for(int i=0; i<SENS_SIZE; i++) sensors[i]=0;
   resetIntegrator();
   pready=testConnection();
@@ -107,8 +108,24 @@ uint8_t Controller::testConnection() {
 
 bool Controller::process(float yaw, uint32_t dt) {
   if(!pready) return false;
+  
+  if(proc_step==0) {
+    getActAdvance();
+    proc_step++;
+    return true;
+  }
+
+  if(proc_step==1) {
+    getSensors();
+    proc_step++;
+    return true;
+  }
+
+  proc_step=0;
+  
   curr_yaw=yaw;
-  if(!getActAdvance()) return false;
+  
+  //if(!getActAdvance()) return false;
    
   if(abs(act_advance[0]-act_advance_0[0])>512 || abs(act_advance[1]-act_advance_0[1])>512) {
     /*
@@ -148,7 +165,8 @@ bool Controller::process(float yaw, uint32_t dt) {
   r[0]+=mov*sin(yaw);
   r[1]+=mov*cos(yaw);
 
-  if(getSensors()) {
+  //if(getSensors()) 
+  {
     int8_t turn=checkObastacle();
     if(turn!=0) {
       if(turn==8) {
