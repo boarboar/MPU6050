@@ -218,11 +218,21 @@ class UnitMap:
             for wall in area["WALLS"] :
                 parea0=area["AT"]
                 wall_crd=wall["C"]
+                """
                 isect=self.intersectHor(y, parea0[0]+wall_crd[0], parea0[1]+wall_crd[1],
                                         parea0[0]+wall_crd[2], parea0[1]+wall_crd[3])
                 if isect!=None :
                     if isect<x : left=left+1
                     else : right=right+1
+                """
+
+                isect=geometry.c_find_intersection((-10000, y), (10000, y), (parea0[0]+wall_crd[0], parea0[1]+wall_crd[1]),
+                                                   (parea0[0]+wall_crd[2], parea0[1]+wall_crd[3]))
+
+                if isect!=None :
+                    if isect[0]<x : left=left+1
+                    else : right=right+1
+
             if left%2==1 and right%2==1 : return area
         return None
 
@@ -314,7 +324,7 @@ class UnitMap:
 
         return intrs, ref, dumped, dist
 
-    def getIntersectionMap(self, p0, p1, findRefl, scan_max_dist):
+    def __getIntersectionMap(self, p0, p1, findRefl, scan_max_dist):
         """
         OBSOLETE
         """
@@ -400,7 +410,7 @@ class UnitMap:
 
         return intrs, ref
 
-    def intersectHor(self, y, x0, y0, x1, y1):
+    def ___intersectHor(self, y, x0, y0, x1, y1):
         if y0==y1 : #with hor line
             if y!=y0 : return None # no intersect
             else : return None # SPECIAL CASE :: ON LINE (TODO)
@@ -431,7 +441,7 @@ class UnitMap:
         #return ((p1[0]+rl*ref[0]/refl, p1[1]+rl*ref[1]/refl), cosa, ref_state)
         return ((p1[0]+rl*ref[0]/refl, p1[1]+rl*ref[1]/refl), cosa2, ref_state)
 
-    def find_intersection(self,  p0, p1, p2, p3 ) :
+    def __find_intersection(self,  p0, p1, p2, p3 ) :
         s10_x = p1[0] - p0[0]
         s10_y = p1[1] - p0[1]
         s32_x = p3[0] - p2[0]
@@ -465,7 +475,8 @@ class UnitMap:
         for v0 in vs0 :
             v10=vs1[-1]
             for v1 in vs1 :
-                isect=self.find_intersection(v00, v0, v10, v1)
+                #isect=self.find_intersection(v00, v0, v10, v1)
+                isect=geometry.c_find_intersection(v00, v0, v10, v1)
                 if isect!=None : break
                 v10=v1
             if isect!=None : break
@@ -486,10 +497,18 @@ class UnitMap:
         left, right = (0, 0)
         v0=vs[-1]
         for v in vs :
+            """
             isect=self.intersectHor(p[1], v0[0], v0[1], v[0], v[1])
             if isect!=None :
                 if isect<p[0] : left=left+1
                 else : right=right+1
+            """
+
+            isect=geometry.c_find_intersection((-10000, p[1]), (10000, p[1]), v0, v)
+            if isect!=None :
+                if isect[0]<p[0] : left=left+1
+                else : right=right+1
+
             v0=v
         if left%2==1 and right%2==1 :
             return True
