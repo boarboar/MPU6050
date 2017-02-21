@@ -351,7 +351,8 @@ class PFilter:
 
     def Gaussian1(self, mu, x, scan_max_dist):
         # calculates the probability of x for 1-dim Gaussian with mean mu and var. sigma
+        if mu==-2 or x==-2 : return 1.0
         if mu < 0 : mu=scan_max_dist
         if x < 0 : x=scan_max_dist
         dist2=(mu-x)**2
-        return math.exp(-dist2/ self.gauss_exp_denom) / self.gauss_denom
+        return math.exp(1.0 * -dist2/ self.gauss_exp_denom) / self.gauss_denom
