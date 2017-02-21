@@ -111,6 +111,18 @@ bool Controller::process(float yaw, uint32_t dt) {
   
   if(proc_step==0) {
     getActAdvance();
+    
+    if(abs(act_advance[0]-act_advance_0[0])>1024 || abs(act_advance[1]-act_advance_0[1])>1024) {
+      Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OVF, act_advance[0], act_advance[1], act_advance_0[0], act_advance_0[1]);    
+      act_advance_0[0]=act_advance[0];
+      act_advance_0[1]=act_advance[1];
+      // RESET PERIPH ?
+      //act_advance[0]=act_advance_0[0];
+      //act_advance[1]=act_advance_0[1];
+      return false;
+      }
+
+
     proc_step++;
     return true;
   }
@@ -126,14 +138,10 @@ bool Controller::process(float yaw, uint32_t dt) {
   curr_yaw=yaw;
   
   //if(!getActAdvance()) return false;
-   
+
+   /*
   if(abs(act_advance[0]-act_advance_0[0])>512 || abs(act_advance[1]-act_advance_0[1])>512) {
-    /*
-        Serial.print(F("! ADV=")); 
-        Serial.print(act_advance[0]); Serial.print(F("\t ")); Serial.println(act_advance[1]);
-        Serial.print(F("\t ADV0=\t ")); 
-        Serial.print(act_advance_0[0]); Serial.print(F("\t ")); Serial.println(act_advance_0[1]);
-  */
+
     Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_OVF, act_advance[0], act_advance[1], act_advance_0[0], act_advance_0[1]);  
   
     //act_advance_0[0]=act_advance[0];
@@ -143,6 +151,7 @@ bool Controller::process(float yaw, uint32_t dt) {
     act_advance[1]=act_advance_0[1];
     return false;
   }
+*/
 
   float mov;
   float dist0=dist;
@@ -639,6 +648,7 @@ bool Controller::getSensors() {
     Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL, Logger::UMP_LOGGER_ALARM, CTL_FAIL_RD, REG_SENSORS_1H);
     return false;
   }
+  delay(25); // temporarily
   res = readInt16_N(REG_SENSORS_2H, nsens/2, sensors_buf+nsens/2); 
   if(!res) {
     Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL, Logger::UMP_LOGGER_ALARM, CTL_FAIL_RD, REG_SENSORS_2H);
