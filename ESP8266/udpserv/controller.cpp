@@ -51,6 +51,7 @@ bool Controller::init() {
   targ_speed=0;
   rot_speed=0;
   proc_step=0;
+  _sens_half=0;
   for(int i=0; i<SENS_SIZE; i++) sensors[i]=0;
   resetIntegrator();
   pready=testConnection();
@@ -639,6 +640,7 @@ bool Controller::getActPower() {
   return res;
 }
 
+/*
 bool Controller::getSensors() {
   ////bool res = readInt16_N(REG_SENSORS_ALL, 10, sensors);
   //bool res = readInt16_N(REG_SENSORS_ALL, nsens, sensors); 
@@ -684,7 +686,49 @@ bool Controller::getSensors() {
   
   return res;
 }
+*/
 
+bool Controller::getSensors() {
+  uint8_t h=_sens_half%2==0 ? REG_SENSORS_1H : REG_SENSORS_2H;
+  bool res= readInt16_N(h, nsens/2, sensors_buf); 
+  if(!res) {
+    Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL, Logger::UMP_LOGGER_ALARM, CTL_FAIL_RD, h);
+    return false;
+  }
+
+  // check for validity
+  uint8_t zero_count=0;
+  for(uint8_t i=0; i<nsens/2; i++) {
+    int16_t s=sensors_buf[i];
+    if(s<-2 || s>512) {
+      if(!sens_alarmed) {
+        Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL, Logger::UMP_LOGGER_ALARM, CTL_FAIL_SENS_CHECK, i, s);
+        sens_alarmed=true;
+      }
+      res=false;
+      break;
+    }
+    if(s==0) zero_count++;
+  }
+  
+  if(zero_count>=1) {
+    if(!sens_alarmed) {
+        Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL, Logger::UMP_LOGGER_ALARM, CTL_FAIL_SENS_CHECK, 0, 0, zero_count);
+        sens_alarmed=true;
+      }
+    res=false;  
+  }
+
+  if(res) {
+    uint8_t shft=_sens_half%2==0 ? 0 : nsens/2;
+    for(uint8_t i=0; i<nsens/2; i++) sensors[i+shft]= sensors_buf[i];
+    sens_alarmed=false;
+  }
+
+  _sens_half++;
+  
+  return res;
+}
 bool Controller::writeInt16(uint16_t reg, int16_t v) {
     buf[0] = (uint8_t)(v>>8);
     buf[1] = (uint8_t)(v&0xFF);   
