@@ -47,13 +47,13 @@ class PFilter:
         #self.beamdelta=5*math.pi/180
         # self.beam_att=0.85
         self.particles=[]
-        self.fwd_noise=5
+        self.fwd_noise=3
         #self.fwd_noise=10
-        self.rot_noise=0.02
+        self.rot_noise=0.01
         #self.rot_noise=0.05
         #self.sense_noise=20
-        #self.sense_noise=scan_max_dist/2
-        self.sense_noise=scan_max_dist/3
+        self.sense_noise=scan_max_dist/2
+        #self.sense_noise=scan_max_dist/5
         #self.sense_noise=400
 
         self.gauss_denom=math.sqrt(2.0 * math.pi * (self.sense_noise ** 2))
@@ -64,8 +64,8 @@ class PFilter:
 
 
     def InitParticles(self):
-        N_D=16
-        #N_D=12
+        #N_D=16
+        N_D=20
         W=1.0/(N_D*N_D)
         #LOC_VAR=150
         LOC_VAR=100

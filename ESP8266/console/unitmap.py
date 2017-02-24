@@ -252,8 +252,12 @@ class UnitMap:
         if intrs0 != None:
             if ref != None :
                 pr, cosa2, refState = ref
+
+
             if not dumped:
                 intrs=intrs0
+
+                """
                 if refState:
                     # secondary intersect if any
                     # reduce max dist due to signal loss
@@ -267,7 +271,7 @@ class UnitMap:
                         intrs=intrs1
                         dist=dist+dist_ref
                         self.counter_map_refl_refl = self.counter_map_refl_refl+1
-
+                """
         return (intrs0, pr, intrs1, refState, intrs, cosa2, dist)
 
 

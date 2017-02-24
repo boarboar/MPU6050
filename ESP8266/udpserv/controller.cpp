@@ -110,7 +110,8 @@ uint8_t Controller::testConnection() {
 bool Controller::process(float yaw, uint32_t dt) {
   if(!pready) return false;
   
-  if(proc_step==0) {
+  if (proc_step==0)  {
+
     getActAdvance();
     
     if(abs(act_advance[0]-act_advance_0[0])>1024 || abs(act_advance[1]-act_advance_0[1])>1024) {
@@ -125,16 +126,15 @@ bool Controller::process(float yaw, uint32_t dt) {
 
 
     proc_step++;
-    return true;
-  }
-
-  if(proc_step==1) {
+    //return true;
+  } else  {
     getSensors();
-    proc_step++;
-    return true;
+    //proc_step++;
+    proc_step=0;
+    //return true;
   }
-
-  proc_step=0;
+  
+  //proc_step=0;
   
   curr_yaw=yaw;
   
