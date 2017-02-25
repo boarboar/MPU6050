@@ -205,7 +205,7 @@ void setup()
   
   analogFrequency(32); 
   
-  for(int i=0; i<M_SENS_N; i++) { sens[i]=-1; /*sens_fail_cnt[i]=0;*/ }
+  for(int i=0; i<M_SENS_N; i++) { sens[i]=-2; /*sens_fail_cnt[i]=0;*/ }
     
   Serial.println("Init Servo...");
   sservo.attach(SERVO_IN);  // attaches the servo on pin 9 to the servo object
