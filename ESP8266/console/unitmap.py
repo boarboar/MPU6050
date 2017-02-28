@@ -237,7 +237,8 @@ class UnitMap:
         return None
 
     def getIntersectionMapRefl(self, p0, p1, scan_max_dist, sorted_walls, for_draw=False):
-        intrs0, ref, dumped, dist =self.getIntersectionMap1(p0, p1, True, scan_max_dist, sorted_walls, for_draw)
+        #intrs0, ref, dumped, dist =self.getIntersectionMap1(p0, p1, True, scan_max_dist, sorted_walls, for_draw)
+        intrs0, ref, dumped, dist =self.getIntersectionMap1(p0, p1, False, scan_max_dist, sorted_walls, for_draw)
         """
         if for_draw and dumped :
             print('Dumped')
