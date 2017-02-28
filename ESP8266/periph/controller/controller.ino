@@ -268,11 +268,13 @@ void loop()
       case REG_START:     
         if(sp.p[0])  {
           ST_SET_START_ON();
-          act_adv_accu_mm[0]=0;
-          act_adv_accu_mm[1]=0;
-          // reset counters
           //Serial.println("Start"); 
-        }  
+        }  else {
+          ST_SET_START_OFF();
+        }
+         // reset counters
+        act_adv_accu_mm[0]=0;
+        act_adv_accu_mm[1]=0;
         break;
       case REG_TARG_POW:         
         targ_new_param[0]=sp.p[0];

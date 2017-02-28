@@ -113,6 +113,7 @@ void loop() {
 void doCycle() {
   uint32_t t = millis();
   uint16_t dt=t-last_cycle;
+  bool mpu_rst=false;
 
    // Do fast cycle
 
@@ -154,6 +155,7 @@ void doCycle() {
     //cmd.sendAlarm(CmdProc::ALR_MPU_RESET, 0);
     Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_IMU,  Logger::UMP_LOGGER_ALARM, -1, "NEEDRST");  
     MpuDrv::Mpu.init();
+    mpu_rst=true;
     yield();
   }
   
@@ -161,7 +163,7 @@ void doCycle() {
     //cmd.sendAlarm(CmdProc::ALR_CTL_RESET, 0);
     Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, -1, "NEEDRST");  
     Controller::ControllerProc.init();
-    Controller::ControllerProc.start(); // forced start for testing purposes...
+    if(!mpu_rst) Controller::ControllerProc.start(); // forced start for testing purposes...
     yield();
   }
   

@@ -57,7 +57,9 @@ bool Controller::init() {
   pready=testConnection();
   if(pready) {
     Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL, Logger::UMP_LOGGER_EVENT, CTL_FAIL_INIT, "CTL_INT_OK");  
-    nsens=_getNumSensors();      
+    nsens=_getNumSensors();    
+    yield();
+    setStart(0);  
   } else {
     Logger::Instance.putEvent(Logger::UMP_LOGGER_MODULE_CTL,  Logger::UMP_LOGGER_ALARM, CTL_FAIL_INIT, "CTL_INT_FL");  
     need_reset=true;
