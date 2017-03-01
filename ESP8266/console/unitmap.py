@@ -17,9 +17,10 @@ from pprint import pprint
 # %: dist
 
 class UnitMap:
-    GRID_SZ=20 #HxW
-    #GRID_SZ=10 #HxW
-    GRID_DELTA=5 #cm
+    #GRID_SZ=20 #HxW
+    GRID_SZ=15 #HxW
+    #GRID_DELTA=5 #cm
+    GRID_DELTA=4 #cm
 
     def __init__(self, mapfile):
         self.boundRect=[sys.maxint, sys.maxint, -sys.maxint, -sys.maxint] #bounding rect

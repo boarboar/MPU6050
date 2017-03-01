@@ -16,7 +16,9 @@ class CameraPanel(wx.Window):
         self.SetSizer(sizer)
         self.timer = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.OnTimer, self.timer)
+        self.videopanel.Bind(wx.EVT_LEFT_UP, self.OnMouseLeftUp)
         self.Bind(EVT_CAMERA_EVENT, self.OnCameraEvent)
+        self.isPlaying = False
 
         # VLC player controls
         try :
@@ -58,7 +60,16 @@ class CameraPanel(wx.Window):
 
     def OnTimer(self, evt):
         self.timer.Stop()
-        print('VLC TIMER')
+        if not self.isPlaying : return
         self.player.set_media(self.Media)
         if self.player.play() == -1:
                 print("Unable to play.")
+
+    def OnMouseLeftUp(self, evt):
+        if self.isPlaying :
+            self.timer.Stop()
+            self.isPlaying=False
+            self.player.stop()
+        else :
+            self.isPlaying=True
+            self.timer.Start(1000)
