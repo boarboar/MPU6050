@@ -52,7 +52,7 @@ bool Controller::init() {
   rot_speed=0;
   proc_step=0;
   _sens_half=0;
-  for(int i=0; i<SENS_SIZE; i++) sensors[i]=0;
+  for(int i=0; i<SENS_SIZE; i++) sensors[i]=-2;
   resetIntegrator();
   pready=testConnection();
   if(pready) {
