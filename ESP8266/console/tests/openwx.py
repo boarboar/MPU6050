@@ -27,15 +27,20 @@ class StreamClientThread(threading.Thread):
     def loadimg(self):
         if self.stream is None : return None
         while True:
-            self.bytes+=self.stream.read(1024)
-            a = self.bytes.find('\xff\xd8')
-            b = self.bytes.find('\xff\xd9')
-            if a!=-1 and b!=-1:
-                jpg = self.bytes[a:b+2]
-                self.bytes= self.bytes[b+2:]
-                i = cv2.imdecode(np.fromstring(jpg, dtype=np.uint8),cv2.IMREAD_COLOR)
-                return i
-
+			try :
+				self.bytes+=self.stream.read(1024)
+				a = self.bytes.find('\xff\xd8')
+				b = self.bytes.find('\xff\xd9')
+				if a!=-1 and b!=-1:
+					jpg = self.bytes[a:b+2]
+					self.bytes= self.bytes[b+2:]
+					i = cv2.imdecode(np.fromstring(jpg, dtype=np.uint8),cv2.IMREAD_COLOR)
+					return i
+					
+			except Exception as e:
+				print 'failed to read'
+				return None
+				
     def run (self):
         if self.__proxysetting is not None :
             proxy = urllib2.ProxyHandler(self.__proxysetting)
@@ -47,7 +52,7 @@ class StreamClientThread(threading.Thread):
             print 'opening stream...'
             self.stream=None
             try:
-                self.stream=urllib2.urlopen(self.__url)
+                self.stream=urllib2.urlopen(self.__url, timeout=10.0)
                 print 'stream opened'
             except URLError as e:
                 print e.reason
@@ -93,11 +98,11 @@ class viewWindow(wx.Frame):
             self.Bind(wx.EVT_PAINT, self.OnPaint)
             self.Bind(EVT_RDR_EVENT, self.onRedrawEvent)
 
-            self.streamthread =StreamClientThread(self,
-                                                  "http://88.53.197.250/axis-cgi/mjpg/video.cgi?resolution=320x240",
-                                                  {'http': 'proxy.reksoft.ru:3128'})
+            #self.streamthread =StreamClientThread(self,
+            #                                      "http://88.53.197.250/axis-cgi/mjpg/video.cgi?resolution=320x240",
+            #                                      {'http': 'proxy.reksoft.ru:3128'})
 
-            #self.streamthread =StreamClientThread(self, "http://192.168.1.120:8080/?action=stream", None)
+            self.streamthread =StreamClientThread(self, "http://192.168.1.120:8080/?action=stream", None)
 
 
             self.streamthread.start()
