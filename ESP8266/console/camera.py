@@ -1,75 +1,144 @@
 import wx
-import vlc
-import sys
+#import sys
 import wx.lib.newevent
+import cv2
+import urllib2
+from urllib2 import URLError
+import numpy as np
+import threading
+import time
 
 CameraEvent, EVT_CAMERA_EVENT = wx.lib.newevent.NewEvent()
+
+RedrawEvent, EVT_RDR_EVENT = wx.lib.newevent.NewEvent()
+
+class StreamClientThread(threading.Thread):
+    def __init__(self, wnd, url, proxysetting):
+        threading.Thread.__init__(self)
+        self.__lock=threading.Lock()
+        self.wnd=wnd
+        self.__url = url
+        self.__proxysetting=proxysetting
+        self.__stop = False
+        self.stream=None
+        self.bytes=''
+        self.setDaemon(1)
+    def stop(self) : self.__stop=True
+    def lock(self) : self.__lock.acquire()
+    def unlock(self) : self.__lock.release()
+
+    def loadimg(self):
+        if self.stream is None : return None
+        while True:
+			try :
+				self.bytes+=self.stream.read(1024)
+				a = self.bytes.find('\xff\xd8')
+				b = self.bytes.find('\xff\xd9')
+				if a!=-1 and b!=-1:
+					jpg = self.bytes[a:b+2]
+					self.bytes= self.bytes[b+2:]
+					i = cv2.imdecode(np.fromstring(jpg, dtype=np.uint8),cv2.IMREAD_COLOR)
+					return i
+
+			except Exception as e:
+				print 'failed to read'
+				return None
+
+    def run (self):
+
+        print 'starting srteamer...'
+
+        if self.__proxysetting is not None :
+            proxy = urllib2.ProxyHandler(self.__proxysetting)
+            opener = urllib2.build_opener(proxy)
+            urllib2.install_opener(opener)
+
+        while not self.__stop:
+            time.sleep(5.0)
+            print 'opening stream...'
+            self.stream=None
+            try:
+                self.stream=urllib2.urlopen(self.__url, timeout=10.0)
+                print 'stream opened'
+            except URLError as e:
+                print e.reason
+                continue
+
+            self.frame = self.loadimg()
+
+            if self.frame is not None:
+                self.height, self.width = self.frame.shape[:2]
+                self.bmp = wx.BitmapFromBuffer(self.width, self.height, self.frame)
+
+            else:
+                print "Error no webcam image"
+                continue
+
+            while not self.__stop and self.frame is not None:
+                #self.frame = self.loadimg()
+                #if self.frame is not None:
+                self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
+                self.lock()
+                self.bmp.CopyFromBuffer(self.frame)
+                self.unlock()
+                #print "Fire event"
+                event = RedrawEvent(bmp=self.bmp)
+                wx.PostEvent(self.wnd, event)
+                self.frame = self.loadimg()
+
+        print "Streamer stopped"
+
 
 class CameraPanel(wx.Window):
     " camera panel"
     def __init__(self, parent):
         wx.Window.__init__(self, parent, wx.ID_ANY, style=wx.SIMPLE_BORDER, size=(160,120))
-        self.videopanel = wx.Panel(self, -1)
-        self.videopanel.SetBackgroundColour(wx.BLACK)
+        #self.imgSizer = (480, 360)
+        self.imgSizer = (640, 480)
+        self.pnl = wx.Panel(self, -1)
         sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(self.videopanel, 1, flag=wx.EXPAND)
+        sizer.Add(self.pnl, 1, flag=wx.EXPAND)
         self.SetSizer(sizer)
-        self.timer = wx.Timer(self)
-        self.Bind(wx.EVT_TIMER, self.OnTimer, self.timer)
-        self.videopanel.Bind(wx.EVT_LEFT_UP, self.OnMouseLeftUp)
-        self.Bind(EVT_CAMERA_EVENT, self.OnCameraEvent)
+
+        #self.vbox = wx.BoxSizer(wx.VERTICAL)
+
+        self.image = wx.EmptyImage(self.imgSizer[0],self.imgSizer[1])
+        self.imageBit = wx.BitmapFromImage(self.image)
+        self.staticBit = wx.StaticBitmap(self.pnl, wx.ID_ANY, self.imageBit)
+
+        #self.vbox.Add(self.staticBit)
+
+        self.Bind(wx.EVT_PAINT, self.OnPaint)
+        self.Bind(EVT_RDR_EVENT, self.onRedrawEvent)
+
         self.isPlaying = False
+        self.staticBit.Bind(wx.EVT_LEFT_UP, self.OnMouseLeftUp)
 
-        # VLC player controls
-        try :
-            self.Instance = vlc.Instance('--live-caching=0 --network-caching=0 --postproc-q=0'
-                                         ' --mjpeg-fps=0 --image-realtime --no-audio ')
+        #self.SetSize(self.imgSizer)
+        #self.pnl.SetSizer(self.vbox)
+        #self.vbox.Fit(self)
+        #self.Show()
 
-            #self.Instance = vlc.Instance('--live-caching=0 --network-caching=0 --postproc-q=0 --mjpeg-fps=0 '
-            #                             '--image-realtime --no-audio --quiet-synchro --clock-synchro=0 --clock-jitter=0')
+    def onRedrawEvent(self, evt):
+        #print "Update"
+        self.streamthread.lock()
+        self.staticBit.SetBitmap(evt.bmp)
+        self.Refresh()
+        self.streamthread.unlock()
 
-            self.player = self.Instance.media_player_new()
-            self.event_manager = self.player.event_manager()
-            self.event_manager.event_attach(vlc.EventType.MediaPlayerEncounteredError, self.http_error)
-            #self.timer.Start(5000)
-
-            self.Media = self.Instance.media_new(unicode('http://192.168.1.120:8080/?action=stream'))
-
-            # set the window id where to render VLC's video output
-            handle = self.videopanel.GetHandle()
-            if sys.platform.startswith('linux'): # for Linux using the X Server
-                self.player.set_xwindow(handle)
-            elif sys.platform == "win32": # for Windows
-                self.player.set_hwnd(handle)
-            elif sys.platform == "darwin": # for MacOS
-                self.player.set_nsobject(handle)
-
-        except:
-            print(sys.exc_info()[0])
-
-
-    @vlc.callbackmethod
-    def http_error(self, event):
-        #print('VLC ERR')
-        event = CameraEvent(msg='error')
-        wx.PostEvent(self, event)
-        return 0
-
-    def OnCameraEvent(self, evt):
-        self.timer.Start(5000)
-
-    def OnTimer(self, evt):
-        self.timer.Stop()
-        if not self.isPlaying : return
-        self.player.set_media(self.Media)
-        if self.player.play() == -1:
-                print("Unable to play.")
+    def OnPaint(self, event):
+        if self.isPlaying :
+            self.streamthread.lock()
+            self.Refresh()
+            self.streamthread.unlock()
 
     def OnMouseLeftUp(self, evt):
         if self.isPlaying :
-            self.timer.Stop()
             self.isPlaying=False
-            self.player.stop()
+            self.streamthread.stop()
         else :
             self.isPlaying=True
-            self.timer.Start(1000)
+            self.streamthread =StreamClientThread(self,
+                                                  "http://88.53.197.250/axis-cgi/mjpg/video.cgi?resolution=320x240",
+                                                  {'http': 'proxy.reksoft.ru:3128'})
+            self.streamthread.start()
