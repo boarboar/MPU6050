@@ -94,7 +94,7 @@ class CameraPanel(wx.Window):
     def __init__(self, parent):
         wx.Window.__init__(self, parent, wx.ID_ANY, style=wx.SIMPLE_BORDER, size=(160,120))
 
-        self.isDebug=True
+        self.isDebug=False
 
 
         #self.imgSizer = (480, 360)
@@ -162,5 +162,5 @@ class CameraPanel(wx.Window):
                                                   "http://88.53.197.250/axis-cgi/mjpg/video.cgi?resolution=320x240",
                                                   {'http': 'proxy.reksoft.ru:3128'})
             else :
-                self.streamthread =StreamClientThread(self, 'http://192.168.1.120:8080/?action=stream')
+                self.streamthread =StreamClientThread(self, 'http://192.168.1.120:8080/?action=stream', None)
             self.streamthread.start()
