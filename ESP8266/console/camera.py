@@ -93,6 +93,10 @@ class CameraPanel(wx.Window):
     " camera panel"
     def __init__(self, parent):
         wx.Window.__init__(self, parent, wx.ID_ANY, style=wx.SIMPLE_BORDER, size=(160,120))
+
+        self.isDebug=True
+
+
         #self.imgSizer = (480, 360)
         self.imgSizer = (640, 480)
         self.pnl = wx.Panel(self, -1)
@@ -121,16 +125,31 @@ class CameraPanel(wx.Window):
 
     def onRedrawEvent(self, evt):
         #print "Update"
+        """
         self.streamthread.lock()
         self.staticBit.SetBitmap(evt.bmp)
         self.Refresh()
         self.streamthread.unlock()
+        """
+        #Size  = self.staticBit.ClientSize
+        Size  = self.pnl.ClientSize
+        self.streamthread.lock()
+        image=wx.ImageFromBitmap(evt.bmp)
+        self.streamthread.unlock()
+        image = image.Scale(Size[0], Size[1], wx.IMAGE_QUALITY_HIGH)
+        bmp = wx.BitmapFromImage(image)
+        self.staticBit.SetBitmap(bmp)
+        self.Refresh()
+
 
     def OnPaint(self, event):
+        """
         if self.isPlaying :
             self.streamthread.lock()
             self.Refresh()
             self.streamthread.unlock()
+        """
+        self.Refresh()
 
     def OnMouseLeftUp(self, evt):
         if self.isPlaying :
@@ -138,7 +157,10 @@ class CameraPanel(wx.Window):
             self.streamthread.stop()
         else :
             self.isPlaying=True
-            self.streamthread =StreamClientThread(self,
+            if self.isDebug :
+                self.streamthread =StreamClientThread(self,
                                                   "http://88.53.197.250/axis-cgi/mjpg/video.cgi?resolution=320x240",
                                                   {'http': 'proxy.reksoft.ru:3128'})
+            else :
+                self.streamthread =StreamClientThread(self, 'http://192.168.1.120:8080/?action=stream')
             self.streamthread.start()
