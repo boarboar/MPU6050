@@ -66,6 +66,8 @@ class MyForm(wx.Frame):
         self.btn_map_pos = wx.ToggleButton(panel, wx.ID_ANY, u"\u25C9", size=( bsz,  bsz))
         self.btn_map_targ = wx.ToggleButton(panel, wx.ID_ANY, u"\u2605", size=( bsz,  bsz))
 
+        self.btn_rot_left = wx.Button(panel, wx.ID_ANY, "<<", size=(bsz, bsz))
+        self.btn_rot_right = wx.Button(panel, wx.ID_ANY, ">>", size=(bsz, bsz))
         self.btn_mov_left = wx.Button(panel, wx.ID_ANY, u"\u2190", size=( bsz,  bsz))
         self.btn_mov_right = wx.Button(panel, wx.ID_ANY, u"\u2192", size=( bsz,  bsz))
         self.btn_mov_up = wx.Button(panel, wx.ID_ANY, u"\u2191", size=( bsz,  bsz))
@@ -124,6 +126,9 @@ class MyForm(wx.Frame):
         #rps=0.5
         #self.Bind(wx.EVT_BUTTON, lambda evt, move=(-rps, rps): self.controller.reqMove(move[0], move[1]), self.btn_mov_left)
         #self.Bind(wx.EVT_BUTTON, lambda evt, move=(rps, -rps): self.controller.reqMove(move[0], move[1]), self.btn_mov_right)
+
+        self.Bind(wx.EVT_BUTTON, lambda evt, steer=-5: self.controller.reqSteer(steer), self.btn_rot_left)
+        self.Bind(wx.EVT_BUTTON, lambda evt, steer=5: self.controller.reqSteer(steer), self.btn_rot_right)
 
         self.Bind(wx.EVT_BUTTON, lambda evt, steer=-90: self.controller.reqSteer(steer), self.btn_mov_left)
         self.Bind(wx.EVT_BUTTON, lambda evt, steer=90: self.controller.reqSteer(steer), self.btn_mov_right)
@@ -185,6 +190,8 @@ class MyForm(wx.Frame):
         sizer_map_ctrls.Add(self.btn_map_targ, 0, wx.LEFT|wx.BOTTOM, 0)
 
         sizer_map_ctrls.AddSpacer(24)
+        sizer_map_ctrls.Add(self.btn_rot_left, 0, wx.LEFT | wx.BOTTOM, 0)
+        sizer_map_ctrls.Add(self.btn_rot_right, 0, wx.LEFT | wx.BOTTOM, 0)
         sizer_map_ctrls.Add(self.btn_mov_left, 0, wx.LEFT|wx.BOTTOM, 0)
         sizer_map_ctrls.Add(self.btn_mov_right, 0, wx.LEFT|wx.BOTTOM, 0)
         sizer_map_ctrls.Add(self.btn_mov_up, 0, wx.LEFT|wx.BOTTOM, 0)
