@@ -49,7 +49,7 @@ class MyForm(wx.Frame):
         self.btn_rst_int = wx.Button(panel, wx.ID_ANY, 'ResetCTRL')
         #self.btn_hist = wx.Button(panel, wx.ID_ANY, 'Measmts')
         #self.btn_dump = wx.Button(panel, wx.ID_ANY, 'Dump')
-        self.btn_sim = wx.Button(panel, wx.ID_ANY, 'Track')
+        self.btn_track = wx.Button(panel, wx.ID_ANY, 'Track')
         self.btn_plan = wx.Button(panel, wx.ID_ANY, 'Plan')
         self.btn_go = wx.Button(panel, wx.ID_ANY, 'Go!')
         self.txt_cmd = wx.TextCtrl(panel, style=wx.TE_PROCESS_ENTER, value='{"C":"INFO"}')
@@ -102,7 +102,7 @@ class MyForm(wx.Frame):
         #self.Bind(wx.EVT_BUTTON, self.onDumpModel, self.btn_dump)
         #self.Bind(wx.EVT_BUTTON, self.onHistory, self.btn_hist)
         self.Bind(wx.EVT_BUTTON, self.onSendCmd, self.btn_cmd)
-        self.Bind(wx.EVT_BUTTON, self.onSimReq, self.btn_sim)
+        self.Bind(wx.EVT_BUTTON, self.onTrackReq, self.btn_track)
         self.Bind(wx.EVT_BUTTON, self.onPlanReq, self.btn_plan)
         self.Bind(wx.EVT_BUTTON, self.onGoReq, self.btn_go)
         self.Bind(wx.EVT_BUTTON, lambda evt, zoom='in': self.map.onZoom(evt, zoom), self.btn_map_zoom_in)
@@ -208,7 +208,7 @@ class MyForm(wx.Frame):
         sizer_ctrls.Add(self.btn_rst_int, 0, wx.ALL|wx.CENTER, 5)
         #sizer_ctrls.Add(self.btn_hist, 0, wx.ALL|wx.CENTER, 5)
         #sizer_ctrls.Add(self.btn_dump, 0, wx.ALL|wx.CENTER, 5)
-        sizer_ctrls.Add(self.btn_sim, 0, wx.ALL|wx.CENTER, 5)
+        sizer_ctrls.Add(self.btn_track, 0, wx.ALL|wx.CENTER, 5)
         sizer_ctrls.Add(self.btn_plan, 0, wx.ALL|wx.CENTER, 5)
         sizer_ctrls.Add(self.btn_go, 0, wx.ALL|wx.CENTER, 5)
 
@@ -297,7 +297,7 @@ class MyForm(wx.Frame):
         else :
             self.controller.startScan()
 
-    def onSimReq(self, event):
+    def onTrackReq(self, event):
         if self.controller.isSimulating() :
             self.controller.stopSimulation()
         else :
@@ -307,6 +307,9 @@ class MyForm(wx.Frame):
         self.map.Plan()
 
     def onGoReq(self, event):
+        if self.controller.isSimulating():
+            self.controller.stopSimulation()
+
         if self.controller.isPathRunning() :
             self.controller.stopPathRunning()
         else :

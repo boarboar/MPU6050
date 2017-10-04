@@ -146,11 +146,11 @@ class Controller():
         js["I"]=self.__genId()
         self.__comm_thread.put((js, None))
 
-    def __req_sync(self, js, retries=3, timeout_net=0.5):
+    def __req_sync(self, js, retries=3, timeout_net=0.25):
         js["I"]=self.__genId()
         resp_json=None
 
-        while  resp_json is None and retries>0 :
+        while resp_json is None and retries>0 :
             #clean response queue first
             try:
                 while True:
@@ -166,8 +166,7 @@ class Controller():
             except Queue.Empty:
                 self.__form.LogErrorString("SYNC RSP MISSING")
             retries-=1
-            if resp_json is None: time.sleep(0.25)
-
+            if resp_json is None: time.sleep(0.1)
         return resp_json
 
     def resp(self, js, req_json=None):
