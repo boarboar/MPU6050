@@ -17,10 +17,11 @@ from pprint import pprint
 # %: dist
 
 class UnitMap:
-    #GRID_SZ=20 #HxW
-    GRID_SZ=15 #HxW
-    #GRID_DELTA=5 #cm
-    GRID_DELTA=4 #cm
+    #GRID_SZ=15 #HxW cm
+    #GRID_DELTA=4 #cm
+
+    GRID_SZ = 10  # HxW cm
+    GRID_DELTA = 2  # cm
 
     def __init__(self, mapfile):
         self.boundRect=[sys.maxint, sys.maxint, -sys.maxint, -sys.maxint] #bounding rect
@@ -124,7 +125,7 @@ class UnitMap:
                       (x+self.GRID_SZ+self.GRID_DELTA, y-self.GRID_DELTA),
                       (x+self.GRID_SZ+self.GRID_DELTA, y+self.GRID_SZ+self.GRID_DELTA),
                       (x-self.GRID_DELTA, y+self.GRID_SZ+self.GRID_DELTA)]
-                cell[2]=self.At(area)
+                cell[2]=self.AtSlow(area)
                 cell[3]=self._getSortedWalls((x+self.GRID_SZ/2, y+self.GRID_SZ/2), 500)
         print('grid inited in %s s' % (round(timeit.default_timer() - start_time, 2)))
 
@@ -137,6 +138,7 @@ class UnitMap:
         return (self.counter_map_sortwalls, self.counter_map_refl, self.counter_map_refl_refl)
 
     def getSortedWalls(self, p, scan_max_dist):
+        self.counter_map_sortwalls = self.counter_map_sortwalls + 1
         cell0=self.grid[0][0]
         r=int((p[1]-cell0[1])/self.GRID_SZ)
         c=int((p[0]-cell0[0])/self.GRID_SZ)
@@ -146,7 +148,7 @@ class UnitMap:
             return []
 
     def _getSortedWalls(self, p, scan_max_dist):
-        self.counter_map_sortwalls = self.counter_map_sortwalls +1
+        #self.counter_map_sortwalls = self.counter_map_sortwalls +1
         wall_dist=[]
         walls_all=self.map["WALLS"]
         maxdist2=scan_max_dist*scan_max_dist
@@ -183,6 +185,61 @@ class UnitMap:
         if x>self.boundRect[2] : self.boundRect[2]=x
         if y>self.boundRect[3] : self.boundRect[3]=y
 
+    def AtSlow(self, cell):
+        # cell status : 0-space, 1-occupied/unusable, 2-variable
+        status=0
+
+        for v in cell :
+            if self.isInsideTestSlow(v[0], v[1]) is None :
+                status=1
+                break
+        if status != 0 : return status
+
+        # bug - it's possible that all the points are inside, but internal wall is inside the cell...
+        # just for now - test a center point
+        if self.isInsideTestSlow((cell[0][0]+cell[-2][0])/2, (cell[0][1]+cell[2][1])/2) is None : return 1
+
+        for area in self.map["AREAS"] :
+            parea0=area["AT"]
+            try:
+                if "OBJECTS" in area :
+                    for obj in area["OBJECTS"] :
+                        if 'CS_P' in obj :
+                            status=self.polyIntersects(cell, obj['CS_P'])
+                            if status!=0 : break
+            except KeyError :
+                print('AT: Some obj attr missing')
+                pass
+
+            if status!=0 : break
+
+        return status
+
+    def isInsideTestSlow(self, x, y):
+        for area in self.map["AREAS"] :
+            left, right = (0, 0)
+            for wall in area["WALLS"] :
+                parea0=area["AT"]
+                wall_crd=wall["C"]
+
+                isect=self.___intersectHor(y, parea0[0]+wall_crd[0], parea0[1]+wall_crd[1],
+                                        parea0[0]+wall_crd[2], parea0[1]+wall_crd[3])
+                if isect!=None :
+                    if isect<x : left=left+1
+                    else : right=right+1
+                """
+
+                isect=geometry.c_find_intersection((-10000, y), (10000, y), (parea0[0]+wall_crd[0], parea0[1]+wall_crd[1]),
+                                                   (parea0[0]+wall_crd[2], parea0[1]+wall_crd[3]))
+
+                if isect!=None :
+                    if isect[0]<x : left=left+1
+                    else : right=right+1
+                """
+
+            if left%2==1 and right%2==1 : return area
+        return None
+
     def At(self, cell):
         # cell status : 0-space, 1-occupied/unusable, 2-variable
         status=0
@@ -192,6 +249,8 @@ class UnitMap:
                 status=1
                 break
         if status != 0 : return status
+
+        return status
 
         # bug - it's possible that all the points are inside, but internal wall is inside the cell...
         # just for now - test a center point
@@ -219,23 +278,24 @@ class UnitMap:
             for wall in area["WALLS"] :
                 parea0=area["AT"]
                 wall_crd=wall["C"]
-                """
-                isect=self.intersectHor(y, parea0[0]+wall_crd[0], parea0[1]+wall_crd[1],
-                                        parea0[0]+wall_crd[2], parea0[1]+wall_crd[3])
-                if isect!=None :
-                    if isect<x : left=left+1
-                    else : right=right+1
-                """
 
                 isect=geometry.c_find_intersection((-10000, y), (10000, y), (parea0[0]+wall_crd[0], parea0[1]+wall_crd[1]),
                                                    (parea0[0]+wall_crd[2], parea0[1]+wall_crd[3]))
-
                 if isect!=None :
                     if isect[0]<x : left=left+1
                     else : right=right+1
 
             if left%2==1 and right%2==1 : return area
         return None
+
+    def isInsideTestFast(self, x, y):
+        cell0 = self.grid[0][0]
+        r = int((x - cell0[1]) / self.GRID_SZ)
+        c = int((y - cell0[0]) / self.GRID_SZ)
+        if r >= 0 and r < len(self.grid) and c >= 0 and c < len(self.grid[r]):
+            return self.grid[r][c][2] != 1
+        else:
+            return False
 
     def getIntersectionMapRefl(self, p0, p1, scan_max_dist, sorted_walls, for_draw=False):
         #intrs0, ref, dumped, dist =self.getIntersectionMap1(p0, p1, True, scan_max_dist, sorted_walls, for_draw)

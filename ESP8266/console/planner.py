@@ -347,8 +347,10 @@ class Planner:
 
     def SmoothPath(self, verbose=True):
         path=[]
-        weight_data = 0.3
-        weight_smooth = 0.7
+        #weight_data = 0.3
+        #weight_smooth = 0.7
+        weight_data = 0.1
+        weight_smooth = 0.9
         tolerance = 0.000001
         for step in self.path :
             cell=self.grid[step[0]][step[1]]

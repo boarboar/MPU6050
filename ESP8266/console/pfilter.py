@@ -112,19 +112,30 @@ class PFilter:
         start_time = timeit.default_timer()
         self.map.resetCounters()
         #sorted_walls=self.map.getSortedWalls((self.particles[0].x, self.particles[0].y), self.scan_max_dist)
-        sorted_walls=None
-        p0=None
-        resorted=0
+
+        for p in self.particles:
+            p.move_d(mov + random.gauss(0, self.fwd_noise), rot + random.gauss(0, self.rot_noise))
+            #if self.map.isInsideTest(p.x, p.y) is not None:
+            if self.map.isInsideTestFast(p.x, p.y) :
+                self.updateParticleProbabilities3(p, scans, scan_angles, self.map.getSortedWalls((p.x, p.y), self.scan_max_dist), beamform)
+            else:
+                p.w = 0.0
+        """    
+        sorted_walls = None
+        p0 = None
+        resorted = 0
         for p in self.particles :
             p.move_d(mov+random.gauss(0, self.fwd_noise), rot+random.gauss(0, self.rot_noise))
             if self.map.isInsideTest(p.x, p.y) is not None :
                 #sorted_walls=self.map.getSortedWalls((p.x, p.y), self.scan_max_dist)
-                if sorted_walls is None or (p0.x-p.x)*(p0.x-p.x)+(p0.y-p.y)*(p0.y-p.y)<25 :
+                if sorted_walls is None or (p0.x-p.x)*(p0.x-p.x)+(p0.y-p.y)*(p0.y-p.y)>25:
                     sorted_walls=self.map.getSortedWalls((p.x, p.y), self.scan_max_dist)
                     p0=p
                     resorted=resorted+1
                 self.updateParticleProbabilities3(p, scans, scan_angles, sorted_walls, beamform)
             else : p.w=0.0
+        """
+
         """
         p2=[]
         for p in self.particles :
@@ -152,7 +163,7 @@ class PFilter:
         counters = self.map.getCounters()
         t=timeit.default_timer() - start_time
         print ('Updated %s particles in %s s, %s per particle, counters: Resort %s, Inters %s, Refl %s' %
-               (len(self.particles), round(t, 2), round(t/len(self.particles), 4), counters[0], counters[1], counters[2]) )
+               (len(self.particles), round(t, 2), round(t/len(self.particles), 4), counters[0], counters[1], counters[2]))
 
         wsum=sum(p.w for p in self.particles)
         if wsum>0 :
