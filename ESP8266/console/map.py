@@ -425,8 +425,8 @@ class MapPanel(wx.Window, UnitMap):
             inters_pen=wx.Pen(wx.GREEN, 2)
             inters_pen_c=wx.Pen(wx.BLUE, 2)
             inters_pen_cr=wx.Pen('GRAY', 2)
-            if self.dist_sim : sorted_walls=self.getSortedWalls(unit.UnitToMapSim(0,0), unit.scan_max_dist)
-            else : sorted_walls=self.getSortedWalls(unit.UnitToMapLoc(0,0), unit.scan_max_dist)
+            if self.dist_sim : sorted_walls=self.getSortedWalls(unit.UnitToMapSim(0,0))
+            else : sorted_walls=self.getSortedWalls(unit.UnitToMapLoc(0,0))
             """
             print("======")
             for wall in sorted_walls:

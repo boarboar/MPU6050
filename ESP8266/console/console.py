@@ -22,6 +22,8 @@ class MyForm(wx.Frame):
 
         self.model=model.Model("ROBO")
         self.config=config.Config(self, self.model)
+        self.map_ctrls = []
+        self.pan_ctrls = []
 
         menuBar = wx.MenuBar()
         menu = wx.Menu()
@@ -42,42 +44,22 @@ class MyForm(wx.Frame):
         panel = wx.Panel(self, wx.ID_ANY)
         self.log = LogControl(panel, sz=(600,200))
         self.log_a = LogControl(panel, sz=(400,200))
-        self.btn_st = wx.Button(panel, wx.ID_ANY, 'Status')
-        self.btn_pos = wx.Button(panel, wx.ID_ANY, 'Pos')
-        self.btn_upl = wx.Button(panel, wx.ID_ANY, 'Upload')
-        self.btn_rst_mpu = wx.Button(panel, wx.ID_ANY, 'ResetIMU')
-        self.btn_rst_int = wx.Button(panel, wx.ID_ANY, 'ResetCTRL')
-        #self.btn_hist = wx.Button(panel, wx.ID_ANY, 'Measmts')
-        #self.btn_dump = wx.Button(panel, wx.ID_ANY, 'Dump')
-        self.btn_track = wx.Button(panel, wx.ID_ANY, 'Track')
-        self.btn_plan = wx.Button(panel, wx.ID_ANY, 'Plan')
-        self.btn_go = wx.Button(panel, wx.ID_ANY, 'Go!')
+
+        self.btn_st = self.AddPanBtn(panel, 'Status', self.onStatusReq)
+        self.btn_pos = self.AddPanBtn(panel, 'Pos', self.onPositionReq)
+        self.btn_upl = self.AddPanBtn(panel, 'Upload', self.onUploadReq)
+        self.btn_rst_mpu = self.AddPanBtn(panel, 'ResetIMU', self.onResetMPUReq)
+        self.btn_rst_int = self.AddPanBtn(panel, 'ResetCTRL', self.onResetMPUIntReq)
+        #self.btn_hist = self.AddPanBtn(panel, 'Measmts', self.onHistory)
+        #self.btn_dump = self.AddPanBtn(panel, 'Dump', self.onDumpModel)
+        self.pan_ctrls.append(None)
+        self.btn_track = self.AddPanBtn(panel, 'Track', self.onTrackReq)
+        self.pan_ctrls.append(None)
+        self.btn_plan = self.AddPanBtn(panel, 'Plan', self.onPlanReq)
+        self.btn_go = self.AddPanBtn(panel, 'Go!', self.onGoReq)
+
         self.txt_cmd = wx.TextCtrl(panel, style=wx.TE_PROCESS_ENTER, value='{"C":"INFO"}')
         self.btn_cmd = wx.Button(panel, wx.ID_ANY, 'Send')
-        bsz=28
-        self.btn_map_zoom_in = wx.Button(panel, wx.ID_ANY, '+', size=( bsz,  bsz))
-        self.btn_map_zoom_out = wx.Button(panel, wx.ID_ANY, '-', size=( bsz,  bsz))
-        self.btn_map_left = wx.Button(panel, wx.ID_ANY, u"\u25C0", size=( bsz,  bsz))
-        self.btn_map_right = wx.Button(panel, wx.ID_ANY, u"\u25B6", size=( bsz,  bsz))
-        self.btn_map_up = wx.Button(panel, wx.ID_ANY, u"\u25B2", size=( bsz,  bsz))
-        self.btn_map_dn = wx.Button(panel, wx.ID_ANY, u"\u25BC", size=( bsz,  bsz))
-        self.btn_map_fit = wx.Button(panel, wx.ID_ANY, u"\u25AD", size=( bsz,  bsz))
-        self.btn_map_ref = wx.ToggleButton(panel, wx.ID_ANY, u"\u2020", size=( bsz,  bsz))
-        self.btn_map_pos = wx.ToggleButton(panel, wx.ID_ANY, u"\u25C9", size=( bsz,  bsz))
-        self.btn_map_targ = wx.ToggleButton(panel, wx.ID_ANY, u"\u2605", size=( bsz,  bsz))
-
-        self.btn_rot_left = wx.Button(panel, wx.ID_ANY, "<<", size=(bsz, bsz))
-        self.btn_rot_right = wx.Button(panel, wx.ID_ANY, ">>", size=(bsz, bsz))
-        self.btn_mov_left = wx.Button(panel, wx.ID_ANY, u"\u2190", size=( bsz,  bsz))
-        self.btn_mov_right = wx.Button(panel, wx.ID_ANY, u"\u2192", size=( bsz,  bsz))
-        self.btn_mov_up = wx.Button(panel, wx.ID_ANY, u"\u2191", size=( bsz,  bsz))
-        self.btn_mov_dn = wx.Button(panel, wx.ID_ANY, u"\u2193", size=( bsz,  bsz))
-        self.btn_mov_stop = wx.Button(panel, wx.ID_ANY, u"\u2717", size=( bsz,  bsz))
-        self.txt_mov_speed = wx.TextCtrl(panel, size=( bsz*2,  bsz))
-        self.txt_mov_speed.SetValue("20")
-        self.cb_dist_sim = wx.CheckBox(panel)
-        self.cb_dist_sim.SetValue(False)
-        self.Bind(wx.EVT_CHECKBOX, self.onDistSimEvent, self.cb_dist_sim)
 
         self.unitPan = draw.UnitPanel(panel)
         self.chart = draw.ChartPanel(panel)
@@ -85,6 +67,34 @@ class MyForm(wx.Frame):
         self.map = map.MapPanel(panel, self.model, "map.json", self.LogString, self.LogErrorString)
         self.controller=controller.Controller(self, self.model, self.map, self.LogString, self.LogErrorString)
         self.map.AddController(self.controller)
+
+        self.btn_map_zoom_in = self.AddToolBtn(panel, '+', lambda evt, zoom='in': self.map.onZoom(evt, zoom))
+        self.btn_map_zoom_out = self.AddToolBtn(panel, '-', lambda evt, zoom='out': self.map.onZoom(evt, zoom))
+        self.btn_map_left = self.AddToolBtn(panel, u"\u25C0", lambda evt, move='left': self.map.onButtonMove(evt, move))
+        self.btn_map_right = self.AddToolBtn(panel, u"\u25B6", lambda evt, move='right': self.map.onButtonMove(evt, move))
+        self.btn_map_up = self.AddToolBtn(panel, u"\u25B2", lambda evt, move='up': self.map.onButtonMove(evt, move))
+        self.btn_map_dn = self.AddToolBtn(panel, u"\u25BC", lambda evt, move='dn': self.map.onButtonMove(evt, move))
+        self.btn_map_fit = self.AddToolBtn(panel, u"\u25AD", self.map.onFit)
+
+        self.btn_map_ref = self.AddToolTogglePos(panel, u"\u2020", 0)
+        self.btn_map_pos = self.AddToolTogglePos(panel, u"\u25C9", 1)
+        self.btn_map_targ = self.AddToolTogglePos(panel, u"\u2605", 2)
+        self.map_ctrls.append(None)
+        self.btn_rot_left = self.AddToolBtn(panel, "<<", lambda evt, steer=-5: self.controller.reqSteer(steer))
+        self.btn_rot_right = self.AddToolBtn(panel, ">>", lambda evt, steer=5: self.controller.reqSteer(steer))
+        self.btn_mov_left = self.AddToolBtn(panel, u"\u2190", lambda evt, steer=-90: self.controller.reqSteer(steer))
+        self.btn_mov_right = self.AddToolBtn(panel, u"\u2192", lambda evt, steer=90: self.controller.reqSteer(steer))
+        self.btn_mov_up = self.AddToolBtn(panel, u"\u2191", lambda evt, dir=1: self.reqMove(dir))
+        self.btn_mov_dn = self.AddToolBtn(panel, u"\u2193", lambda evt, dir=-1: self.reqMove(dir))
+        self.btn_mov_stop = self.AddToolBtn(panel, u"\u2717", lambda evt, dir=0: self.reqMove(dir))
+
+        self.txt_mov_speed = wx.TextCtrl(panel, size=(28 * 2, 28))
+        self.txt_mov_speed.SetValue("20")
+        self.map_ctrls.append(self.txt_mov_speed)
+        self.cb_dist_sim = wx.CheckBox(panel)
+        self.cb_dist_sim.SetValue(False)
+        self.Bind(wx.EVT_CHECKBOX, self.onDistSimEvent, self.cb_dist_sim)
+        self.map_ctrls.append(self.cb_dist_sim)
 
         self.layout(panel)
         # redirect text here
@@ -94,48 +104,9 @@ class MyForm(wx.Frame):
         self.Bind(EVT_UPD_EVENT, self.onUpdEvent)
         self.Bind(EVT_UPD_STAT_EVENT, self.onUpdStatEvent)
         self.Bind(EVT_INFO_EVENT, self.onInfoEvent)
-        self.Bind(wx.EVT_BUTTON, self.onStatusReq, self.btn_st)
-        self.Bind(wx.EVT_BUTTON, self.onPositionReq, self.btn_pos)
-        self.Bind(wx.EVT_BUTTON, self.onUploadReq, self.btn_upl)
-        self.Bind(wx.EVT_BUTTON, self.onResetMPUReq, self.btn_rst_mpu)
-        self.Bind(wx.EVT_BUTTON, self.onResetMPUIntReq, self.btn_rst_int)
-        #self.Bind(wx.EVT_BUTTON, self.onDumpModel, self.btn_dump)
-        #self.Bind(wx.EVT_BUTTON, self.onHistory, self.btn_hist)
+
         self.Bind(wx.EVT_BUTTON, self.onSendCmd, self.btn_cmd)
-        self.Bind(wx.EVT_BUTTON, self.onTrackReq, self.btn_track)
-        self.Bind(wx.EVT_BUTTON, self.onPlanReq, self.btn_plan)
-        self.Bind(wx.EVT_BUTTON, self.onGoReq, self.btn_go)
-        self.Bind(wx.EVT_BUTTON, lambda evt, zoom='in': self.map.onZoom(evt, zoom), self.btn_map_zoom_in)
-        self.Bind(wx.EVT_BUTTON, lambda evt, zoom='out': self.map.onZoom(evt, zoom), self.btn_map_zoom_out)
-        self.Bind(wx.EVT_BUTTON, lambda evt, move='left': self.map.onButtonMove(evt, move), self.btn_map_left)
-        self.Bind(wx.EVT_BUTTON, lambda evt, move='right': self.map.onButtonMove(evt, move), self.btn_map_right)
-        self.Bind(wx.EVT_BUTTON, lambda evt, move='up': self.map.onButtonMove(evt, move), self.btn_map_up)
-        self.Bind(wx.EVT_BUTTON, lambda evt, move='dn': self.map.onButtonMove(evt, move), self.btn_map_dn)
-        self.Bind(wx.EVT_BUTTON, self.map.onFit, self.btn_map_fit)
-        self.Bind(wx.EVT_TOGGLEBUTTON,
-                  lambda evt : self.map.onPosToggle(evt, 0, self.btn_map_ref.GetValue()) and self.ToggleGroup1(self.btn_map_ref),
-                  self.btn_map_ref)
-        self.Bind(wx.EVT_TOGGLEBUTTON,
-                  lambda evt : self.map.onPosToggle(evt, 1, self.btn_map_pos.GetValue())  and self.ToggleGroup1(self.btn_map_pos),
-                  self.btn_map_pos)
-        self.Bind(wx.EVT_TOGGLEBUTTON,
-                  lambda evt : self.map.onPosToggle(evt, 2, self.btn_map_targ.GetValue())  and self.ToggleGroup1(self.btn_map_targ),
-                  self.btn_map_targ)
         self.txt_cmd.Bind(wx.EVT_KEY_DOWN, self.onEnterCmdText)
-
-        #rps=0.5
-        #self.Bind(wx.EVT_BUTTON, lambda evt, move=(-rps, rps): self.controller.reqMove(move[0], move[1]), self.btn_mov_left)
-        #self.Bind(wx.EVT_BUTTON, lambda evt, move=(rps, -rps): self.controller.reqMove(move[0], move[1]), self.btn_mov_right)
-
-        self.Bind(wx.EVT_BUTTON, lambda evt, steer=-5: self.controller.reqSteer(steer), self.btn_rot_left)
-        self.Bind(wx.EVT_BUTTON, lambda evt, steer=5: self.controller.reqSteer(steer), self.btn_rot_right)
-
-        self.Bind(wx.EVT_BUTTON, lambda evt, steer=-90: self.controller.reqSteer(steer), self.btn_mov_left)
-        self.Bind(wx.EVT_BUTTON, lambda evt, steer=90: self.controller.reqSteer(steer), self.btn_mov_right)
-
-        self.Bind(wx.EVT_BUTTON, lambda evt, dir=1: self.reqMove(dir), self.btn_mov_up)
-        self.Bind(wx.EVT_BUTTON, lambda evt, dir=-1: self.reqMove(dir), self.btn_mov_dn)
-        self.Bind(wx.EVT_BUTTON, lambda evt, dir=0: self.reqMove(dir), self.btn_mov_stop)
 
         self.LogString("Local address is %s" % socket.gethostbyname(socket.gethostname()))
         self.map.Reset() # init particles filter and position
@@ -144,7 +115,6 @@ class MyForm(wx.Frame):
             self.history_ptr=len(self.history)-1
             self.txt_cmd.SetValue(self.history[self.history_ptr])
         self.dist_sim = False
-
 
     def layout(self, panel):
         self.unitPan.SetMaxSize((240, 240))
@@ -177,40 +147,22 @@ class MyForm(wx.Frame):
         #sizer_pan.Add(self.map, 2, wx.ALL|wx.EXPAND, border=0)
         sizer_pan.Add(sizer_map, 2, wx.ALL|wx.EXPAND, border=0)
         sizer_map.Add(self.map, 5, wx.ALL|wx.EXPAND, border=0)
-        sizer_map.Add(sizer_map_ctrls, 0, wx.ALL|wx.EXPAND, border=0)
-        sizer_map_ctrls.Add(self.btn_map_zoom_in, 0, wx.LEFT|wx.BOTTOM, 0)
-        sizer_map_ctrls.Add(self.btn_map_zoom_out, 0, wx.LEFT|wx.BOTTOM, 0)
-        sizer_map_ctrls.Add(self.btn_map_left, 0, wx.LEFT|wx.BOTTOM, 0)
-        sizer_map_ctrls.Add(self.btn_map_right, 0, wx.LEFT|wx.BOTTOM, 0)
-        sizer_map_ctrls.Add(self.btn_map_up, 0, wx.LEFT|wx.BOTTOM, 0)
-        sizer_map_ctrls.Add(self.btn_map_dn, 0, wx.LEFT|wx.BOTTOM, 0)
-        sizer_map_ctrls.Add(self.btn_map_fit, 0, wx.LEFT|wx.BOTTOM, 0)
-        sizer_map_ctrls.Add(self.btn_map_ref, 0, wx.LEFT|wx.BOTTOM, 0)
-        sizer_map_ctrls.Add(self.btn_map_pos, 0, wx.LEFT|wx.BOTTOM, 0)
-        sizer_map_ctrls.Add(self.btn_map_targ, 0, wx.LEFT|wx.BOTTOM, 0)
 
-        sizer_map_ctrls.AddSpacer(24)
-        sizer_map_ctrls.Add(self.btn_rot_left, 0, wx.LEFT | wx.BOTTOM, 0)
-        sizer_map_ctrls.Add(self.btn_rot_right, 0, wx.LEFT | wx.BOTTOM, 0)
-        sizer_map_ctrls.Add(self.btn_mov_left, 0, wx.LEFT|wx.BOTTOM, 0)
-        sizer_map_ctrls.Add(self.btn_mov_right, 0, wx.LEFT|wx.BOTTOM, 0)
-        sizer_map_ctrls.Add(self.btn_mov_up, 0, wx.LEFT|wx.BOTTOM, 0)
-        sizer_map_ctrls.Add(self.btn_mov_dn, 0, wx.LEFT|wx.BOTTOM, 0)
-        sizer_map_ctrls.Add(self.btn_mov_stop, 0, wx.LEFT|wx.BOTTOM, 0)
-        sizer_map_ctrls.Add(self.txt_mov_speed, 0, wx.LEFT|wx.BOTTOM, 0)
-        sizer_map_ctrls.Add(self.cb_dist_sim, 0, wx.LEFT|wx.BOTTOM, 0)
+        sizer_map.Add(sizer_map_ctrls, 0, wx.ALL|wx.EXPAND, border=0)
+
+        for bctrl in self.map_ctrls:
+            if bctrl is not None:
+                sizer_map_ctrls.Add(bctrl, 0, wx.LEFT | wx.BOTTOM, 0)
+            else:
+                sizer_map_ctrls.AddSpacer(24)
 
         sizer_pan.Add(sizer_ctrls, 0, wx.ALL|wx.RIGHT, 5)
-        sizer_ctrls.Add(self.btn_st, 0, wx.ALL|wx.CENTER, 5)
-        sizer_ctrls.Add(self.btn_pos, 0, wx.ALL|wx.CENTER, 5)
-        sizer_ctrls.Add(self.btn_upl, 0, wx.ALL|wx.CENTER, 5)
-        sizer_ctrls.Add(self.btn_rst_mpu, 0, wx.ALL|wx.CENTER, 5)
-        sizer_ctrls.Add(self.btn_rst_int, 0, wx.ALL|wx.CENTER, 5)
-        #sizer_ctrls.Add(self.btn_hist, 0, wx.ALL|wx.CENTER, 5)
-        #sizer_ctrls.Add(self.btn_dump, 0, wx.ALL|wx.CENTER, 5)
-        sizer_ctrls.Add(self.btn_track, 0, wx.ALL|wx.CENTER, 5)
-        sizer_ctrls.Add(self.btn_plan, 0, wx.ALL|wx.CENTER, 5)
-        sizer_ctrls.Add(self.btn_go, 0, wx.ALL|wx.CENTER, 5)
+
+        for bctrl in self.pan_ctrls:
+            if bctrl is not None:
+                sizer_ctrls.Add(bctrl, 0, wx.LEFT | wx.BOTTOM, 0)
+            else:
+                sizer_ctrls.AddSpacer(24)
 
         sizer_cmd.Add(self.txt_cmd, 10, wx.ALL|wx.CENTER, 5)
         sizer_cmd.Add(self.btn_cmd, 0, wx.ALL|wx.CENTER, 5)
@@ -219,6 +171,26 @@ class MyForm(wx.Frame):
         #panel.SetAutoLayout(True)
         panel.Layout()
         sizer.Fit(panel)
+
+    def AddPanBtn(self, panel, text, bind):
+        but = wx.Button(panel, wx.ID_ANY, text)
+        self.Bind(wx.EVT_BUTTON, bind, but)
+        self.pan_ctrls.append(but)
+        return but
+
+    def AddToolBtn(self, panel, text, bind):
+        but = wx.Button(panel, wx.ID_ANY, text, size=(28, 28))
+        self.Bind(wx.EVT_BUTTON, bind, but)
+        self.map_ctrls.append(but)
+        return but
+
+    def AddToolTogglePos(self, panel, text, toggle_code):
+        but = wx.ToggleButton(panel, wx.ID_ANY, text, size=(28, 28))
+        self.Bind(wx.EVT_TOGGLEBUTTON,
+                  lambda evt: self.map.onPosToggle(evt, toggle_code, but.GetValue()) and self.ToggleGroup1(but),
+                  but)
+        self.map_ctrls.append(but)
+        return but
 
     def ToggleGroup1(self, sel):
         group = [self.btn_map_ref, self.btn_map_pos, self.btn_map_targ]

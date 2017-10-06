@@ -219,15 +219,15 @@ class PathThread(threading.Thread):
 
                     self.__planner.RePlanOnMove((x,y), False)
 
-                    if len(self.__planner.spath)<2 :
+                    if len(self.__planner.spath) < 3:
                         self.__controller.log().LogString("Got there!")
                         self.complete=True
                         break
 
-                    if len(self.__planner.spath)<5 and not closing:
+                    if len(self.__planner.spath) < 6 and not closing:
                         self.__controller.log().LogString("Closing++++++++++++++++++++++")
-                        self.__controller.reqMoveSpeedSync(self.__speed/2) #cm/s
-                        closing=True
+                        self.__controller.reqMoveSpeedSync(self.__speed/2)  #cm/s
+                        closing = True
 
                     plan_a=math.atan2( self.__planner.spath[1][0]-self.__planner.spath[0][0],
                                         self.__planner.spath[1][1]-self.__planner.spath[0][1])
@@ -257,6 +257,8 @@ class PathThread(threading.Thread):
                     s=s0-(s0-s)*0.5 #LPM
                     s0=s
                     """
+
+                    print("Plan run: A_LOC=%s, A_REQ=%s" % (round(a*180/math.pi, 0), round(plan_a*180/math.pi)))
 
                     self.__controller.reqBearingSync(plan_a*180/math.pi)
 

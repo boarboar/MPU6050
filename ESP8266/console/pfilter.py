@@ -115,12 +115,22 @@ class PFilter:
 
         for p in self.particles:
             p.move_d(mov + random.gauss(0, self.fwd_noise), rot + random.gauss(0, self.rot_noise))
+
+
+            """
             #if self.map.isInsideTest(p.x, p.y) is not None:
             if self.map.isInsideTestFast(p.x, p.y) :
                 self.updateParticleProbabilities3(p, scans, scan_angles, self.map.getSortedWalls((p.x, p.y), self.scan_max_dist), beamform)
             else:
                 p.w = 0.0
-        """    
+            """
+            walls = self.map.getSortedWalls((p.x, p.y))
+            if len(walls) > 0:
+                self.updateParticleProbabilities3(p, scans, scan_angles, walls, beamform)
+            else:
+                p.w = 0.0
+
+            """    
         sorted_walls = None
         p0 = None
         resorted = 0

@@ -117,6 +117,8 @@ class UnitMap:
         y0=self.boundRect[1]
         print('init grid NR=%s NC=%s...' % (ny, nx))
         start_time = timeit.default_timer()
+        cells_unused = 0
+        cells_avail = 0
         self.grid = [[[x0+col*self.GRID_SZ,y0+row*self.GRID_SZ, None, None] for col in range(nx)] for row in range(ny)]
         for row in self.grid:
             for cell in row:
@@ -126,8 +128,14 @@ class UnitMap:
                       (x+self.GRID_SZ+self.GRID_DELTA, y+self.GRID_SZ+self.GRID_DELTA),
                       (x-self.GRID_DELTA, y+self.GRID_SZ+self.GRID_DELTA)]
                 cell[2]=self.AtSlow(area)
-                cell[3]=self._getSortedWalls((x+self.GRID_SZ/2, y+self.GRID_SZ/2), 500)
-        print('grid inited in %s s' % (round(timeit.default_timer() - start_time, 2)))
+                if cell[2] == 1:
+                    cell[3] = []  # unused/ occupied
+                    cells_unused += 1
+                else:
+                    cell[3] = self._getSortedWalls((x+self.GRID_SZ/2, y+self.GRID_SZ/2), 500)
+                    cells_avail += 1
+        print('grid inited in %s s, unused %s, avail %s' %
+              (round(timeit.default_timer() - start_time, 2), cells_unused, cells_avail))
 
     def resetCounters(self) :
         self.counter_map_sortwalls = 0
@@ -137,7 +145,7 @@ class UnitMap:
     def getCounters(self) :
         return (self.counter_map_sortwalls, self.counter_map_refl, self.counter_map_refl_refl)
 
-    def getSortedWalls(self, p, scan_max_dist):
+    def getSortedWalls(self, p):
         self.counter_map_sortwalls = self.counter_map_sortwalls + 1
         cell0=self.grid[0][0]
         r=int((p[1]-cell0[1])/self.GRID_SZ)
