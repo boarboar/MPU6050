@@ -20,7 +20,7 @@ class UnitMap:
     #GRID_SZ=15 #HxW cm
     #GRID_DELTA=4 #cm
 
-    GRID_SZ = 10  # HxW cm
+    GRID_SZ = 8  # HxW cm
     GRID_DELTA = 2  # cm
 
     def __init__(self, mapfile):
@@ -137,22 +137,36 @@ class UnitMap:
         print('grid inited in %s s, unused %s, avail %s' %
               (round(timeit.default_timer() - start_time, 2), cells_unused, cells_avail))
 
-    def resetCounters(self) :
-        self.counter_map_sortwalls = 0
-        self.counter_map_refl = 0
-        self.counter_map_refl_refl = 0
+        count_walls = 0
+        meaningless = 0
+        start_time = timeit.default_timer()
+        for row in self.grid:
+            for cell in row:
+                walls = cell[3]
+                for w in walls:
+                    count_walls += 1
+                    meaningless += w[5]
+        print('traversed %s walls, ml=%s,  in %s' %
+              (count_walls, meaningless/count_walls, round(timeit.default_timer() - start_time, 2)))
 
-    def getCounters(self) :
-        return (self.counter_map_sortwalls, self.counter_map_refl, self.counter_map_refl_refl)
+        self.counter_t_upd = 0
+
+    def resetCounters(self) :
+        #self.counter_map_sortwalls = 0
+        #self.counter_map_refl = 0
+        #self.counter_map_refl_refl = 0
+        self.counter_t_upd = 0
+
+    def getCounters(self):
+        return self.counter_t_upd
 
     def getSortedWalls(self, p):
-        self.counter_map_sortwalls = self.counter_map_sortwalls + 1
         cell0=self.grid[0][0]
         r=int((p[1]-cell0[1])/self.GRID_SZ)
         c=int((p[0]-cell0[0])/self.GRID_SZ)
-        if r >= 0 and r < len(self.grid) and c >=0 and c < len(self.grid[r]) :
+        if r >= 0 and r < len(self.grid) and c >=0 and c < len(self.grid[r]):
             return self.grid[r][c][3]
-        else :
+        else:
             return []
 
     def _getSortedWalls(self, p, scan_max_dist):
@@ -229,7 +243,6 @@ class UnitMap:
             for wall in area["WALLS"] :
                 parea0=area["AT"]
                 wall_crd=wall["C"]
-
                 isect=self.___intersectHor(y, parea0[0]+wall_crd[0], parea0[1]+wall_crd[1],
                                         parea0[0]+wall_crd[2], parea0[1]+wall_crd[3])
                 if isect!=None :
@@ -304,6 +317,47 @@ class UnitMap:
             return self.grid[r][c][2] != 1
         else:
             return False
+    """
+    def getIntersectionMapClean(self, p0, p1, sorted_walls):
+        intrs0, dumped, dist = self.getIntersectionMapSimple(p0, p1, sorted_walls)
+        d = None
+        if intrs0 is not None:
+            if not dumped:
+                d = dist
+        return d
+    """
+    def getIntersectionMapClean(self, p0, p1, sorted_walls):
+        # line p0->p1 in absolute map coords (world)
+        intrs = None
+        dist2 = 0  #square dist
+
+        for walls in sorted_walls:
+        #for i in range(len(sorted_walls)):
+        #    walls=sorted_walls[i]
+            if (dist2 > 0) and (walls[5] > dist2):
+                break
+            isect = None
+            movable = walls[2]
+            if movable == 0 or (movable == 2 and random.random() > 0.5):
+                # isect=self.find_intersection(p0, p1, p2, p3)
+                p2 = walls[0]
+                p3 = walls[1]
+                #start_time_upd = timeit.default_timer()
+                isect = geometry.c_find_intersection(p0, p1, p2, p3)
+                #self.counter_t_upd += timeit.default_timer() - start_time_upd
+
+            if isect is not None:
+                #d2 = (isect[0] - p0[0]) * (isect[0] - p0[0]) + (isect[1] - p0[1]) * (isect[1] - p0[1])
+                dx, dy = isect[0] - p0[0], isect[1] - p0[1]
+                d2 = dx*dx+dy*dy
+                if (intrs is None or d2 < dist2) and d2 > 0.01:
+                    intrs = isect
+                    dist2 = d2
+
+        if intrs is not None:
+            return math.sqrt(dist2)
+        else:
+            return None
 
     def getIntersectionMapRefl(self, p0, p1, scan_max_dist, sorted_walls, for_draw=False):
         #intrs0, ref, dumped, dist =self.getIntersectionMap1(p0, p1, True, scan_max_dist, sorted_walls, for_draw)
@@ -313,7 +367,7 @@ class UnitMap:
             print('Dumped')
             print(intrs0)
         """
-        self.counter_map_refl = self.counter_map_refl+1
+        #self.counter_map_refl = self.counter_map_refl+1
         refState = False
         pr = None
         intrs1 = None
@@ -360,8 +414,6 @@ class UnitMap:
             p2=walls[0]
             p3=walls[1]
             movable=walls[2]
-            #reffw=walls[3]
-            #density=walls[4]
             if movable==0 or (movable==2 and random.random()>0.5):
                 #isect=self.find_intersection(p0, p1, p2, p3)
                 isect=geometry.c_find_intersection(p0, p1, p2, p3)
@@ -374,18 +426,12 @@ class UnitMap:
                     reff=walls[3]
                     density=walls[4]
 
-        #return intrs, ref
-
-
         dist=math.sqrt(dist2)
         if intrs!=None and findRefl :
-            #if density<0.99 and for_draw:
             if density<0.99:
                 ref=self.getReflection(p0, intrs, wsect[0], wsect[1], dist, density)
                 if ref is not None :
                     pr, cc, refState = ref
-                    #cosa=math.sqrt(cc)
-                    #print(cosa)
                     if refState :
                         dumped=True
                         #print()

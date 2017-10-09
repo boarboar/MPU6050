@@ -219,12 +219,12 @@ class PathThread(threading.Thread):
 
                     self.__planner.RePlanOnMove((x,y), False)
 
-                    if len(self.__planner.spath) < 3:
+                    if len(self.__planner.spath) < 4:
                         self.__controller.log().LogString("Got there!")
                         self.complete=True
                         break
 
-                    if len(self.__planner.spath) < 6 and not closing:
+                    if len(self.__planner.spath) < 8 and not closing:
                         self.__controller.log().LogString("Closing++++++++++++++++++++++")
                         self.__controller.reqMoveSpeedSync(self.__speed/2)  #cm/s
                         closing = True
@@ -235,32 +235,22 @@ class PathThread(threading.Thread):
                     #self.__controller.log().LogString("After move CRD=(%s %s), A=%s, AP=%s"
                     #                                  % (round(x,2), round(y, 2),
                     #                                     round(a*180/math.pi,2), round(plan_a*180/math.pi,2)))
-                    """
-                    err_p=(a-plan_a)
-                    if err_p < -math.pi :
-                        err_p += 2*math.pi
-                    if err_p > math.pi :
-                        err_p -= 2*math.pi
 
+                    ## apply LPM
+                    x_a = math.sin(plan_a) + math.sin(a)
+                    y_a = math.cos(plan_a) + math.cos(a)
+                    a_a = math.atan2(y_a, x_a)
+                    a_a = math.pi * 0.5 - a_a
+                    if a_a < -math.pi:
+                        a_a += 2 * math.pi
+                    if a_a > math.pi:
+                        a_a -= 2 * math.pi
 
-                    err_i=err_p+degain_i*err_i
-                    err_d=err_p-err_p_0
-                    err_p_0=err_p
-                    feedback=-(gain_p*err_p+gain_d*err_d+gain_i*err_i)*gain_f
-                    feedback=round(feedback,2)
+                    print("Plan run: A_LOC=%s, A_REQ=%s, A_LPM=%s" %
+                          (round(a*180/math.pi, 0), round(plan_a*180/math.pi), round(a_a*180/math.pi, 0)))
 
-                    s=-err_p*180/math.pi
-
-                    if(s<-5) : s=-5
-                    if(s>5) : s=5
-
-                    s=s0-(s0-s)*0.5 #LPM
-                    s0=s
-                    """
-
-                    print("Plan run: A_LOC=%s, A_REQ=%s" % (round(a*180/math.pi, 0), round(plan_a*180/math.pi)))
-
-                    self.__controller.reqBearingSync(plan_a*180/math.pi)
+                    #self.__controller.reqBearingSync(plan_a*180/math.pi)
+                    self.__controller.reqBearingSync(a_a * 180 / math.pi)
 
             except KeyError: pass
 

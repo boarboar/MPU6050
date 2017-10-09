@@ -62,6 +62,8 @@ class PFilter:
         #self.pool = multiprocessing.Pool(ncpu)
         #print("Pool created, CPU count %s" % (ncpu))
 
+        self.count_zz = 0
+
 
     def InitParticles(self):
         #N_D=16
@@ -108,72 +110,31 @@ class PFilter:
             scan_angles_cos.append(math.cos(a))
             scan_angles_sin.append(math.sin(a))
 
-
         start_time = timeit.default_timer()
         self.map.resetCounters()
-        #sorted_walls=self.map.getSortedWalls((self.particles[0].x, self.particles[0].y), self.scan_max_dist)
+        count_tot = 0
+        count_prc = 0
+        self.count_zz = 0
+        t_upd = 0
 
         for p in self.particles:
+            count_tot += 1
             p.move_d(mov + random.gauss(0, self.fwd_noise), rot + random.gauss(0, self.rot_noise))
 
-
-            """
-            #if self.map.isInsideTest(p.x, p.y) is not None:
-            if self.map.isInsideTestFast(p.x, p.y) :
-                self.updateParticleProbabilities3(p, scans, scan_angles, self.map.getSortedWalls((p.x, p.y), self.scan_max_dist), beamform)
-            else:
-                p.w = 0.0
-            """
             walls = self.map.getSortedWalls((p.x, p.y))
             if len(walls) > 0:
-                self.updateParticleProbabilities3(p, scans, scan_angles, walls, beamform)
+                start_time_upd = timeit.default_timer()
+                self.updateParticleProbabilitiesClean(p, scans, scan_angles, walls, beamform)
+                t_upd += timeit.default_timer() - start_time_upd
+                count_prc += 1
             else:
                 p.w = 0.0
 
-            """    
-        sorted_walls = None
-        p0 = None
-        resorted = 0
-        for p in self.particles :
-            p.move_d(mov+random.gauss(0, self.fwd_noise), rot+random.gauss(0, self.rot_noise))
-            if self.map.isInsideTest(p.x, p.y) is not None :
-                #sorted_walls=self.map.getSortedWalls((p.x, p.y), self.scan_max_dist)
-                if sorted_walls is None or (p0.x-p.x)*(p0.x-p.x)+(p0.y-p.y)*(p0.y-p.y)>25:
-                    sorted_walls=self.map.getSortedWalls((p.x, p.y), self.scan_max_dist)
-                    p0=p
-                    resorted=resorted+1
-                self.updateParticleProbabilities3(p, scans, scan_angles, sorted_walls, beamform)
-            else : p.w=0.0
-        """
-
-        """
-        p2=[]
-        for p in self.particles :
-            p2.append(self.updateOneParticle(p, mov, rot, scans, scan_angles, beamform))
-        self.particles=p2
-
-        #results = [self.pool.apply_async(PrintParticle(p)) for p in self.particles]
-
-
-        #results = [self.pool.apply_async(self.updateOneParticle(p, mov, rot, scans, scan_angles, beamform)) for p in self.particles]
-
-        #self.particles=[]
-        #for result in results:
-        #    print(result._value)
-
-
-        p2 = self.pool.map(UpdateOneParticle, [(p, mov, rot, scans, scan_angles, beamform) for p in self.particles])
-        #p2 = self.pool.map(PrintParticle, [(p) for p in self.particles])
-        #p2 = self.pool.map(self.testParticle, [(self, p) for p in self.particles])
-        #for result in p2:
-        #    print(result)
-
-        #self.particles=p2
-        """
         counters = self.map.getCounters()
         t=timeit.default_timer() - start_time
-        print ('Updated %s particles in %s s, %s per particle, counters: Resort %s, Inters %s, Refl %s' %
-               (len(self.particles), round(t, 2), round(t/len(self.particles), 4), counters[0], counters[1], counters[2]))
+        print ('Updated %s particles in %s s, (upd %s), (is %s) %s per particle, counters: Tot %s, Proc %s, ZZ %s' %
+               (len(self.particles), round(t, 2), round(t_upd, 2), round(counters, 2), round(t/len(self.particles), 4),
+                count_tot, count_prc, self.count_zz))
 
         wsum=sum(p.w for p in self.particles)
         if wsum>0 :
@@ -200,17 +161,6 @@ class PFilter:
             #print self.particles
 
 
-        """
-        dist = WeightedDistribution(self.particles)
-        p3 = []
-        for _ in self.particles:
-            p = dist.pick()
-            if p is None:  # No pick b/c all totally improbable
-                pass
-            else:
-                p3.append(copy.copy(p))
-        self.particles = p3
-        """
 
         #self.printParticles("After Rsample")
 
@@ -222,6 +172,36 @@ class PFilter:
 
         #self.printParticles("Normed")
         #self.x_mean, self.y_mean, self.p_var, self.a_mean, self.a_var = self.getMeanDistribution()
+
+    def updateParticleProbabilitiesClean(self, p, meas, scan_angles, sorted_walls, beamform):
+        prob = 1.0
+        p0 = (p.x, p.y)
+
+        max_dist = self.scan_max_dist
+
+        for i in range(len(scan_angles)):
+            # should be more dense starting from the center anf=d unwinding, with sub-beam at each 1 degree
+            ba = p.a + scan_angles[i]
+            cba = math.cos(ba)
+            sba = math.sin(ba)
+            for bf in beamform:
+                da, max_dist, cda, sda = bf
+                cosa = cba * cda - sba * sda
+                sina = cba * sda + cda * sba
+                p1 = (p.x + sina * self.scan_max_dist, p.y + cosa * max_dist)
+                dist = self.map.getIntersectionMapClean(p0, p1, sorted_walls)
+                if dist is not None: break
+
+            if dist is None:
+                dist = -1
+
+            if dist == -1 and meas == -1 :
+                self.count_zz += 1
+
+            prob *= self.Gaussian1(dist, meas[i], max_dist)
+
+        p.w = prob
+
 
     def getMeanDistribution(self):
         # mean distrubution of coords and angles
@@ -369,6 +349,7 @@ class PFilter:
         if x < 0 : x=scan_max_dist
         return math.exp(- ((mu - x) ** 2) / (sigma ** 2) / 2.0) / math.sqrt(2.0 * math.pi * (sigma ** 2))
     """
+
 
     def Gaussian1(self, mu, x, scan_max_dist):
         # calculates the probability of x for 1-dim Gaussian with mean mu and var. sigma
