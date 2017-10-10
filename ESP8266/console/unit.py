@@ -26,6 +26,7 @@ class Unit:
         #
 
         self.beamdelta=3*math.pi/180 #3 degree
+        #self.beamdelta = 6 * math.pi / 180  # 6 degree
         #self.beam_att=0.9
         self.beam_att=0.75
         self.beamform=[]
@@ -37,11 +38,11 @@ class Unit:
             if i%2==0 : nda=-nda
             da=nda*self.beamdelta
             self.beamform.append((da, maxdist, math.cos(da), math.sin(da)))
-            print '(', da*180/math.pi, maxdist, ')',
+            #print '(', da*180/math.pi, maxdist, ')',
             #maxdist = maxdist*self.beam_att
             maxdist = maxdist*att
 
-        print
+        print("Beam width %s, %s rays" % (self.bfa, na+1))
         pass
 
     def InitUnitPos(self, start):

@@ -5,6 +5,7 @@ import random
 from operator import itemgetter
 import timeit
 import geometry
+import numpy as np
 
 from pprint import pprint
 
@@ -15,6 +16,23 @@ from pprint import pprint
 # 3: refl
 # 4: density
 # %: dist
+
+# New wall struct
+# 0: dist
+# 1: Stat
+# 2: p0
+# 3: p1
+# 4: refl
+# 5: density
+
+class Wall(object):
+    def __init__(self, p0, p1, S, refl, density, dist):
+        self.p0=p0
+        self.p1 = p1
+        self.S = S
+        self.refl=refl
+        self.density=density
+        self.dist=dist
 
 class UnitMap:
     #GRID_SZ=15 #HxW cm
@@ -137,6 +155,8 @@ class UnitMap:
         print('grid inited in %s s, unused %s, avail %s' %
               (round(timeit.default_timer() - start_time, 2), cells_unused, cells_avail))
 
+        self.i_fun = geometry.c_find_intersection
+
         count_walls = 0
         meaningless = 0
         start_time = timeit.default_timer()
@@ -145,9 +165,10 @@ class UnitMap:
                 walls = cell[3]
                 for w in walls:
                     count_walls += 1
-                    meaningless += w[5]
+                    meaningless += w[0]
+                    #meaningless += w.dist
         print('traversed %s walls, ml=%s,  in %s' %
-              (count_walls, meaningless/count_walls, round(timeit.default_timer() - start_time, 2)))
+              (count_walls, meaningless, round(timeit.default_timer() - start_time, 2)))
 
         self.counter_t_upd = 0
 
@@ -182,9 +203,16 @@ class UnitMap:
             d=d0
             if d1<d0 : d=d1
             if d<maxdist2 and walls[4]>0.1 :
-                wall_dist.append((p0, p1, walls[2], walls[3], walls[4], d))
+                #wall_dist.append([p0, p1, walls[2], walls[3], walls[4], d])
+                #wall_dist.append([d, walls[2], p0, p1, walls[3], walls[4]])
+                wall_dist.append([d, walls[2], p0, p1])
 
-        return sorted(wall_dist, key=itemgetter(5))
+        return sorted(wall_dist, key=itemgetter(0))
+
+        #return sorted(wall_dist, key=itemgetter(5))
+
+        #wall_dist = sorted(wall_dist, key=itemgetter(5))
+        #return np.array([Wall(w[0], w[1], w[2], w[3], w[4], w[5]) for w in wall_dist])
 
     def getReSortedWalls(self, walls0, p, scan_max_dist):
         wall_dist=[]
@@ -330,27 +358,28 @@ class UnitMap:
         # line p0->p1 in absolute map coords (world)
         intrs = None
         dist2 = 0  #square dist
-
+        # i_fun=self.find_intersection
+        i_fun = geometry.c_find_intersection
+        rnd = random.random
         for walls in sorted_walls:
-        #for i in range(len(sorted_walls)):
-        #    walls=sorted_walls[i]
-            if (dist2 > 0) and (walls[5] > dist2):
+            #if (dist2 > 0) and (walls[5] > dist2):
+            if (dist2 > 0) and (walls[0] > dist2):
                 break
             isect = None
-            movable = walls[2]
-            if movable == 0 or (movable == 2 and random.random() > 0.5):
-                # isect=self.find_intersection(p0, p1, p2, p3)
-                p2 = walls[0]
-                p3 = walls[1]
-                #start_time_upd = timeit.default_timer()
-                isect = geometry.c_find_intersection(p0, p1, p2, p3)
-                #self.counter_t_upd += timeit.default_timer() - start_time_upd
+            #movable = walls[2]
+            movable = walls[1]
+            if movable == 0 or (movable == 2 and rnd() > 0.5):
+                #p2 = walls[0]
+                #p3 = walls[1]
+                p2 = walls[2]
+                p3 = walls[3]
+                isect = i_fun(p0, p1, p2, p3)
 
             if isect is not None:
                 #d2 = (isect[0] - p0[0]) * (isect[0] - p0[0]) + (isect[1] - p0[1]) * (isect[1] - p0[1])
                 dx, dy = isect[0] - p0[0], isect[1] - p0[1]
                 d2 = dx*dx+dy*dy
-                if (intrs is None or d2 < dist2) and d2 > 0.01:
+                if (intrs is None or d2 < dist2) and d2 > 0.001:
                     intrs = isect
                     dist2 = d2
 

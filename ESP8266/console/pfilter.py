@@ -123,9 +123,9 @@ class PFilter:
 
             walls = self.map.getSortedWalls((p.x, p.y))
             if len(walls) > 0:
-                start_time_upd = timeit.default_timer()
+                #start_time_upd = timeit.default_timer()
                 self.updateParticleProbabilitiesClean(p, scans, scan_angles, walls, beamform)
-                t_upd += timeit.default_timer() - start_time_upd
+                #t_upd += timeit.default_timer() - start_time_upd
                 count_prc += 1
             else:
                 p.w = 0.0
@@ -176,29 +176,32 @@ class PFilter:
     def updateParticleProbabilitiesClean(self, p, meas, scan_angles, sorted_walls, beamform):
         prob = 1.0
         p0 = (p.x, p.y)
+        a, x, y = p.a, p.x, p.y
 
         max_dist = self.scan_max_dist
+        i_fun = self.map.getIntersectionMapClean
+        gauss = self.Gaussian1
 
         for i in range(len(scan_angles)):
             # should be more dense starting from the center anf=d unwinding, with sub-beam at each 1 degree
-            ba = p.a + scan_angles[i]
+            ba = a + scan_angles[i]
             cba = math.cos(ba)
             sba = math.sin(ba)
             for bf in beamform:
                 da, max_dist, cda, sda = bf
                 cosa = cba * cda - sba * sda
                 sina = cba * sda + cda * sba
-                p1 = (p.x + sina * self.scan_max_dist, p.y + cosa * max_dist)
-                dist = self.map.getIntersectionMapClean(p0, p1, sorted_walls)
+                p1 = (x + sina * max_dist, y + cosa * max_dist)
+                dist = i_fun(p0, p1, sorted_walls)
                 if dist is not None: break
 
             if dist is None:
                 dist = -1
 
-            if dist == -1 and meas == -1 :
-                self.count_zz += 1
+            #if dist == -1 and meas == -1 :
+            #    self.count_zz += 1
 
-            prob *= self.Gaussian1(dist, meas[i], max_dist)
+            prob *= gauss(dist, meas[i], max_dist)
 
         p.w = prob
 
