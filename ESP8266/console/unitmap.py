@@ -39,7 +39,7 @@ class UnitMap:
     #GRID_DELTA=4 #cm
 
     GRID_SZ = 8  # HxW cm
-    GRID_DELTA = 2  # cm
+    GRID_DELTA = 8  # cm
 
     def __init__(self, mapfile):
         self.boundRect=[sys.maxint, sys.maxint, -sys.maxint, -sys.maxint] #bounding rect

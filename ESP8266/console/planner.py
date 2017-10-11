@@ -4,8 +4,7 @@ import timeit
 
 class Planner:
     " Path planner"
-    #GRID_SZ=20 #HxW
-    #GRID_DELTA=5 #cm
+
     def __init__(self, map, LogString, LogErrorString):
         self.map=map
         self.LogString=LogString
@@ -32,21 +31,14 @@ class Planner:
             self.target_cell=None
             return False
         cell0=self.grid[0][0]
-        #self.start_cell=(int((self.start_pos[1]-cell0[1])/self.GRID_SZ), int((self.start_pos[0]-cell0[0])/self.GRID_SZ))
-        #self.target_cell=(int((self.target_pos[1]-cell0[1])/self.GRID_SZ), int((self.target_pos[0]-cell0[0])/self.GRID_SZ))
         self.start_cell=(int((self.start_pos[1]-cell0[1])/self.grid_sz), int((self.start_pos[0]-cell0[0])/self.grid_sz))
         self.target_cell=(int((self.target_pos[1]-cell0[1])/self.grid_sz), int((self.target_pos[0]-cell0[0])/self.grid_sz))
-
-        #self.LogString('from (%s, %s) to (%s, %s)' % (self.start_cell[0], self.start_cell[1], self.target_cell[0], self.target_cell[1]))
         return True
 
 
     def Plan(self, verbose=True):
         if self.grid is None:
-            #w=self.map.boundRect[2]-self.map.boundRect[0]
-            #h=self.map.boundRect[3]-self.map.boundRect[1]
-            #nx=w/self.GRID_SZ+1
-            #ny=h/self.GRID_SZ+1
+
             x0=self.map.boundRect[0]
             y0=self.map.boundRect[1]
 
@@ -131,10 +123,16 @@ class Planner:
 
         del self.path[:]
         del self.spath[:]
+
+        start_time = timeit.default_timer()
         if not self.AStarPlanning(verbose) : return False
+        plan_time = timeit.default_timer() - start_time
         start_time = timeit.default_timer()
         self.SmoothPath(verbose)
-        if verbose : self.LogString('Smoothed in %s s' % (round(timeit.default_timer() - start_time, 2)))
+        smooth_time = timeit.default_timer() - start_time
+        if verbose: self.LogString('Smoothed in %s s' % (round(timeit.default_timer() - start_time, 2)))
+
+        print('Planning done: in %s s (plan %s, smooth %s)' % (round(plan_time+smooth_time, 2),round(plan_time, 2),round(smooth_time, 2)))
 
         return True
 
@@ -328,20 +326,21 @@ class Planner:
 
         irow = self.target_cell[0]
         icol = self.target_cell[1]
-        self.path.append((irow, icol, '*'))
+        self.path.append([irow, icol])
 
         while not (irow==self.start_cell[0] and icol==self.start_cell[1]) :
             i = self.grid[irow][icol][5] #action
             irow2 = irow - delta[i][0]
             icol2 = icol - delta[i][1]
-            self.path.append((irow2, icol2, '*'))
+            self.path.append([irow2, icol2])
             irow=irow2
             icol=icol2
 
         #print(self.path)
         if verbose : self.LogString('Done path')
-
         if verbose : self.LogString('Planning done in %s s' % (round(timeit.default_timer() - start_time, 2)))
+
+        #print('Planning done in %s s' % (round(timeit.default_timer() - start_time, 2)))
 
         return True
 
@@ -351,7 +350,8 @@ class Planner:
         #weight_smooth = 0.7
         weight_data = 0.1
         weight_smooth = 0.9
-        tolerance = 0.000001
+        #tolerance = 0.000001
+        tolerance = 0.0001
         for step in self.path :
             cell=self.grid[step[0]][step[1]]
             x, y =cell[0], cell[1]
