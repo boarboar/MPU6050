@@ -58,7 +58,7 @@ class Unit:
         self.x_mean, self.y_mean, self.p_var, self.a_mean, self.a_var = (self.start[0], self.start[1],0,0,0) # unit localization, abs coords
         self.__l_cos, self.__l_sin= (1.0, 0.0)    # unit cosine matrix, 'localized'
 
-    def MoveUnit(self, angle, dist, scans, x, y):
+    def MoveUnit(self, angle, dist, scans, v, x, y):
         start_time = timeit.default_timer()
         if self.__move_step == 0 : # first step
             move_rot=0
@@ -89,18 +89,36 @@ class Unit:
             self.scans.append(s)
 
         #print(self.scans)
-
+        old_loc_x, old_loc_y = self.x_mean, self.y_mean
         if self.pfilter is not None :
             loc_x=self.x_mean+dist*math.sin(angle)
             loc_y=self.y_mean+dist*math.cos(angle)
             self.pfilter.updateParticles(move_dist, move_rot, scans, self.scan_angles, loc_x, loc_y, self.beamform)
             self.x_mean, self.y_mean, self.p_var, self.a_mean, self.a_var = self.pfilter.getMeanDistribution()
+
+
         self.__l_cos=math.cos(self.a_mean)
         self.__l_sin=math.sin(self.a_mean)
 
+        upd_time = timeit.default_timer() - start_time
+        v_corr = v * upd_time;
+
+        print("Unit Mov: corr %s for %s s" % (round(v_corr, 2), round(upd_time, 2)))
+
+        self.x_mean += v_corr * self.__l_sin
+        self.y_mean += v_corr * self.__l_cos
+
+
         self.__r_x, self.__r_y = x, y # simulated crd
         #self.isInside=self.map.isInsideTest(x+self.start[0], y+self.start[1]) is not None
-        self.isInside=self.map.isInsideTest(loc_x+self.start[0], loc_y+self.start[1]) is not None
+        #self.isInside=self.map.isInsideTest(loc_x+self.start[0], loc_y+self.start[1]) is not None
+
+        if not self.map.isInsideTestFast(self.x_mean, self.y_mean):
+            # fallback
+            self.x_mean, old_loc_x
+            self.y_mean, old_loc_y
+            print("Moved outside area, fallback")
+
 
         """
         print("Unit Mov: Rot %s Dist %s (%s, %s, %s) vs (%s, %s, %s) in %s s" %

@@ -289,7 +289,7 @@ class UnitMap:
             if left%2==1 and right%2==1 : return area
         return None
 
-    def At(self, cell):
+    def ___At(self, cell):
         # cell status : 0-space, 1-occupied/unusable, 2-variable
         status=0
 
@@ -339,11 +339,13 @@ class UnitMap:
 
     def isInsideTestFast(self, x, y):
         cell0 = self.grid[0][0]
-        r = int((x - cell0[1]) / self.GRID_SZ)
-        c = int((y - cell0[0]) / self.GRID_SZ)
+        r = int((y - cell0[1]) / self.GRID_SZ)
+        c = int((x - cell0[0]) / self.GRID_SZ)
         if r >= 0 and r < len(self.grid) and c >= 0 and c < len(self.grid[r]):
+            print("[%s, %s] (%s,%s) %s" % (x, y, c, r, self.grid[r][c][2]))
             return self.grid[r][c][2] != 1
         else:
+            print("[%s, %s] (%s,%s) %s" % (x, y, c, r, '#'))
             return False
     """
     def getIntersectionMapClean(self, p0, p1, sorted_walls):

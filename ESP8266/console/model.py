@@ -17,7 +17,8 @@ class Model(dict):
         self["FSS"]=0
         self["YPR"]=[0,0,0]
         #self["PREV_YPR"]=[0,0,0]
-        self["V"]=[0,0,0]
+        #self["V"]=[0,0,0]
+        self["V"] = 0
         self["CRD"]=[0,0,0] #coord X, Y, Z
         self["D"]=[0] # move dist
         #self["PREV_CRD"]=[0,0,0] #prev coord X, Y, Z
@@ -51,7 +52,8 @@ class Model(dict):
                 data=dict.__getitem__(self, "MHIST")
                 data[1][:] = [] # clear history
                 self["YPR"]=[0,0,0]
-                self["V"]=[0,0,0]
+                #self["V"]=[0,0,0]
+                self["V"] = 0
                 self["CRD"]=[0,0,0]
                 self["D"]=0
                 self["S"]=[0,0,0]

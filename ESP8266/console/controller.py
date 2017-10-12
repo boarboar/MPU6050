@@ -211,7 +211,7 @@ class Controller():
             try:
                 yaw, pitch, roll = [a*math.pi/180.0 for a in self.__model["YPR"]]
                 x, y, z = [int(a) for a in self.__model["CRD"]] # for simulation
-                self.unit.MoveUnit(yaw, self.__model["D"], self.__model["S"], x, y)
+                self.unit.MoveUnit(yaw, self.__model["D"], self.__model["S"], self.__model["V"], x, y)
             except KeyError : pass
             except IndexError : pass
             self.__form.UpdatePos(reset=model_reset)
