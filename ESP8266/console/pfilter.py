@@ -58,12 +58,7 @@ class PFilter:
 
         self.gauss_denom=math.sqrt(2.0 * math.pi * (self.sense_noise ** 2))
         self.gauss_exp_denom=(self.sense_noise ** 2) * 2.0
-        #ncpu=multiprocessing.cpu_count()/2
-        #self.pool = multiprocessing.Pool(ncpu)
-        #print("Pool created, CPU count %s" % (ncpu))
-
-        self.count_zz = 0
-
+        self.gauss_0 = 1.0 / self.gauss_denom
 
     def InitParticles(self):
         #N_D=16
@@ -112,29 +107,36 @@ class PFilter:
 
         start_time = timeit.default_timer()
         self.map.resetCounters()
-        count_tot = 0
+        count_tot = len(self.particles)
         count_prc = 0
-        self.count_zz = 0
+
+        self.count_back = 0
         t_upd = 0
 
         for p in self.particles:
-            count_tot += 1
+            (x_0, y_0) = (p.x, p.y)
             p.move_d(mov + random.gauss(0, self.fwd_noise), rot + random.gauss(0, self.rot_noise))
 
             walls = self.map.getSortedWalls((p.x, p.y))
+            if len(walls) == 0:
+                # out of bounds
+                noise = self.fwd_noise * (1.0+5.0*self.count_back/count_tot) # ???
+                (p.x, p.y) = (x_0+random.gauss(0, noise), y_0+random.gauss(0, noise))
+                walls = self.map.getSortedWalls((p.x, p.y))
+                self.count_back += 1
+
             if len(walls) > 0:
-                #start_time_upd = timeit.default_timer()
                 self.updateParticleProbabilitiesClean(p, scans, scan_angles, walls, beamform)
-                #t_upd += timeit.default_timer() - start_time_upd
                 count_prc += 1
             else:
+                # still out of bounds ?
                 p.w = 0.0
 
         counters = self.map.getCounters()
         t=timeit.default_timer() - start_time
         print ('Updated %s particles in %s s, (upd %s), (is %s) %s per particle, counters: Tot %s, Proc %s, ZZ %s' %
                (len(self.particles), round(t, 2), round(t_upd, 2), round(counters, 2), round(t/len(self.particles), 4),
-                count_tot, count_prc, self.count_zz))
+                count_tot, count_prc, self.count_back))
 
         wsum=sum(p.w for p in self.particles)
         if wsum>0 :
@@ -197,9 +199,6 @@ class PFilter:
 
             if dist is None:
                 dist = -1
-
-            #if dist == -1 and meas == -1 :
-            #    self.count_zz += 1
 
             prob *= gauss(dist, meas[i], max_dist)
 
@@ -356,8 +355,9 @@ class PFilter:
 
     def Gaussian1(self, mu, x, scan_max_dist):
         # calculates the probability of x for 1-dim Gaussian with mean mu and var. sigma
-        if mu==-2 or x==-2 : return 1.0
+        if mu==-2 or x==-2 : self.gauss_0
         if mu < 0 : mu=scan_max_dist
         if x < 0 : x=scan_max_dist
         dist2=(mu-x)**2
+        if dist2 == 0: return self.gauss_0
         return math.exp(1.0 * -dist2/ self.gauss_exp_denom) / self.gauss_denom
