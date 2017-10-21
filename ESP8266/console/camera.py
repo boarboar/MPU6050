@@ -7,6 +7,7 @@ from urllib2 import URLError
 import numpy as np
 import threading
 import time
+import socket
 
 CameraEvent, EVT_CAMERA_EVENT = wx.lib.newevent.NewEvent()
 
@@ -27,22 +28,51 @@ class StreamClientThread(threading.Thread):
     def lock(self) : self.__lock.acquire()
     def unlock(self) : self.__lock.release()
 
+    def contoursCanny(self, img_g):
+        img_cont = cv2.bilateralFilter(img_g, 11, 17, 17)
+        edged = cv2.Canny(img_cont, 30, 200)
+        # note - findCounters is destructive, so it will destroy edge !
+        # _, contours, _ = cv2.findContours(edged.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        _, contours, _ = cv2.findContours(edged, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        #_, contours, _ = cv2.findContours(edged, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+        return contours
+
+    def contoursBfilt(self, img_g):
+        img_cont = cv2.bilateralFilter(img_g, 11, 17, 17)
+        ret, thresh = cv2.threshold(img_cont, 127, 255, cv2.THRESH_BINARY)
+        _, contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        return contours
+
+    def contoursStd(self, img_g):
+        ret, thresh = cv2.threshold(img_g, 127, 255, cv2.THRESH_BINARY)
+        _, contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+        ###ret, thresh = cv2.threshold(img_cont, 127, 255, cv2.THRESH_BINARY_INV)
+        ###ret, thresh = cv2.threshold(img_cont, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        ###thresh = cv2.adaptiveThreshold(img_cont, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
+        ###thresh = cv2.adaptiveThreshold(img_cont, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 11, 2)
+        ###_, contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)    return contours
+        return contours
+
     def loadimg(self):
         if self.stream is None : return None
         while True:
-			try :
-				self.bytes+=self.stream.read(1024)
-				a = self.bytes.find('\xff\xd8')
-				b = self.bytes.find('\xff\xd9')
-				if a!=-1 and b!=-1:
-					jpg = self.bytes[a:b+2]
-					self.bytes= self.bytes[b+2:]
-					i = cv2.imdecode(np.fromstring(jpg, dtype=np.uint8),cv2.IMREAD_COLOR)
-					return i
-
-			except Exception as e:
-				print 'failed to read'
-				return None
+            try :
+                self.bytes+=self.stream.read(1024)
+                a = self.bytes.find('\xff\xd8')
+                b = self.bytes.find('\xff\xd9')
+                if a!=-1 and b!=-1:
+                    jpg = self.bytes[a:b+2]
+                    self.bytes= self.bytes[b+2:]
+                    img = cv2.imdecode(np.fromstring(jpg, dtype=np.uint8),cv2.IMREAD_COLOR)
+                    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                    img_cont = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                    contours = self.contoursStd(img_cont)
+                    cv2.drawContours(img, contours, -1, (0, 255, 0), 1)
+                    return img
+            except Exception as e:
+                print 'failed to read'
+                return None
 
     def run (self):
 
@@ -63,6 +93,9 @@ class StreamClientThread(threading.Thread):
             except URLError as e:
                 print e.reason
                 continue
+            except socket.timeout as e:
+                print("timeout")
+                continue
 
             self.frame = self.loadimg()
 
@@ -75,15 +108,13 @@ class StreamClientThread(threading.Thread):
                 continue
 
             while not self.__stop and self.frame is not None:
-                #self.frame = self.loadimg()
-                #if self.frame is not None:
-                self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
                 self.lock()
                 self.bmp.CopyFromBuffer(self.frame)
                 self.unlock()
                 #print "Fire event"
                 event = RedrawEvent(bmp=self.bmp)
                 wx.PostEvent(self.wnd, event)
+                time.sleep(0.05)
                 self.frame = self.loadimg()
 
         print "Streamer stopped"
