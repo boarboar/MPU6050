@@ -62,7 +62,7 @@ class MyForm(wx.Frame):
         self.btn_cmd = wx.Button(panel, wx.ID_ANY, 'Send')
 
         self.unitPan = draw.UnitPanel(panel)
-        self.chart = draw.ChartPanel(panel)
+        #self.chart = draw.ChartPanel(panel)
         self.camera = camera.CameraPanel(panel)
         self.map = map.MapPanel(panel, self.model, "map.json", self.LogString, self.LogErrorString)
         self.controller=controller.Controller(self, self.model, self.map, self.LogString, self.LogErrorString)
@@ -137,7 +137,7 @@ class MyForm(wx.Frame):
 
         ##sizer_pan.Add(self.unitPan, 1, wx.ALL|wx.EXPAND, 5)
         sizer_charts.Add(self.unitPan, 1, wx.ALL|wx.EXPAND, border=0)
-        sizer_charts.Add(self.chart, 1, wx.ALL|wx.EXPAND, border=0)
+        #sizer_charts.Add(self.chart, 1, wx.ALL|wx.EXPAND, border=0)
         sizer_charts.Add(self.camera, 1, wx.ALL|wx.EXPAND, border=0)
         sizer_pan.Add(sizer_charts, 1, wx.ALL|wx.EXPAND, border=0)
 
