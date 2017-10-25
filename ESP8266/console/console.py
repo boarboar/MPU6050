@@ -339,7 +339,7 @@ class MyForm(wx.Frame):
             #    self.controller.updatePathRunning()
 
         self.unitPan.UpdateData(self.model["T_ATT"], self.model["YPR"], self.model["V"], self.controller.unit.a_mean)
-        self.chart.UpdateData(self.model["T_ATT"], self.model["YPR"], self.model["V"])
+        #self.chart.UpdateData(self.model["T_ATT"], self.model["YPR"], self.model["V"])
 
 
     def onUpdStatEvent(self, evt):
