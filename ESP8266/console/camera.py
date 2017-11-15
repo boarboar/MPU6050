@@ -23,6 +23,12 @@ class StreamClientThread(threading.Thread):
         self.__stop = False
         self.stream=None
         self.bytes=''
+        self.sigma = 0.33
+        self.lines_rho = 1
+        self.lines_phi_div = 180
+        self.lines_threshold = 100
+        self.lines_minLineLength = 56
+        self.lines_maxLineGap = 100
         self.setDaemon(1)
     def stop(self) : self.__stop=True
     def lock(self) : self.__lock.acquire()
@@ -30,21 +36,39 @@ class StreamClientThread(threading.Thread):
 
 
     def edges(self, img, gray):
-        minLineLength = 20
-        maxLineGap = 1
+        h, w = img.shape[:2]
+        low_bound = 0.05
+        hi_bound = 0.5
+        # auto canny
+        v = np.median(gray)
+        # apply automatic Canny edge detection using the computed median
+        low_thresh = int(max(0, (1.0 - self.sigma) * v))
+        high_thresh = int(min(255, (1.0 + self.sigma) * v))
+        edges = cv2.Canny(gray, low_thresh, high_thresh, apertureSize=3, L2gradient=False)
+        lines = cv2.HoughLinesP(edges, self.lines_rho, np.pi / self.lines_phi_div,
+                                threshold=self.lines_threshold, minLineLength=self.lines_minLineLength,
+                                maxLineGap=self.lines_maxLineGap)
+        if lines is None:
+            return img, cv2.cvtColor(edges, cv2.COLOR_GRAY2RGB)
 
-        #gray = cv2.bilateralFilter(gray, 11, 17, 17) #?
-        #edges = cv2.Canny(gray, 50, 150, apertureSize=7)
-        edges = cv2.Canny(gray, 80, 120)
-        #edges = cv2.Canny(gray, 30, 200)
-        lines = cv2.HoughLinesP(edges, 1, np.pi / 2, 2, None, minLineLength, maxLineGap)
-        #lines = cv2.HoughLines(edges, 1, np.pi / 2, 2)
 
+        print("Lines : %s" % (len(lines)))
+
+        y_lim_1 = int(h * (1-low_bound))
+        y_lim_0 = int(h * (1 - hi_bound))
+        cv2.line(img, (0, y_lim_1), (w-1, y_lim_1), (0, 0, 255), 1)
+        cv2.line(img, (0, y_lim_0), (w - 1, y_lim_0), (0, 0, 255), 1)
 
         for line in lines:
             for x1, y1, x2, y2 in line:
-                if x1==x2 :
-                    cv2.line(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                cv2.line(img, (x1, y1), (x2, y2), (0, 255, 0), 3)
+
+        for line in lines:
+            for x1, y1, x2, y2 in line:
+                if abs(y1-y2)>40 and abs(x1-x2)*100/abs(y1-y2)<10 and min(y1,y2)<y_lim_1 and max(y1,y2)>y_lim_0:  #5% inclination
+                    cv2.line(img, (x1, y1), (x2, y2), (255, 0, 0), 2)
+
+        return img
 
     def loadimg(self):
         if self.stream is None : return None
@@ -59,8 +83,7 @@ class StreamClientThread(threading.Thread):
                     img = cv2.imdecode(np.fromstring(jpg, dtype=np.uint8),cv2.IMREAD_COLOR)
                     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
                     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-                    self.edges(img, gray)
-                    return img
+                    return self.edges(img, gray)
             except Exception as e:
                 print 'failed to read'
                 return None
@@ -76,7 +99,7 @@ class StreamClientThread(threading.Thread):
 
         while not self.__stop:
             time.sleep(5.0)
-            print 'opening stream...'
+            print('opening stream at %s ...' % (self.__url))
             self.stream=None
             try:
                 self.stream=urllib2.urlopen(self.__url, timeout=10.0)
@@ -116,7 +139,7 @@ class CameraPanel(wx.Window):
     def __init__(self, parent):
         wx.Window.__init__(self, parent, wx.ID_ANY, style=wx.SIMPLE_BORDER, size=(160,120))
 
-        self.isDebug = False
+        self.isDebug = True
 
         #self.imgSizer = (480, 360)
         self.imgSizer = (640, 480)
@@ -180,7 +203,8 @@ class CameraPanel(wx.Window):
             self.isPlaying=True
             if self.isDebug :
                 self.streamthread =StreamClientThread(self,
-                                                  "http://88.53.197.250/axis-cgi/mjpg/video.cgi?resolution=320x240",
+                                                  #"http://88.53.197.250/axis-cgi/mjpg/video.cgi?resolution=320x240",
+                                                    "http://iris.not.iac.es/axis-cgi/mjpg/video.cgi?resolution=320x240",
                                                   {'http': 'proxy.reksoft.ru:3128'})
             else :
                 self.streamthread =StreamClientThread(self, 'http://192.168.1.120:8080/?action=stream', None)
