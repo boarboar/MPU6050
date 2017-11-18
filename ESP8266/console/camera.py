@@ -49,8 +49,7 @@ class StreamClientThread(threading.Thread):
                                 threshold=self.lines_threshold, minLineLength=self.lines_minLineLength,
                                 maxLineGap=self.lines_maxLineGap)
         if lines is None:
-            return img, cv2.cvtColor(edges, cv2.COLOR_GRAY2RGB)
-
+            return img
 
         print("Lines : %s" % (len(lines)))
 
@@ -84,6 +83,7 @@ class StreamClientThread(threading.Thread):
                     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
                     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
                     return self.edges(img, gray)
+                    #return img
             except Exception as e:
                 print 'failed to read'
                 return None
@@ -139,7 +139,7 @@ class CameraPanel(wx.Window):
     def __init__(self, parent):
         wx.Window.__init__(self, parent, wx.ID_ANY, style=wx.SIMPLE_BORDER, size=(160,120))
 
-        self.isDebug = True
+        self.isDebug = False
 
         #self.imgSizer = (480, 360)
         self.imgSizer = (640, 480)
