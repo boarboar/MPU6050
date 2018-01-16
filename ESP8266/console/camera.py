@@ -35,10 +35,11 @@ class StreamClientThread(threading.Thread):
     def unlock(self) : self.__lock.release()
 
 
-    def edges(self, img, gray):
+    def edges(self, img):
         h, w = img.shape[:2]
         low_bound = 0.05
         hi_bound = 0.5
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         # auto canny
         v = np.median(gray)
         # apply automatic Canny edge detection using the computed median
@@ -49,24 +50,24 @@ class StreamClientThread(threading.Thread):
                                 threshold=self.lines_threshold, minLineLength=self.lines_minLineLength,
                                 maxLineGap=self.lines_maxLineGap)
         if lines is None:
-            return img, cv2.cvtColor(edges, cv2.COLOR_GRAY2RGB)
+            return img
 
 
         print("Lines : %s" % (len(lines)))
 
         y_lim_1 = int(h * (1-low_bound))
         y_lim_0 = int(h * (1 - hi_bound))
-        cv2.line(img, (0, y_lim_1), (w-1, y_lim_1), (0, 0, 255), 1)
-        cv2.line(img, (0, y_lim_0), (w - 1, y_lim_0), (0, 0, 255), 1)
+        #cv2.line(img, (0, y_lim_1), (w-1, y_lim_1), (0, 0, 255), 1)
+        #cv2.line(img, (0, y_lim_0), (w - 1, y_lim_0), (0, 0, 255), 1)
 
         for line in lines:
             for x1, y1, x2, y2 in line:
                 cv2.line(img, (x1, y1), (x2, y2), (0, 255, 0), 3)
 
-        for line in lines:
-            for x1, y1, x2, y2 in line:
-                if abs(y1-y2)>40 and abs(x1-x2)*100/abs(y1-y2)<10 and min(y1,y2)<y_lim_1 and max(y1,y2)>y_lim_0:  #5% inclination
-                    cv2.line(img, (x1, y1), (x2, y2), (255, 0, 0), 2)
+        #for line in lines:
+        #    for x1, y1, x2, y2 in line:
+        #        if abs(y1-y2)>40 and abs(x1-x2)*100/abs(y1-y2)<10 and min(y1,y2)<y_lim_1 and max(y1,y2)>y_lim_0:  #5% inclination
+        #            cv2.line(img, (x1, y1), (x2, y2), (255, 0, 0), 2)
 
         return img
 
@@ -82,10 +83,12 @@ class StreamClientThread(threading.Thread):
                     self.bytes= self.bytes[b+2:]
                     img = cv2.imdecode(np.fromstring(jpg, dtype=np.uint8),cv2.IMREAD_COLOR)
                     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-                    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-                    return self.edges(img, gray)
+                    #gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                    return self.edges(img)
+                    #return img
             except Exception as e:
                 print 'failed to read'
+                print(e)
                 return None
 
     def run (self):
@@ -199,6 +202,7 @@ class CameraPanel(wx.Window):
         if self.isPlaying :
             self.isPlaying=False
             self.streamthread.stop()
+            self.streamthread = None
         else :
             self.isPlaying=True
             if self.isDebug :
