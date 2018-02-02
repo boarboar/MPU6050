@@ -54,17 +54,7 @@ class Planner:
             #   7: weight
 
             start_time = timeit.default_timer()
-            """
-            self.grid = [[[x0+col*self.GRID_SZ,y0+row*self.GRID_SZ,None,None,None,None,None,0] for col in range(nx)] for row in range(ny)]
-            for row in self.grid:
-                for cell in row:
-                    x, y =cell[0], cell[1]
-                    area=[(x-self.GRID_DELTA,y-self.GRID_DELTA),
-                          (x+self.GRID_SZ+self.GRID_DELTA, y-self.GRID_DELTA),
-                          (x+self.GRID_SZ+self.GRID_DELTA, y+self.GRID_SZ+self.GRID_DELTA),
-                          (x-self.GRID_DELTA, y+self.GRID_SZ+self.GRID_DELTA)]
-                    cell[2]=self.map.At(area)
-            """
+
             self.grid_sz = self.map.GRID_SZ
             self.grid = []
             for mrow in self.map.grid:

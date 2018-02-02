@@ -181,6 +181,8 @@ class MapPanel(wx.Window, UnitMap):
 
     def Draw(self, dc):
         dc.Clear()
+        self.DrawIntrsMap(dc)
+
         self.DrawAreas(dc)
 
         if self.__show_plan :
@@ -190,6 +192,56 @@ class MapPanel(wx.Window, UnitMap):
             self.DrawRobot(dc)
 
         self.DrawPath(dc)
+        #self.DrawIntrsMap(dc)
+
+    def DrawIntrsMap(self, dc):
+        #dc.SetBackgroundMode(wx.TRANSPARENT)
+        #dc.SetBrush(wx.Brush(wx.RED))
+        #dc.SetPen(wx.Pen(wx.BLACK, 0))
+        dc.SetPen(wx.TRANSPARENT_PEN)
+        # from ffffff to ff0000
+
+        # ff0000
+        # ff1919
+        # ff3232
+        # ff4c4c
+        # ff6666
+        # ff7f7f
+        # ff9999
+        # ffb2b2
+        # ffcccc
+        # ffe5e5
+        # ffffff
+
+        #brush = wx.Brush(wx.Colour(25, 0, 0))
+        #brush = wx.Brush(wx.Colour(0x000000FF))
+        #brush = wx.Brush(wx.Colour(0x00B2B2FF))
+
+        colors = [0xE5, 0xCC, 0xB2, 0x99, 0x7F, 0x66, 0x4C, 0x32, 0x19]
+        brushes = [wx.Brush(wx.Colour(0xFF, c, c)) for c in colors]
+
+        #brush = wx.Brush(wx.Colour(0xFF, 0xE5, 0xE5))
+
+        for row in range(len(self.grid)):
+            for col in range(len(self.grid[row])):
+                cell = self.grid[row][col]
+                # print cell
+                if cell[4] > 0 :
+                    x, y = cell[0], cell[1]
+                    #print x, y, cell[4]
+                    #pts = [self.tc(x, y), self.tc(x + self.GRID_SZ, y),
+                    #       self.tc(x + self.GRID_SZ, y + self.GRID_SZ), self.tc(x, y + self.GRID_SZ)]
+                    pt = self.tc(x, y)
+                    col = int(math.log(cell[4], 2))
+                    if col > len(brushes) : col = len(brushes)-1
+                    #dc.SetBrush(brush)
+                    dc.SetBrush(brushes[col])
+                    #dc.DrawRectangle(pts[0].x, pts[0].y, self.GRID_SZ, self.GRID_SZ)
+                    dc.DrawRectangle(pt.x, pt.y, self.GRID_SZ, self.GRID_SZ)
+                    #dc.DrawPolygon(pts)
+                    #dc.DrawLinePoint(pts[0], pts[2])
+                    #dc.DrawLinePoint(pts[1], pts[3])
+
 
     def DrawPlan(self, dc):
         dc.SetBackgroundMode(wx.SOLID)
@@ -472,7 +524,6 @@ class MapPanel(wx.Window, UnitMap):
                 if intrs!=None :
                     dc.SetPen(inters_pen_c)
                     dc.DrawCirclePoint(self.tc(intrs[0], intrs[1]), 5)
-
 
 
     def UpdateDrawing(self) :

@@ -78,7 +78,7 @@ class Unit:
 
         #print('Scans:')
         #print(scans)
-        self.scans=[s-10 for s in scans]
+        self.scans=[s-10 for s in scans] #???
         self.scans=[]
         for i in range(len(scans)) :
             s=scans[i]
@@ -115,10 +115,12 @@ class Unit:
 
         if not self.map.isInsideTestFast(self.x_mean, self.y_mean):
             # fallback
-            self.x_mean, old_loc_x
-            self.y_mean, old_loc_y
+            self.x_mean = old_loc_x
+            self.y_mean = old_loc_y
             print("Moved outside area, fallback")
 
+
+        self.map.UnitMoved(self)
 
         """
         print("Unit Mov: Rot %s Dist %s (%s, %s, %s) vs (%s, %s, %s) in %s s" %

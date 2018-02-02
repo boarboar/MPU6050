@@ -17,8 +17,8 @@ __r_sin=0
 __r_x=0
 __r_y = 0 # simulated crd
 isInside=False
-
 def gauss_lim(m, d, l) :
+
     v=random.gauss(m, d)
     if v<-l: v=-l
     if v>l: v=l
@@ -79,7 +79,7 @@ except socket.error as msg:
 print 'Socket bind complete to '+str(s.getsockname())
  
 map =  unitmap.UnitMap('./console/map.json')
-unit =  unit.Unit(map, None)
+unit =  unit.Unit(map, None, 400)
 #unit.InitUnitPos(map.start)
 
 #now keep talking with the client
@@ -190,11 +190,13 @@ while 1:
             
             intrsects = []
             intrsects0 = []
-            sorted_walls=map.getSortedWalls((mapx, mapy), unit.scan_max_dist)
+            #sorted_walls=map.getSortedWalls((mapx, mapy), unit.scan_max_dist)
+            sorted_walls=map.getSortedWalls((mapx, mapy))
             
             for a in unit.scan_angles :
                 #intrs0, pr, intrs1, refstate, intrs=map.getIntersectionUnit(0, 0, math.sin(a)*map.scan_max_dist, rvy+math.cos(a)*map.scan_max_dist)  
-                intrs0, pr, intrs1, refstate, intrs=map.getIntersectionMapRefl(
+                """
+                intrs0, pr, intrs1, refstate, intrs, cosa2, dist =map.getIntersectionMapRefl(
                     (mapx, mapy), 
                     UnitToMapSim(math.sin(a)*unit.scan_max_dist, rvy+math.cos(a)*unit.scan_max_dist),
                     unit.scan_max_dist, sorted_walls)  
@@ -216,11 +218,24 @@ while 1:
                     dist0=math.sqrt(intrs0[0]*intrs0[0]+intrs0[1]*intrs0[1])
                 else :
                     dist0=-1
-                intrsects0.append(dist0)                
-                
+                intrsects0.append(dist0)   
+                """
+                dist = map.getIntersectionMapClean((mapx, mapy), 
+                    UnitToMapSim(math.sin(a)*unit.scan_max_dist, rvy+math.cos(a)*unit.scan_max_dist), sorted_walls)   
+                if dist is not None:
+                    err=gauss_lim(0, dist/10, 150) 
+                    dist=dist+err
+                    if dist<0 : dist=0
+                    dist=round(dist, 2)
+                else:     
+                    dist = -1
+                    
+                intrsects.append(dist)                
             print(intrsects)
             sr=len(intrsects)-1
             sm=(len(intrsects)-1)/2
+            
+            """
             if not isInside : corr=180
             elif intrsects0[sm]>=0 and intrsects0[sm]<90:
                 #value=10
@@ -232,6 +247,7 @@ while 1:
                 else : corr=-value
                 print ("Correct with %s" % corr)
             else : corr=0
+            """
             
             js.update( {
                 "YPR":[round(yaw, 2),int((random.random()-0.5)*360),int((random.random()-0.5)*360)], 

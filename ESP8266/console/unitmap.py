@@ -137,7 +137,7 @@ class UnitMap:
         start_time = timeit.default_timer()
         cells_unused = 0
         cells_avail = 0
-        self.grid = [[[x0+col*self.GRID_SZ,y0+row*self.GRID_SZ, None, None] for col in range(nx)] for row in range(ny)]
+        self.grid = [[[x0+col*self.GRID_SZ,y0+row*self.GRID_SZ, None, None, None] for col in range(nx)] for row in range(ny)]
         for row in self.grid:
             for cell in row:
                 x, y =cell[0], cell[1]
@@ -152,6 +152,7 @@ class UnitMap:
                 else:
                     cell[3] = self._getSortedWalls((x+self.GRID_SZ/2, y+self.GRID_SZ/2), 500)
                     cells_avail += 1
+                cell[4]=0   # hit count
         print('grid inited in %s s, unused %s, avail %s' %
               (round(timeit.default_timer() - start_time, 2), cells_unused, cells_avail))
 
@@ -234,6 +235,22 @@ class UnitMap:
         if y<self.boundRect[1] : self.boundRect[1]=y
         if x>self.boundRect[2] : self.boundRect[2]=x
         if y>self.boundRect[3] : self.boundRect[3]=y
+
+    def UnitMoved(self, unit):
+        if unit.scans is not None:
+            i = 0
+            cell0 = self.grid[0][0]
+            for ray in unit.scan_rays:
+                idist = unit.scans[i]
+                i = i+1
+                if idist > 0:
+                    p = unit.UnitToMapLoc(ray[0] * idist, ray[1] * idist)
+                    r = int((p[1] - cell0[1]) / self.GRID_SZ)
+                    c = int((p[0] - cell0[0]) / self.GRID_SZ)
+                    #print c, r, p
+                    if r >= 0 and r < len(self.grid) and c >= 0 and c < len(self.grid[r]):
+                        self.grid[r][c][4] = self.grid[r][c][4]+1
+
 
     def AtSlow(self, cell):
         # cell status : 0-space, 1-occupied/unusable, 2-variable
