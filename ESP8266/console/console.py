@@ -14,6 +14,7 @@ LogEvent, EVT_LOG_EVENT = wx.lib.newevent.NewEvent()
 UpdEvent, EVT_UPD_EVENT = wx.lib.newevent.NewEvent()
 UpdStatusEvent, EVT_UPD_STAT_EVENT = wx.lib.newevent.NewEvent()
 InfoEvent, EVT_INFO_EVENT = wx.lib.newevent.NewEvent()
+ActEvent, EVT_ACT_EVENT = wx.lib.newevent.NewEvent()
 
 class MyForm(wx.Frame):
     def __init__(self):
@@ -87,9 +88,13 @@ class MyForm(wx.Frame):
         self.btn_mov_up = self.AddToolBtn(panel, u"\u2191", lambda evt, dir=1: self.reqMove(dir))
         self.btn_mov_dn = self.AddToolBtn(panel, u"\u2193", lambda evt, dir=-1: self.reqMove(dir))
         self.btn_mov_stop = self.AddToolBtn(panel, u"\u2717", lambda evt, dir=0: self.reqMove(dir))
+        #self.btn_mov_bear = self.AddToolBtn(panel, "B", lambda evt, bear=int(self.txt_mov_speed.GetValue()): self.controller.reqBearing(bear))
+        self.btn_mov_bear = self.AddToolBtn(panel, "B", lambda evt: self.reqBearing())
 
         self.txt_mov_speed = wx.TextCtrl(panel, size=(28 * 2, 28))
         self.txt_mov_speed.SetValue("20")
+
+
         self.map_ctrls.append(self.txt_mov_speed)
         self.cb_dist_sim = wx.CheckBox(panel)
         self.cb_dist_sim.SetValue(False)
@@ -104,6 +109,7 @@ class MyForm(wx.Frame):
         self.Bind(EVT_UPD_EVENT, self.onUpdEvent)
         self.Bind(EVT_UPD_STAT_EVENT, self.onUpdStatEvent)
         self.Bind(EVT_INFO_EVENT, self.onInfoEvent)
+        self.Bind(EVT_ACT_EVENT, self.onActionEvent)
 
         self.Bind(wx.EVT_BUTTON, self.onSendCmd, self.btn_cmd)
         self.txt_cmd.Bind(wx.EVT_KEY_DOWN, self.onEnterCmdText)
@@ -221,6 +227,10 @@ class MyForm(wx.Frame):
 
     def UpdateStatus(self, **kwargs) :
         event = UpdStatusEvent(**kwargs)
+        wx.PostEvent(self, event)
+
+    def ActionShow(self, action) :
+        event = ActEvent(action=action)
         wx.PostEvent(self, event)
 
     def OnClose(self, event):
@@ -342,6 +352,12 @@ class MyForm(wx.Frame):
         #self.chart.UpdateData(self.model["T_ATT"], self.model["YPR"], self.model["V"])
 
 
+    def onActionEvent(self, evt):
+        if "C" in evt.action and evt.action["C"] in {"M", "D", "S", "B"} :
+            self.unitPan.ShowAction(evt.action)
+            #self.AddLine(evt.action["C"], 'orange')
+
+
     def onUpdStatEvent(self, evt):
         self.statusbar.SetStatusText(str(self.model["FHS"]), 0)
 
@@ -355,6 +371,12 @@ class MyForm(wx.Frame):
             speed=int(self.txt_mov_speed.GetValue())
         except ValueError : speed=20
         self.controller.reqMoveSpeed(speed*dir)
+
+    def reqBearing(self):
+        try :
+            ang=int(self.txt_mov_speed.GetValue())
+        except ValueError : ang=0
+        self.controller.reqBearing(ang)
 
 class SettingsDialog(wx.Dialog):
     def __init__(self, model, *args, **kw):

@@ -19,6 +19,7 @@ class UnitPanel(wx.Window):
         self.v=[0,0,0]
         self.r_sin=0.0
         self.r_cos=1.0
+        self.action=None
         # in real coords
         self.shape=[wx.Point(-self.UNIT_WIDTH/2, -self.UNIT_HEIGHT/2),
                     wx.Point(-self.UNIT_WIDTH/2, self.UNIT_HEIGHT/2),
@@ -52,6 +53,11 @@ class UnitPanel(wx.Window):
         self.att=att
         self.v=v
         if a_loc is not None: self.a_loc=a_loc
+        self.action = None
+        self.UpdateDrawing()
+
+    def ShowAction(self, action):
+        self.action = action
         self.UpdateDrawing()
 
     def Draw(self, dc):
@@ -101,12 +107,49 @@ class UnitPanel(wx.Window):
         self.SetRotation(self.a_loc)
         dc.DrawPolygon(self.ts(self.shape))
 
+        if self.action is not None and 'C' in self.action:
+            adeg = self.a_loc/math.pi*180.0
+            if self.action['C']=='M' :
+                move_arrow = self.MakeArrow(self.action['V']*self.UNIT_HEIGHT/100)
+                dc.SetPen(wx.Pen("RED", 6))
+                dc.DrawLines(self.ts(move_arrow))
+                pass
+            elif self.action['C']=='S':
+                dc.SetPen(wx.Pen("RED", 6))
+                a = self.action['S'] #steering angle
+                #left = self.tp(wx.Point(-self.UNIT_WIDTH/2, self.UNIT_WIDTH/2))
+                dc.DrawEllipticArc(self.x0-self.UNIT_WIDTH/2, self.y0-self.UNIT_WIDTH/2, self.UNIT_WIDTH, self.UNIT_WIDTH, 90-adeg, 90-a-adeg)
+            elif self.action['C'] == 'B':
+                dc.SetPen(wx.Pen("GREEN", 6))
+                a = self.action['A']  #absolute steering angle
+                #left = self.tp(wx.Point(-self.UNIT_WIDTH / 2, self.UNIT_WIDTH / 2))
+                dc.DrawEllipticArc(self.x0-self.UNIT_WIDTH/2, self.y0-self.UNIT_WIDTH/2, self.UNIT_WIDTH, self.UNIT_WIDTH, 90-adeg, 90 - a)
+
+
     def MakeArrow(self, len):
-        return [wx.Point(0,0), wx.Point(0,len),
+        shape=None
+        if len==0 :
+            shape = [wx.Point(self.UNIT_ARROW_SIZE/2,self.UNIT_ARROW_SIZE/2),
+                     wx.Point(-self.UNIT_ARROW_SIZE / 2, -self.UNIT_ARROW_SIZE / 2),
+                     wx.Point(0, 0),
+                     wx.Point(-self.UNIT_ARROW_SIZE / 2, self.UNIT_ARROW_SIZE / 2),
+                     wx.Point(self.UNIT_ARROW_SIZE / 2, -self.UNIT_ARROW_SIZE / 2)]
+
+        elif len>0:
+            shape = [wx.Point(0,0), wx.Point(0,len),
                      wx.Point(self.UNIT_ARROW_SIZE/2,len-self.UNIT_ARROW_SIZE/2),
                      wx.Point(0,len),
                      wx.Point(-self.UNIT_ARROW_SIZE/2,len-self.UNIT_ARROW_SIZE/2)
                      ]
+        else :
+            shape = [wx.Point(0, 0), wx.Point(0, len),
+                     wx.Point(self.UNIT_ARROW_SIZE / 2, len + self.UNIT_ARROW_SIZE / 2),
+                     wx.Point(0, len),
+                     wx.Point(-self.UNIT_ARROW_SIZE / 2, len + self.UNIT_ARROW_SIZE / 2)
+                     ]
+
+        return shape
+
 
     def SetRotation(self, angle):
         self.r_cos=math.cos(angle)

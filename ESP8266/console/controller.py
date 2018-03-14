@@ -130,7 +130,10 @@ class Controller():
 
     def reqBearingSync(self, s):
         return self.__req_sync({"C":"B", "A":round(s,2)})
-        
+
+    def reqBearing(self, s):
+        return self.__req({"C": "B", "A": round(s, 2)})
+
     def reqUpload(self):
         # config upload
         # {"I":1,"C":"SYSL", "ON":1, "ADDR":"192.168.1.141", "PORT":4444}
@@ -145,6 +148,7 @@ class Controller():
     def __req(self, js):
         js["I"]=self.__genId()
         self.__comm_thread.put((js, None))
+        self.__form.ActionShow(action=js)
 
     def __req_sync(self, js, retries=3, timeout_net=0.25):
         js["I"]=self.__genId()
@@ -157,6 +161,7 @@ class Controller():
                     self.__resp_q.get_nowait()
             except Queue.Empty: pass
             self.__comm_thread.put((js, self.__resp_q))
+            self.__form.ActionShow(action=js)
             try:
                 resp = self.__resp_q.get(timeout=timeout_net)
                 if resp is not None:
