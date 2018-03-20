@@ -8,6 +8,7 @@ import numpy as np
 import threading
 import time
 import socket
+import math
 
 CameraEvent, EVT_CAMERA_EVENT = wx.lib.newevent.NewEvent()
 
@@ -84,8 +85,8 @@ class StreamClientThread(threading.Thread):
                     img = cv2.imdecode(np.fromstring(jpg, dtype=np.uint8),cv2.IMREAD_COLOR)
                     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-                    #gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-                    return self.edges(img)
+                    #return self.edges(img)
+                    return img
 
                     #return img
             except Exception as e:
@@ -144,7 +145,8 @@ class CameraPanel(wx.Window):
     def __init__(self, parent):
         wx.Window.__init__(self, parent, wx.ID_ANY, style=wx.SIMPLE_BORDER, size=(160,120))
 
-        self.isDebug = False
+        #self.isDebug = False
+        self.isDebug = True
 
         #self.imgSizer = (480, 360)
         self.imgSizer = (640, 480)
@@ -166,6 +168,8 @@ class CameraPanel(wx.Window):
 
         self.isPlaying = False
         self.staticBit.Bind(wx.EVT_LEFT_UP, self.OnMouseLeftUp)
+        self.sensors=None
+        self.CAM_ANGLE_2_TAN=math.tan(73*math.pi/180) #to measure
 
         #self.SetSize(self.imgSizer)
         #self.pnl.SetSizer(self.vbox)
@@ -187,6 +191,34 @@ class CameraPanel(wx.Window):
         self.streamthread.unlock()
         image = image.Scale(Size[0], Size[1], wx.IMAGE_QUALITY_HIGH)
         bmp = wx.BitmapFromImage(image)
+        temp_dc = wx.MemoryDC()
+        temp_dc.SelectObject(bmp)
+        temp_dc.SetBackgroundMode(wx.TRANSPARENT)
+        temp_dc.SetBrush(wx.TRANSPARENT_BRUSH)
+        temp_dc.SetTextForeground(wx.GREEN)
+        temp_dc.SetPen(wx.Pen(wx.GREEN, 1))
+        temp_dc.DrawLinePoint(wx.Point(0, Size[1]/2), wx.Point(Size[0]-1, Size[1]/2))
+        temp_dc.DrawLinePoint(wx.Point(Size[0]/2, Size[1] / 2-20), wx.Point(Size[0] / 2, Size[1] / 2+20))
+        if self.sensors is not None and self.sensors[2]>0:
+            nsens = len(self.sensors)
+            isens = nsens/4
+            if self.sensors[isens]>0 :
+                temp_dc.DrawTextPoint(str(round(self.sensors[isens], 0)), wx.Point(Size[0] / 2, Size[1] / 2))
+            for i in range(2):
+                a = 360 / nsens*math.pi/180 *(i+1)
+                d = Size[0]*math.tan(a)/(2*self.CAM_ANGLE_2_TAN)
+                for j in range(2):
+                    k = j*2-1
+                    temp_dc.DrawLinePoint(wx.Point(Size[0] / 2 + d*k, Size[1] / 2 - 10),
+                                      wx.Point(Size[0] / 2 + d*k, Size[1] / 2 + 10))
+                    isens = nsens/4 + k*(i+1)
+                    if self.sensors[isens] > 0:
+                        temp_dc.DrawTextPoint(str(round(self.sensors[isens], 0)),
+                                              wx.Point(Size[0] / 2+d*k, Size[1] / 2-20))
+
+        else :
+            temp_dc.DrawTextPoint("--", wx.Point(Size[0] / 2, Size[1] / 2))
+        temp_dc.SelectObject(wx.NullBitmap)
         self.staticBit.SetBitmap(bmp)
         self.Refresh()
 
@@ -215,3 +247,7 @@ class CameraPanel(wx.Window):
             else :
                 self.streamthread =StreamClientThread(self, 'http://192.168.1.120:8080/?action=stream', None)
             self.streamthread.start()
+
+    def UpdateData(self, sensors):
+        if sensors is not None:
+            self.sensors=sensors
