@@ -13,7 +13,7 @@ class MapPanel(wx.Window, UnitMap):
     " MAP panel, with doublebuffering"
     UNIT_WIDTH=18
     UNIT_HEIGHT=30
-    def __init__(self, parent, model, mapfile, LogString, LogErrorString):
+    def __init__(self, parent, frame, model, mapfile, LogString, LogErrorString):
         wx.Window.__init__(self, parent, wx.ID_ANY, style=wx.SIMPLE_BORDER, size=(240,240))
         UnitMap.__init__(self, mapfile)
         self.Bind(wx.EVT_PAINT, self.OnPaint)
@@ -24,6 +24,7 @@ class MapPanel(wx.Window, UnitMap):
         self.Bind(wx.EVT_MOTION, self.OnMouseMotion)
         self.LogString=LogString
         self.LogErrorString=LogErrorString
+        self.frame=frame
         self.__model=model
         self.__controller=None
         self.__map=[]
@@ -95,8 +96,9 @@ class MapPanel(wx.Window, UnitMap):
         event.Skip()
 
     def OnMouseMotion(self,event):
+        X, Y = self.ScreenToClient(wx.GetMousePosition())
+        self.frame.DispMousePos(self.tm(X, Y))
         if self.__drag :
-            X, Y = self.ScreenToClient(wx.GetMousePosition())
             self.__x0 += X-self.__drag_prev[0]
             self.__y0 += Y-self.__drag_prev[1]
             self.__drag_prev = (X,Y)

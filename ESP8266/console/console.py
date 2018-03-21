@@ -37,10 +37,11 @@ class MyForm(wx.Frame):
         self.Bind(wx.EVT_MENU, self.onDumpModel, m_scan)
         self.SetMenuBar(menuBar)
         self.statusbar = self.CreateStatusBar()
-        self.statusbar.SetFieldsCount(3)
+        self.statusbar.SetFieldsCount(4)
         self.statusbar.SetStatusText("---", 0)
         self.statusbar.SetStatusText("---,----", 1)
         self.statusbar.SetStatusText("none", 2)
+        self.statusbar.SetStatusText("(0,0)", 3)
         # Add a panel so it looks the correct on all platforms
         panel = wx.Panel(self, wx.ID_ANY)
         self.log = LogControl(panel, sz=(600,200))
@@ -65,7 +66,7 @@ class MyForm(wx.Frame):
         self.unitPan = draw.UnitPanel(panel)
         #self.chart = draw.ChartPanel(panel)
         self.camera = camera.CameraPanel(panel)
-        self.map = map.MapPanel(panel, self.model, "map.json", self.LogString, self.LogErrorString)
+        self.map = map.MapPanel(panel, self, self.model, "map.json", self.LogString, self.LogErrorString)
         self.controller=controller.Controller(self, self.model, self.map, self.LogString, self.LogErrorString)
         self.map.AddController(self.controller)
 
@@ -232,6 +233,9 @@ class MyForm(wx.Frame):
     def ActionShow(self, action) :
         event = ActEvent(action=action)
         wx.PostEvent(self, event)
+
+    def DispMousePos(self, pt):
+        self.statusbar.SetStatusText('({}, {})'.format(int(pt[0]), int(pt[1])), 3)
 
     def OnClose(self, event):
         print(self.history)
