@@ -145,8 +145,8 @@ class CameraPanel(wx.Window):
     def __init__(self, parent):
         wx.Window.__init__(self, parent, wx.ID_ANY, style=wx.SIMPLE_BORDER, size=(160,120))
 
-        self.isDebug = False
-        #self.isDebug = True
+        #self.isDebug = False
+        self.isDebug = True
 
         #self.imgSizer = (480, 360)
         self.imgSizer = (640, 480)
@@ -169,7 +169,8 @@ class CameraPanel(wx.Window):
         self.isPlaying = False
         self.staticBit.Bind(wx.EVT_LEFT_UP, self.OnMouseLeftUp)
         self.sensors=None
-        self.CAM_ANGLE_2_TAN=math.tan(24*math.pi/180) #to measure
+        self.CAM_ANGLE_2_TAN=math.tan(24*math.pi/180) #48 degree view
+        self.DIST_THRESH = 50
 
         #self.SetSize(self.imgSizer)
         #self.pnl.SetSizer(self.vbox)
@@ -203,13 +204,15 @@ class CameraPanel(wx.Window):
             nsens = len(self.sensors)
             isens = nsens/4
             if self.sensors[isens]>0 :
-                temp_dc.DrawTextPoint(str(round(self.sensors[isens], 0)), wx.Point(Size[0] / 2, Size[1] / 2))
+                temp_dc.SetTextForeground(wx.GREEN if self.sensors[isens]>self.DIST_THRESH else wx.RED)
+                temp_dc.DrawTextPoint(str(round(self.sensors[isens], 0)), wx.Point(Size[0] / 2, Size[1] / 2 - 20))
             for i in range(1):
                 a = 360 / nsens*math.pi/180 *(i+1)
                 d = Size[0]*math.tan(a)/(2*self.CAM_ANGLE_2_TAN)
                 for j in range(2):
                     k = j*2-1
                     isens = nsens / 4 + k * (i + 1)
+                    temp_dc.SetTextForeground(wx.GREEN if self.sensors[isens] > self.DIST_THRESH else wx.RED)
                     if d < Size[0] / 2:
                         temp_dc.DrawLinePoint(wx.Point(Size[0] / 2 + d*k, Size[1] / 2 - 10),
                                       wx.Point(Size[0] / 2 + d*k, Size[1] / 2 + 10))
@@ -229,7 +232,7 @@ class CameraPanel(wx.Window):
                             temp_dc.DrawTextPoint(str(round(self.sensors[isens], 0)),
                                     wx.Point(Size[0] / 2 + (Size[0] / 2 - offset)*k, Size[1] / 2 - 20))
 
-            temp_dc.DrawTextPoint("--", wx.Point(Size[0] / 2, Size[1] / 2))
+
         temp_dc.SelectObject(wx.NullBitmap)
         self.staticBit.SetBitmap(bmp)
         self.Refresh()
