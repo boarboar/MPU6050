@@ -182,13 +182,14 @@ class SimulationThread(threading.Thread):
 
 class PathThread(threading.Thread):
     # device command-resp communication
-    def __init__(self, controller, planner, unit, speed):
+    def __init__(self, controller, planner, unit, speed, resume_track):
         threading.Thread.__init__(self)
         self.__controller = controller
         self.__planner = planner
         self.__unit = unit
         self.__stop = False
         self.__speed = speed
+        self.__resume_track = resume_track
         self.complete = False
         self.setDaemon(1)
 
@@ -258,3 +259,5 @@ class PathThread(threading.Thread):
 
         self.__controller.reqMoveSpeedSync(0)
         self.__controller.log().LogString("Path running thread stopped")
+        if self.__resume_track :
+            self.__controller.startSimulation()

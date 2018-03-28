@@ -239,7 +239,11 @@ class Controller():
         return self.__comm_path_thread!=None and self.__comm_path_thread.complete!=True
 
     def startPathRunning(self, speed):
-        self.__comm_path_thread=comm.PathThread(self, self.planner, self.unit, speed)
+        is_track_now=False
+        if self.isSimulating():
+            self.stopSimulation()
+            is_track_now = True
+        self.__comm_path_thread=comm.PathThread(self, self.planner, self.unit, speed, is_track_now)
         self.__comm_path_thread.start()
 
     def movePathRunning(self):

@@ -293,8 +293,6 @@ class MyForm(wx.Frame):
         self.map.Plan()
 
     def onGoReq(self, event):
-        if self.controller.isSimulating():
-            self.controller.stopSimulation()
 
         if self.controller.isPathRunning() :
             self.controller.stopPathRunning()
@@ -305,6 +303,8 @@ class MyForm(wx.Frame):
             try :
                 speed=int(self.txt_mov_speed.GetValue())
             except ValueError : speed=20
+            #if self.controller.isSimulating():
+            #    self.controller.stopSimulation()
             self.controller.startPathRunning(speed)
 
     def onDumpModel(self, event):

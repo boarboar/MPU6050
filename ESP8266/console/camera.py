@@ -145,8 +145,8 @@ class CameraPanel(wx.Window):
     def __init__(self, parent):
         wx.Window.__init__(self, parent, wx.ID_ANY, style=wx.SIMPLE_BORDER, size=(160,120))
 
-        #self.isDebug = False
-        self.isDebug = True
+        self.isDebug = False
+        #self.isDebug = True
 
         #self.imgSizer = (480, 360)
         self.imgSizer = (640, 480)
