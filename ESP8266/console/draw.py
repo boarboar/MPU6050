@@ -16,7 +16,8 @@ class UnitPanel(wx.Window):
         self.att=[0,0,0]
         self.a_loc=0
         self.t=0
-        self.v=[0,0,0]
+        #self.v=[0,0,0]
+        self.v = 0
         self.r_sin=0.0
         self.r_cos=1.0
         self.action=None
@@ -108,6 +109,20 @@ class UnitPanel(wx.Window):
         self.SetRotation(self.a_loc)
         dc.DrawPolygon(self.ts(self.shape))
 
+        dc.SetPen(wx.Pen(wx.BLUE, 4))
+        dc.DrawLines(self.ts(self.axe_line))  ## X
+        dc.DrawTextPoint("X", self.tp(self.axe_line[1]))
+        self.SetRotation(self.a_loc - math.pi * 0.5)
+        dc.DrawLines(self.ts(self.axe_line))  ## Y
+        dc.DrawTextPoint("Y", self.tp(self.axe_line[1]))
+
+        self.SetRotation(self.a_loc)
+
+        if self.v is not None and self.v>1:
+            move_arrow = self.MakeArrow(self.v * self.UNIT_HEIGHT / 100)
+            dc.SetPen(wx.Pen("GREEN", 4))
+            dc.DrawLines(self.ts(move_arrow))
+
         if self.action is not None and 'C' in self.action:
             adeg = self.a_loc/math.pi*180.0
             if self.action['C']=='M' :
@@ -126,12 +141,6 @@ class UnitPanel(wx.Window):
                 #left = self.tp(wx.Point(-self.UNIT_WIDTH / 2, self.UNIT_WIDTH / 2))
                 dc.DrawEllipticArc(self.x0-self.UNIT_WIDTH/2, self.y0-self.UNIT_WIDTH/2, self.UNIT_WIDTH, self.UNIT_WIDTH, 90-adeg, 90 - a)
 
-        dc.SetPen(wx.Pen(wx.BLUE, 4))
-        dc.DrawLines(self.ts(self.axe_line))  ## X
-        dc.DrawTextPoint("X", self.tp(self.axe_line[1]))
-        self.SetRotation(self.a_loc - math.pi * 0.5)
-        dc.DrawLines(self.ts(self.axe_line))  ## Y
-        dc.DrawTextPoint("Y", self.tp(self.axe_line[1]))
 
     def MakeArrow(self, len):
         shape=None

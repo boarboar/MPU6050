@@ -65,7 +65,7 @@ class MyForm(wx.Frame):
 
         self.unitPan = draw.UnitPanel(panel)
         #self.chart = draw.ChartPanel(panel)
-        self.camera = camera.CameraPanel(panel)
+        self.camera = camera.CameraPanel(panel, self.LogString, self.LogErrorString)
         self.map = map.MapPanel(panel, self, self.model, "map.json", self.LogString, self.LogErrorString)
         self.controller=controller.Controller(self, self.model, self.map, self.LogString, self.LogErrorString)
         self.map.AddController(self.controller)

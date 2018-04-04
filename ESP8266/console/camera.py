@@ -15,7 +15,7 @@ CameraEvent, EVT_CAMERA_EVENT = wx.lib.newevent.NewEvent()
 RedrawEvent, EVT_RDR_EVENT = wx.lib.newevent.NewEvent()
 
 class StreamClientThread(threading.Thread):
-    def __init__(self, wnd, url, proxysetting):
+    def __init__(self, wnd, url, proxysetting, LogString, LogErrorString):
         threading.Thread.__init__(self)
         self.__lock=threading.Lock()
         self.wnd=wnd
@@ -30,7 +30,10 @@ class StreamClientThread(threading.Thread):
         self.lines_threshold = 100
         self.lines_minLineLength = 56
         self.lines_maxLineGap = 100
+        self.LogString = LogString
+        self.LogErrorString = LogErrorString
         self.setDaemon(1)
+
     def stop(self) : self.__stop=True
     def lock(self) : self.__lock.acquire()
     def unlock(self) : self.__lock.release()
@@ -106,15 +109,18 @@ class StreamClientThread(threading.Thread):
         while not self.__stop:
             time.sleep(5.0)
             print('opening stream at %s ...' % (self.__url))
+            self.LogString('opening stream at %s ...' % (self.__url))
             self.stream=None
             try:
                 self.stream=urllib2.urlopen(self.__url, timeout=10.0)
                 print 'stream opened'
+                self.LogString('stream opened')
             except URLError as e:
                 print e.reason
                 continue
             except socket.timeout as e:
                 print("timeout")
+                self.LogErrorString('stream timeout')
                 continue
 
             self.frame = self.loadimg()
@@ -125,6 +131,7 @@ class StreamClientThread(threading.Thread):
 
             else:
                 print "Error no webcam image"
+                self.LogErrorString('no webcam image')
                 continue
 
             while not self.__stop and self.frame is not None:
@@ -142,7 +149,7 @@ class StreamClientThread(threading.Thread):
 
 class CameraPanel(wx.Window):
     " camera panel"
-    def __init__(self, parent):
+    def __init__(self, parent, LogString, LogErrorString):
         wx.Window.__init__(self, parent, wx.ID_ANY, style=wx.SIMPLE_BORDER, size=(160,120))
 
         self.isDebug = False
@@ -171,6 +178,9 @@ class CameraPanel(wx.Window):
         self.sensors=None
         self.CAM_ANGLE_2_TAN=math.tan(24*math.pi/180) #48 degree view
         self.DIST_THRESH = 50
+
+        self.LogString = LogString
+        self.LogErrorString = LogErrorString
 
         #self.SetSize(self.imgSizer)
         #self.pnl.SetSizer(self.vbox)
@@ -258,9 +268,9 @@ class CameraPanel(wx.Window):
                 self.streamthread =StreamClientThread(self,
                                                   #"http://88.53.197.250/axis-cgi/mjpg/video.cgi?resolution=320x240",
                                                     "http://iris.not.iac.es/axis-cgi/mjpg/video.cgi?resolution=320x240",
-                                                  {'http': 'proxy.reksoft.ru:3128'})
+                                                  {'http': 'proxy.reksoft.ru:3128'}, self.LogString, self.LogErrorString)
             else :
-                self.streamthread =StreamClientThread(self, 'http://192.168.1.120:8080/?action=stream', None)
+                self.streamthread =StreamClientThread(self, 'http://192.168.1.120:8080/?action=stream', None, self.LogString, self.LogErrorString)
             self.streamthread.start()
 
     def UpdateData(self, sensors):
