@@ -7,6 +7,9 @@ class UnitPanel(wx.Window):
     UNIT_HEIGHT=110
     UNIT_LEVEL_RAD=36
     UNIT_ARROW_SIZE=10
+    UNIT_POW_HEIGHT = UNIT_HEIGHT/2+UNIT_HEIGHT/4
+    UNIT_POW_WIDTH = UNIT_WIDTH/6
+
     V_SCALE=100  # 1 cm/s = 0.01 m/s * 1000 = 1 pix
     def __init__(self, parent):
         wx.Window.__init__(self, parent, wx.ID_ANY, style=wx.SIMPLE_BORDER, size=(160,160))
@@ -21,6 +24,7 @@ class UnitPanel(wx.Window):
         self.r_sin=0.0
         self.r_cos=1.0
         self.action=None
+        self.pow=None
         # in real coords
         self.shape=[wx.Point(-self.UNIT_WIDTH/2, -self.UNIT_HEIGHT/2),
                     wx.Point(-self.UNIT_WIDTH/2, self.UNIT_HEIGHT/2),
@@ -49,12 +53,13 @@ class UnitPanel(wx.Window):
         self.Refresh()
         self.Update()
 
-    def UpdateData(self, t, att, v=None, a_loc=None):
+    def UpdateData(self, t, att, v=None, a_loc=None, pow=None):
         self.t=t
         self.att=att
         self.v=v
         if a_loc is not None: self.a_loc=a_loc
         self.action = None
+        self.pow=pow
         self.UpdateDrawing()
 
     def ShowAction(self, action):
@@ -141,6 +146,22 @@ class UnitPanel(wx.Window):
                 #left = self.tp(wx.Point(-self.UNIT_WIDTH / 2, self.UNIT_WIDTH / 2))
                 dc.DrawEllipticArc(self.x0-self.UNIT_WIDTH/2, self.y0-self.UNIT_WIDTH/2, self.UNIT_WIDTH, self.UNIT_WIDTH, 90-adeg, 90 - a)
 
+        if self.pow is not None:
+            self.DrawPower(dc, 0)
+            self.DrawPower(dc, 1)
+
+    def DrawPower(self, dc, pos):
+        dc.SetPen(wx.Pen("BLACK", 2))
+        if pos==0:
+            x=self.UNIT_POW_WIDTH
+        else:
+            x =(self.x0-self.UNIT_POW_WIDTH)*2
+        y=self.y0
+        dc.DrawRectangle(x, y, self.UNIT_POW_WIDTH, self.UNIT_POW_HEIGHT)
+        ph=int(self.pow[pos]/100.0*(self.UNIT_POW_HEIGHT-4))
+        dc.SetPen(wx.Pen("GREEN", 2))
+        dc.SetBrush(wx.Brush("GREEN", wx.SOLID))
+        dc.DrawRectangle(x+2, y+self.UNIT_POW_HEIGHT-2-ph, self.UNIT_POW_WIDTH-4, ph)
 
     def MakeArrow(self, len):
         shape=None

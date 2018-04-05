@@ -57,6 +57,7 @@ class Model(dict):
                 self["CRD"]=[0,0,0]
                 self["D"]=0
                 self["S"]=[0,0,0]
+                self["W"] = [0, 0]
                 update_pos=True
                 prev_t=0
             self["T_ATT"]=0
@@ -74,6 +75,7 @@ class Model(dict):
                     self["D"]=resp_json["D"]
                     self["S"]=resp_json["S"]
                     self["T_ATT"]=resp_json["T"]
+                    self["W"] = resp_json["W"]
                     update_pos=True
                     #item={"T":resp_json["T"], "YPR":resp_json["YPR"], "V":resp_json["V"] }
                     #data[1].append(item)#history

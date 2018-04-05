@@ -352,7 +352,7 @@ class MyForm(wx.Frame):
             #if self.controller.isPathRunning() :
             #    self.controller.updatePathRunning()
 
-        self.unitPan.UpdateData(self.model["T_ATT"], self.model["YPR"], self.model["V"], self.controller.unit.a_mean)
+        self.unitPan.UpdateData(self.model["T_ATT"], self.model["YPR"], self.model["V"], self.controller.unit.a_mean, self.model["W"])
         self.camera.UpdateData(sensors=self.model["S"])
         #self.chart.UpdateData(self.model["T_ATT"], self.model["YPR"], self.model["V"])
 
