@@ -157,11 +157,17 @@ class UnitPanel(wx.Window):
         else:
             x =(self.x0-self.UNIT_POW_WIDTH)*2
         y=self.y0
+        dc.SetBrush(wx.Brush("WHITE", wx.TRANSPARENT))
         dc.DrawRectangle(x, y, self.UNIT_POW_WIDTH, self.UNIT_POW_HEIGHT)
         ph=int(self.pow[pos]/100.0*(self.UNIT_POW_HEIGHT-4))
-        dc.SetPen(wx.Pen("GREEN", 2))
-        dc.SetBrush(wx.Brush("GREEN", wx.SOLID))
-        dc.DrawRectangle(x+2, y+self.UNIT_POW_HEIGHT-2-ph, self.UNIT_POW_WIDTH-4, ph)
+        if ph>=0 :
+            dc.SetPen(wx.Pen("GREEN", 2))
+            dc.SetBrush(wx.Brush("GREEN", wx.SOLID))
+            dc.DrawRectangle(x+2, y+self.UNIT_POW_HEIGHT-2-ph, self.UNIT_POW_WIDTH-4, ph)
+        else:
+            dc.SetPen(wx.Pen("RED", 2))
+            dc.SetBrush(wx.Brush("RED", wx.SOLID))
+            dc.DrawRectangle(x + 2, y + +2, self.UNIT_POW_WIDTH - 4, -ph)
 
     def MakeArrow(self, len):
         shape=None
