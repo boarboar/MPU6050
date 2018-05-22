@@ -9,13 +9,19 @@ import threading
 import time
 import socket
 import math
+import tf_labels
+
+DNN_PATH = "model/frozen_inference_graph.pb"
+DNN_MODEL_PATH = "model/ssd_mobilenet_v1_coco.pbtxt"
+DNN_LABELS_PATH = "model/mscoco_label_map.pbtxt"
+
 
 CameraEvent, EVT_CAMERA_EVENT = wx.lib.newevent.NewEvent()
 
 RedrawEvent, EVT_RDR_EVENT = wx.lib.newevent.NewEvent()
 
 class StreamClientThread(threading.Thread):
-    def __init__(self, wnd, url, proxysetting, LogString, LogErrorString):
+    def __init__(self, wnd, url, proxysetting, LogString, LogErrorString, dnn=None):
         threading.Thread.__init__(self)
         self.__lock=threading.Lock()
         self.wnd=wnd
@@ -32,6 +38,7 @@ class StreamClientThread(threading.Thread):
         self.lines_maxLineGap = 100
         self.LogString = LogString
         self.LogErrorString = LogErrorString
+        self.cvNet=dnn
         self.setDaemon(1)
 
     def stop(self) : self.__stop=True
@@ -75,6 +82,29 @@ class StreamClientThread(threading.Thread):
 
         return img
 
+    def obj_detect(self, img):
+        rows = img.shape[0]
+        cols = img.shape[1]
+        self.cvNet.setInput(
+            cv2.dnn.blobFromImage(img, 1.0 / 127.5, (300, 300), (127.5, 127.5, 127.5), swapRB=True, crop=False))
+        cvOut = self.cvNet.forward()
+
+        for detection in cvOut[0, 0, :, :]:
+            score = float(detection[2])
+            if score > 0.25:
+                left = int(detection[3] * cols)
+                top = int(detection[4] * rows)
+                right = int(detection[5] * cols)
+                bottom = int(detection[6] * rows)
+                label = tf_labels.getLabel(int(detection[1]))
+                # label = int(detection[1])
+                #print(label, score, left, top, right, bottom)
+                text_color = (23, 230, 210)
+                cv2.rectangle(img, (left, top), (right, bottom), text_color, thickness=1)
+                cv2.putText(img, str(label), (left, top), cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1)
+
+        return img
+
     def loadimg(self):
         if self.stream is None : return None
         while True:
@@ -89,9 +119,10 @@ class StreamClientThread(threading.Thread):
                     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
                     #return self.edges(img)
-                    return img
-
-                    #return img
+                    if self.cvNet is not None:
+                        return self.obj_detect(img)
+                    else:
+                        return img
             except Exception as e:
                 print 'failed to read'
                 print(e)
@@ -152,8 +183,8 @@ class CameraPanel(wx.Window):
     def __init__(self, parent, LogString, LogErrorString):
         wx.Window.__init__(self, parent, wx.ID_ANY, style=wx.SIMPLE_BORDER, size=(160,120))
 
-        self.isDebug = False
-        #self.isDebug = True
+        #self.isDebug = False
+        self.isDebug = True
 
         #self.imgSizer = (480, 360)
         self.imgSizer = (640, 480)
@@ -181,6 +212,20 @@ class CameraPanel(wx.Window):
 
         self.LogString = LogString
         self.LogErrorString = LogErrorString
+
+        print("Loading DNN...")
+        self.LogString('Loading DNN...')
+        try:
+            tf_labels.initLabels(DNN_LABELS_PATH)
+            self.cvNet = cv2.dnn.readNetFromTensorflow(DNN_PATH, DNN_MODEL_PATH)
+            self.LogString('DNN loaded')
+        except Exception as e:
+            print 'failed to read DNN'
+            print(e)
+            self.LogErrorString('DNN failed to load')
+            self.cvNet = None
+
+        print("Done.")
 
         #self.SetSize(self.imgSizer)
         #self.pnl.SetSizer(self.vbox)
@@ -267,10 +312,11 @@ class CameraPanel(wx.Window):
             if self.isDebug :
                 self.streamthread =StreamClientThread(self,
                                                   #"http://88.53.197.250/axis-cgi/mjpg/video.cgi?resolution=320x240",
-                                                    "http://iris.not.iac.es/axis-cgi/mjpg/video.cgi?resolution=320x240",
-                                                  {'http': 'proxy.reksoft.ru:3128'}, self.LogString, self.LogErrorString)
+                                                    #"http://iris.not.iac.es/axis-cgi/mjpg/video.cgi?resolution=320x240",
+                                                    "http://camera1.mairie-brest.fr/mjpg/video.mjpg?resolution=320x240",
+                                                  {'http': 'proxy.reksoft.ru:3128'}, self.LogString, self.LogErrorString, dnn=self.cvNet)
             else :
-                self.streamthread =StreamClientThread(self, 'http://192.168.1.120:8080/?action=stream', None, self.LogString, self.LogErrorString)
+                self.streamthread =StreamClientThread(self, 'http://192.168.1.120:8080/?action=stream', None, self.LogString, self.LogErrorString, dnn=self.cvNet)
             self.streamthread.start()
 
     def UpdateData(self, sensors):
