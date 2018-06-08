@@ -13,6 +13,8 @@ import tf_labels
 
 DNN_PATH = "model/frozen_inference_graph.pb"
 DNN_MODEL_PATH = "model/ssd_mobilenet_v1_coco.pbtxt"
+#DNN_PATH = "ssd_inception_v2_coco_2017_11_17/frozen_inference_graph.pb"
+#DNN_MODEL_PATH = "ssd_inception_v2_coco_2017_11_17/ssd_inception_v2_coco_2017_11_17.pbtxt"
 DNN_LABELS_PATH = "model/mscoco_label_map.pbtxt"
 
 
@@ -20,8 +22,67 @@ CameraEvent, EVT_CAMERA_EVENT = wx.lib.newevent.NewEvent()
 
 RedrawEvent, EVT_RDR_EVENT = wx.lib.newevent.NewEvent()
 
+class StreamDetectThread(threading.Thread):
+    def __init__(self,  dnn):
+        threading.Thread.__init__(self)
+        self.__lock=threading.Lock()
+        self.__stop = False
+        self.frame = None
+        self.cvNet = dnn
+        self.setDaemon(1)
+
+    def stop(self) : self.__stop=True
+    def lock(self) : self.__lock.acquire()
+    def unlock(self) : self.__lock.release()
+
+
+
+    def obj_detect(self, img):
+        rows = img.shape[0]
+        cols = img.shape[1]
+        self.cvNet.setInput(
+            cv2.dnn.blobFromImage(img, 1.0 / 127.5, (299, 299), (127.5, 127.5, 127.5), swapRB=True, crop=False))
+        cvOut = self.cvNet.forward()
+
+        for detection in cvOut[0, 0, :, :]:
+            score = float(detection[2])
+            if score > 0.25:
+                left = int(detection[3] * cols)
+                top = int(detection[4] * rows)
+                right = int(detection[5] * cols)
+                bottom = int(detection[6] * rows)
+                label = tf_labels.getLabel(int(detection[1]))
+                # label = int(detection[1])
+                print('Detect:', label, score, left, top, right, bottom)
+                text_color = (23, 230, 210)
+                label_str = '{} ({:.2f})'.format(label, score)
+                cv2.rectangle(img, (left, top), (right, bottom), text_color, thickness=1)
+                cv2.putText(img, label_str, (left, top), cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1)
+
+        return img
+
+    def run(self):
+        print 'starting detector...'
+        while not self.__stop:
+            self.lock()
+            pframe = self.frame
+            self.frame = None
+            self.unlock()
+            if pframe is not None and self.cvNet is not None:
+                print "Detect"
+                pframe = self.obj_detect(pframe)
+                time.sleep(0.05)
+                print "Detect - done"
+
+        print "Detector stopped"
+
+    def putframe(self, iframe):
+        self.lock()
+        self.frame = iframe
+        self.unlock()
+
 class StreamClientThread(threading.Thread):
-    def __init__(self, wnd, url, proxysetting, LogString, LogErrorString, dnn=None):
+    def __init__(self, wnd, url, proxysetting, LogString, LogErrorString, dnn=None, detectthread=None):
         threading.Thread.__init__(self)
         self.__lock=threading.Lock()
         self.wnd=wnd
@@ -38,7 +99,8 @@ class StreamClientThread(threading.Thread):
         self.lines_maxLineGap = 100
         self.LogString = LogString
         self.LogErrorString = LogErrorString
-        self.cvNet=dnn
+        self.cvNet = dnn
+        self.detectthread = detectthread
         self.setDaemon(1)
 
     def stop(self) : self.__stop=True
@@ -86,7 +148,7 @@ class StreamClientThread(threading.Thread):
         rows = img.shape[0]
         cols = img.shape[1]
         self.cvNet.setInput(
-            cv2.dnn.blobFromImage(img, 1.0 / 127.5, (300, 300), (127.5, 127.5, 127.5), swapRB=True, crop=False))
+            cv2.dnn.blobFromImage(img, 1.0 / 127.5, (299, 299), (127.5, 127.5, 127.5), swapRB=True, crop=False))
         cvOut = self.cvNet.forward()
 
         for detection in cvOut[0, 0, :, :]:
@@ -100,8 +162,9 @@ class StreamClientThread(threading.Thread):
                 # label = int(detection[1])
                 #print(label, score, left, top, right, bottom)
                 text_color = (23, 230, 210)
+                label_str = '{} ({:.2f})'.format(label, score)
                 cv2.rectangle(img, (left, top), (right, bottom), text_color, thickness=1)
-                cv2.putText(img, str(label), (left, top), cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1)
+                cv2.putText(img, label_str, (left, top), cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1)
 
         return img
 
@@ -110,19 +173,20 @@ class StreamClientThread(threading.Thread):
         while True:
             try :
                 self.bytes+=self.stream.read(1024)
+                #print(len(self.bytes))
+                if len(self.bytes) == 2:
+                    raise Exception("Bad frame")
                 a = self.bytes.find('\xff\xd8')
                 b = self.bytes.find('\xff\xd9')
                 if a!=-1 and b!=-1:
+                    #print('frame')
                     jpg = self.bytes[a:b+2]
-                    self.bytes= self.bytes[b+2:]
+                    self.bytes = self.bytes[b+2:]
                     img = cv2.imdecode(np.fromstring(jpg, dtype=np.uint8),cv2.IMREAD_COLOR)
                     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
                     #return self.edges(img)
-                    if self.cvNet is not None:
-                        return self.obj_detect(img)
-                    else:
-                        return img
+                    return img
+
             except Exception as e:
                 print 'failed to read'
                 print(e)
@@ -154,6 +218,8 @@ class StreamClientThread(threading.Thread):
                 self.LogErrorString('stream timeout')
                 continue
 
+            socket.setdefaulttimeout(5.0)
+
             self.frame = self.loadimg()
 
             if self.frame is not None:
@@ -172,8 +238,16 @@ class StreamClientThread(threading.Thread):
                 #print "Fire event"
                 event = RedrawEvent(bmp=self.bmp)
                 wx.PostEvent(self.wnd, event)
-                time.sleep(0.1)
+                time.sleep(0.05)
                 self.frame = self.loadimg()
+
+                if self.frame is not None and self.detectthread is not None:
+                    self.detectthread.putframe(self.frame)
+
+                #if self.cvNet is not None:
+                #    self.frame = self.obj_detect(self.frame)
+
+            self.stream.close()
 
         print "Streamer stopped"
 
@@ -212,6 +286,9 @@ class CameraPanel(wx.Window):
 
         self.LogString = LogString
         self.LogErrorString = LogErrorString
+
+        self.detectthread = None
+        self.streamthread = None
 
         print("Loading DNN...")
         self.LogString('Loading DNN...')
@@ -305,18 +382,22 @@ class CameraPanel(wx.Window):
     def OnMouseLeftUp(self, evt):
         if self.isPlaying :
             self.isPlaying=False
+            self.detectthread.stop()
+            self.detectthread = None
             self.streamthread.stop()
             self.streamthread = None
         else :
             self.isPlaying=True
+            self.detectthread = StreamDetectThread(self.cvNet)
             if self.isDebug :
                 self.streamthread =StreamClientThread(self,
                                                   #"http://88.53.197.250/axis-cgi/mjpg/video.cgi?resolution=320x240",
                                                     #"http://iris.not.iac.es/axis-cgi/mjpg/video.cgi?resolution=320x240",
                                                     "http://camera1.mairie-brest.fr/mjpg/video.mjpg?resolution=320x240",
-                                                  {'http': 'proxy.reksoft.ru:3128'}, self.LogString, self.LogErrorString, dnn=self.cvNet)
+                                                  {'http': 'proxy.reksoft.ru:3128'}, self.LogString, self.LogErrorString, dnn=self.cvNet, detectthread=self.detectthread)
             else :
-                self.streamthread =StreamClientThread(self, 'http://192.168.1.120:8080/?action=stream', None, self.LogString, self.LogErrorString, dnn=self.cvNet)
+                self.streamthread =StreamClientThread(self, 'http://192.168.1.120:8080/?action=stream', None, self.LogString, self.LogErrorString, dnn=self.cvNet, detectthread=self.detectthread)
+            self.detectthread.start()
             self.streamthread.start()
 
     def UpdateData(self, sensors):
