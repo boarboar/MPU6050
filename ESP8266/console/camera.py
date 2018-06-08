@@ -29,6 +29,7 @@ class StreamDetectThread(threading.Thread):
         self.__stop = False
         self.frame = None
         self.cvNet = dnn
+        self.objects = []
         self.setDaemon(1)
 
     def stop(self) : self.__stop=True
@@ -43,6 +44,7 @@ class StreamDetectThread(threading.Thread):
         self.cvNet.setInput(
             cv2.dnn.blobFromImage(img, 1.0 / 127.5, (299, 299), (127.5, 127.5, 127.5), swapRB=True, crop=False))
         cvOut = self.cvNet.forward()
+        self.objects = []
 
         for detection in cvOut[0, 0, :, :]:
             score = float(detection[2])
@@ -52,12 +54,13 @@ class StreamDetectThread(threading.Thread):
                 right = int(detection[5] * cols)
                 bottom = int(detection[6] * rows)
                 label = tf_labels.getLabel(int(detection[1]))
+                self.objects.append((left, top, right, bottom, label, score))
                 # label = int(detection[1])
                 print('Detect:', label, score, left, top, right, bottom)
-                text_color = (23, 230, 210)
-                label_str = '{} ({:.2f})'.format(label, score)
-                cv2.rectangle(img, (left, top), (right, bottom), text_color, thickness=1)
-                cv2.putText(img, label_str, (left, top), cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1)
+                #text_color = (23, 230, 210)
+                #label_str = '{} ({:.2f})'.format(label, score)
+                #cv2.rectangle(img, (left, top), (right, bottom), text_color, thickness=1)
+                #cv2.putText(img, label_str, (left, top), cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1)
 
         return img
 
@@ -79,6 +82,16 @@ class StreamDetectThread(threading.Thread):
     def putframe(self, iframe):
         self.lock()
         self.frame = iframe
+        self.unlock()
+
+    def augment(self, img):
+        self.lock()
+        for obj in self.objects :
+            left, top, right, bottom, label, score = obj
+            text_color = (23, 230, 210)
+            label_str = '{} ({:.2f})'.format(label, score)
+            cv2.rectangle(img, (left, top), (right, bottom), text_color, thickness=1)
+            cv2.putText(img, label_str, (left, top), cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1)
         self.unlock()
 
 class StreamClientThread(threading.Thread):
@@ -232,6 +245,7 @@ class StreamClientThread(threading.Thread):
                 continue
 
             while not self.__stop and self.frame is not None:
+                self.detectthread.augment(self.frame)
                 self.lock()
                 self.bmp.CopyFromBuffer(self.frame)
                 self.unlock()
