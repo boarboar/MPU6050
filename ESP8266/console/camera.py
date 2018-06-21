@@ -11,12 +11,13 @@ import socket
 import math
 import tf_labels
 
-DNN_PATH = "model/frozen_inference_graph.pb"
-DNN_MODEL_PATH = "model/ssd_mobilenet_v1_coco.pbtxt"
-#DNN_PATH = "ssd_inception_v2_coco_2017_11_17/frozen_inference_graph.pb"
-#DNN_MODEL_PATH = "ssd_inception_v2_coco_2017_11_17/ssd_inception_v2_coco_2017_11_17.pbtxt"
-DNN_LABELS_PATH = "model/mscoco_label_map.pbtxt"
+#DNN_PATH = "model/frozen_inference_graph.pb"
+#DNN_MODEL_PATH = "model/ssd_mobilenet_v1_coco.pbtxt"
+DNN_PATH = "ssd_inception_v2_coco_2017_11_17/frozen_inference_graph.pb"
+DNN_MODEL_PATH = "ssd_inception_v2_coco_2017_11_17/ssd_inception_v2_coco_2017_11_17.pbtxt"
 
+DNN_LABELS_PATH = "model/mscoco_label_map.pbtxt"
+DNN_SCORE=20
 
 CameraEvent, EVT_CAMERA_EVENT = wx.lib.newevent.NewEvent()
 
@@ -48,7 +49,7 @@ class StreamDetectThread(threading.Thread):
 
         for detection in cvOut[0, 0, :, :]:
             score = float(detection[2])
-            if score > 0.25:
+            if score > DNN_SCORE:
                 left = int(detection[3] * cols)
                 top = int(detection[4] * rows)
                 right = int(detection[5] * cols)
@@ -174,10 +175,11 @@ class StreamClientThread(threading.Thread):
                 label = tf_labels.getLabel(int(detection[1]))
                 # label = int(detection[1])
                 #print(label, score, left, top, right, bottom)
-                text_color = (23, 230, 210)
+                box_color = (23, 230, 210)
+                label_color = (230, 23, 23)
                 label_str = '{} ({:.2f})'.format(label, score)
-                cv2.rectangle(img, (left, top), (right, bottom), text_color, thickness=1)
-                cv2.putText(img, label_str, (left, top), cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1)
+                cv2.putText(img, label_str, (left, top), cv2.FONT_HERSHEY_SIMPLEX, 0.5, box_color, 1)
+                cv2.rectangle(img, (left, top), (right, bottom), label_color, thickness=1)
 
         return img
 
