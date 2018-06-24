@@ -17,7 +17,7 @@ DNN_PATH = "ssd_inception_v2_coco_2017_11_17/frozen_inference_graph.pb"
 DNN_MODEL_PATH = "ssd_inception_v2_coco_2017_11_17/ssd_inception_v2_coco_2017_11_17.pbtxt"
 
 DNN_LABELS_PATH = "model/mscoco_label_map.pbtxt"
-DNN_SCORE=20
+DNN_SCORE=0.55
 
 CameraEvent, EVT_CAMERA_EVENT = wx.lib.newevent.NewEvent()
 
@@ -273,8 +273,8 @@ class CameraPanel(wx.Window):
     def __init__(self, parent, LogString, LogErrorString):
         wx.Window.__init__(self, parent, wx.ID_ANY, style=wx.SIMPLE_BORDER, size=(160,120))
 
-        #self.isDebug = False
-        self.isDebug = True
+        self.isDebug = False
+        #self.isDebug = True
 
         #self.imgSizer = (480, 360)
         self.imgSizer = (640, 480)
