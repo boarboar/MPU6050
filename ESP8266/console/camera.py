@@ -43,7 +43,7 @@ class StreamDetectThread(threading.Thread):
         rows = img.shape[0]
         cols = img.shape[1]
         self.cvNet.setInput(
-            cv2.dnn.blobFromImage(img, 1.0 / 127.5, (299, 299), (127.5, 127.5, 127.5), swapRB=True, crop=False))
+            cv2.dnn.blobFromImage(img, 1.0 / 127.5, (227, 227), (127.5, 127.5, 127.5), swapRB=True, crop=False))
         cvOut = self.cvNet.forward()
         self.objects = []
 
@@ -54,6 +54,7 @@ class StreamDetectThread(threading.Thread):
                 top = int(detection[4] * rows)
                 right = int(detection[5] * cols)
                 bottom = int(detection[6] * rows)
+                if right-left>227 or bottom-top>227 : continue
                 label = tf_labels.getLabel(int(detection[1]))
                 self.objects.append((left, top, right, bottom, label, score))
                 # label = int(detection[1])
@@ -157,7 +158,7 @@ class StreamClientThread(threading.Thread):
         #            cv2.line(img, (x1, y1), (x2, y2), (255, 0, 0), 2)
 
         return img
-
+    """
     def obj_detect(self, img):
         rows = img.shape[0]
         cols = img.shape[1]
@@ -182,6 +183,7 @@ class StreamClientThread(threading.Thread):
                 cv2.rectangle(img, (left, top), (right, bottom), label_color, thickness=1)
 
         return img
+    """
 
     def loadimg(self):
         if self.stream is None : return None
@@ -324,6 +326,9 @@ class CameraPanel(wx.Window):
         #self.pnl.SetSizer(self.vbox)
         #self.vbox.Fit(self)
         #self.Show()
+
+    def SetDbg(self, dbg):
+        self.isDebug = dbg
 
     def onRedrawEvent(self, evt):
         #print "Update"

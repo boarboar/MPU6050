@@ -94,13 +94,18 @@ class MyForm(wx.Frame):
 
         self.txt_mov_speed = wx.TextCtrl(panel, size=(28 * 2, 28))
         self.txt_mov_speed.SetValue("20")
-
-
         self.map_ctrls.append(self.txt_mov_speed)
-        self.cb_dist_sim = wx.CheckBox(panel)
+
+        self.cb_dist_sim = wx.CheckBox(panel, label = "DSim")
         self.cb_dist_sim.SetValue(False)
         self.Bind(wx.EVT_CHECKBOX, self.onDistSimEvent, self.cb_dist_sim)
         self.map_ctrls.append(self.cb_dist_sim)
+        self.map_ctrls.append(None)
+
+        self.cb_camera_dbg = wx.CheckBox(panel, label="DCam")
+        self.cb_camera_dbg.SetValue(False)
+        self.Bind(wx.EVT_CHECKBOX, self.onCamSimEvent, self.cb_camera_dbg)
+        self.map_ctrls.append(self.cb_camera_dbg)
 
         self.layout(panel)
         # redirect text here
@@ -370,6 +375,10 @@ class MyForm(wx.Frame):
         self.dist_sim = self.cb_dist_sim.GetValue()
         self.map.dist_sim = self.dist_sim
         self.map.UpdateDrawing()
+
+    def onCamSimEvent(self, evt):
+        self.camera.SetDbg(self.cb_camera_dbg.GetValue())
+
 
     def reqMove(self, dir):
         try :
