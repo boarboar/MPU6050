@@ -43,7 +43,7 @@ class StreamDetectThread(threading.Thread):
         rows = img.shape[0]
         cols = img.shape[1]
         self.cvNet.setInput(
-            cv2.dnn.blobFromImage(img, 1.0 / 127.5, (227, 227), (127.5, 127.5, 127.5), swapRB=True, crop=False))
+            cv2.dnn.blobFromImage(img, 1.0 / 127.5, (299, 299), (127.5, 127.5, 127.5), swapRB=True, crop=False))
         cvOut = self.cvNet.forward()
         self.objects = []
 
