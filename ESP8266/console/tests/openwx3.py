@@ -1,11 +1,14 @@
 import wx
 import wx.lib.newevent
 import cv2
-import urllib2
-from urllib2 import URLError
+import urllib.request
+from urllib.error import URLError
 import numpy as np
 import threading
 import time
+
+# py -m pip install -U wxPython
+# py -m pip install -U opencv-python
 
 RedrawEvent, EVT_RDR_EVENT = wx.lib.newevent.NewEvent()
 
@@ -43,16 +46,16 @@ class StreamClientThread(threading.Thread):
                 
     def run (self):
         if self.__proxysetting is not None :
-            proxy = urllib2.ProxyHandler(self.__proxysetting)
-            opener = urllib2.build_opener(proxy)
-            urllib2.install_opener(opener)
+            proxy = urllib.request.ProxyHandler(self.__proxysetting)
+            opener = urllib.request.build_opener(proxy)
+            urllib.request.install_opener(opener)
 
         while not self.__stop:
             time.sleep(5.0)
             print('opening stream...')
             self.stream=None
             try:
-                self.stream=urllib2.urlopen(self.__url, timeout=10.0)
+                self.stream=urllib.request.urlopen(self.__url, timeout=10.0)
                 print('stream opened')
             except URLError as e:
                 print(e.reason)
@@ -89,8 +92,8 @@ class viewWindow(wx.Frame):
             self.pnl = wx.Panel(self)
             self.vbox = wx.BoxSizer(wx.VERTICAL)
 
-            self.image = wx.EmptyImage(self.imgSizer[0],self.imgSizer[1])
-            self.imageBit = wx.BitmapFromImage(self.image)
+            self.image = wx.Image(self.imgSizer[0],self.imgSizer[1])
+            self.imageBit = wx.Bitmap(self.image)
             self.staticBit = wx.StaticBitmap(self.pnl, wx.ID_ANY, self.imageBit)
 
             self.vbox.Add(self.staticBit)
@@ -102,7 +105,7 @@ class viewWindow(wx.Frame):
             #                                      "http://88.53.197.250/axis-cgi/mjpg/video.cgi?resolution=320x240",
             #                                      {'http': 'proxy.reksoft.ru:3128'})
 
-            self.streamthread =StreamClientThread(self, "http://192.168.1.120:8080/?action=stream", None)
+            self.streamthread =StreamClientThread(self, "http://192.168.1.134", None)
 
 
             self.streamthread.start()
@@ -126,7 +129,7 @@ class viewWindow(wx.Frame):
         self.streamthread.unlock()
 
 def main():
-    app = wx.PySimpleApp()
+    app = wx.App()
     frame = viewWindow(None)
     frame.Center()
     frame.Show()
