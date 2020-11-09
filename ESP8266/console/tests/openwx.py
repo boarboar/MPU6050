@@ -35,6 +35,8 @@ class StreamClientThread(threading.Thread):
                     jpg = self.bytes[a:b+2]
                     self.bytes= self.bytes[b+2:]
                     i = cv2.imdecode(np.fromstring(jpg, dtype=np.uint8),cv2.IMREAD_COLOR)
+                    i = cv2.cvtColor(i, cv2.COLOR_BGR2RGB)
+                    #i = cv2.imdecode(np.fromstring(jpg, dtype=np.uint8),cv2.COLOR_BGR2RGB)
                     return i
                     
             except Exception as e:
@@ -69,15 +71,13 @@ class StreamClientThread(threading.Thread):
                 continue
 
             while not self.__stop and self.frame is not None:
-                #self.frame = self.loadimg()
-                #if self.frame is not None:
-                self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
-                self.lock()
+                #self.lock()
                 self.bmp.CopyFromBuffer(self.frame)
-                self.unlock()
-                print("Fire event")
-                event = RedrawEvent(bmp=self.bmp)
-                wx.PostEvent(self.wnd, event)
+                #self.unlock()
+                #print("Fire event")
+                #event = RedrawEvent(bmp=self.bmp)
+                #wx.PostEvent(self.wnd, event)
+                self.wnd.staticBit.SetBitmap(self.bmp)
                 self.frame = self.loadimg()
 
 class viewWindow(wx.Frame):
@@ -95,14 +95,14 @@ class viewWindow(wx.Frame):
 
             self.vbox.Add(self.staticBit)
 
-            self.Bind(wx.EVT_PAINT, self.OnPaint)
-            self.Bind(EVT_RDR_EVENT, self.onRedrawEvent)
+            #self.Bind(wx.EVT_PAINT, self.OnPaint)
+            #self.Bind(EVT_RDR_EVENT, self.onRedrawEvent)
 
             #self.streamthread =StreamClientThread(self,
             #                                      "http://88.53.197.250/axis-cgi/mjpg/video.cgi?resolution=320x240",
             #                                      {'http': 'proxy.reksoft.ru:3128'})
 
-            self.streamthread =StreamClientThread(self, "http://192.168.1.120:8080/?action=stream", None)
+            self.streamthread =StreamClientThread(self, "http://192.168.1.134", None)
 
 
             self.streamthread.start()
@@ -112,18 +112,20 @@ class viewWindow(wx.Frame):
             self.vbox.Fit(self)
             self.Show()
 
-
+"""
     def onRedrawEvent(self, evt):
-        print("Rcv event")
+        #print("Rcv event")
         self.streamthread.lock()
-        self.staticBit.SetBitmap(evt.bmp)
-        self.Refresh()
+        #self.staticBit.SetBitmap(evt.bmp)
+        #self.Refresh()
         self.streamthread.unlock()
 
     def OnPaint(self, event):
         self.streamthread.lock()
-        self.Refresh()
+        #self.Refresh()
         self.streamthread.unlock()
+"""
+
 
 def main():
     app = wx.PySimpleApp()
