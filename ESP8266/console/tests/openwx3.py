@@ -10,7 +10,7 @@ import time
 # py -m pip install -U wxPython
 # py -m pip install -U opencv-python
 
-RedrawEvent, EVT_RDR_EVENT = wx.lib.newevent.NewEvent()
+#RedrawEvent, EVT_RDR_EVENT = wx.lib.newevent.NewEvent()
 
 class StreamClientThread(threading.Thread):
     def __init__(self, wnd, url, proxysetting):
@@ -23,6 +23,7 @@ class StreamClientThread(threading.Thread):
         self.stream=None
         self.bytes=b''
         self.setDaemon(1)
+
     def stop(self) : self.__stop=True
     def lock(self) : self.__lock.acquire()
     def unlock(self) : self.__lock.release()
@@ -31,22 +32,22 @@ class StreamClientThread(threading.Thread):
         if self.stream is None : return None
         while True:
             try:
-                status = "read" 
+                step = "read" 
                 self.bytes += self.stream.read(1024)
-                status = "find bord" 
+                step = "find bord" 
                 a = self.bytes.find(b'\xff\xd8')
                 b = self.bytes.find(b'\xff\xd9')
                 if a!=-1 and b!=-1:
                     jpg = self.bytes[a:b+2]
                     self.bytes = self.bytes[b+2:]       
-                    status = "convert"         
-                    i = cv2.imdecode(np.fromstring(jpg, dtype=np.uint8),cv2.IMREAD_COLOR)
-                    i = cv2.cvtColor(i, cv2.COLOR_BGR2RGB)
+                    step = "convert"     
+                    img = cv2.imdecode(np.frombuffer(jpg, dtype=np.uint8),cv2.IMREAD_COLOR)
+                    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB, img)
                     print("read frame")
-                    return i
+                    return img
                     
             except Exception as e:
-                print('failed to', status, ' with ', e)
+                print('failed at:', step, ' with ', e)
                 return None
                 
     def run (self):
@@ -77,13 +78,8 @@ class StreamClientThread(threading.Thread):
                 continue
 
             while not self.__stop and self.frame is not None:
-                #self.lock()
                 self.bmp.CopyFromBuffer(self.frame)
-                self.wnd.staticBit.SetBitmap(self.bmp)
-                #self.unlock()
-                #print("Fire event")
-                #event = RedrawEvent(bmp=self.bmp)
-                #wx.PostEvent(self.wnd, event)
+                self.wnd.SetBitmap(self.bmp)
                 self.frame = self.loadimg()
 
 class viewWindow(wx.Frame):
@@ -91,50 +87,38 @@ class viewWindow(wx.Frame):
             # super(viewWindow,self).__init__(parent)
             wx.Frame.__init__(self, parent)
 
-            self.imgSizer = (480, 360)
+            self.imgSizer = (640, 480)
             self.pnl = wx.Panel(self)
-            self.vbox = wx.BoxSizer(wx.VERTICAL)
+            self.vbox = wx.BoxSizer(wx.HORIZONTAL)
 
             self.image = wx.Image(self.imgSizer[0],self.imgSizer[1])
-            self.imageBit = wx.Bitmap(self.image)
-            self.staticBit = wx.StaticBitmap(self.pnl, wx.ID_ANY, self.imageBit)
+            
+            self.imageBit0 = wx.Bitmap(self.image)
+            self.staticBit0 = wx.StaticBitmap(self.pnl, wx.ID_ANY, self.imageBit0)
 
-            self.vbox.Add(self.staticBit)
+            self.imageBit1 = wx.Bitmap(self.image)
+            self.staticBit1 = wx.StaticBitmap(self.pnl, wx.ID_ANY, self.imageBit1)
 
-            #self.Bind(wx.EVT_PAINT, self.OnPaint)
-            #self.Bind(EVT_RDR_EVENT, self.onRedrawEvent)
+            self.vbox.Add(self.staticBit0)
+            self.vbox.Add(self.staticBit1)
+
             self.Bind(wx.EVT_ERASE_BACKGROUND, self.OnEraseBackground)
 
-            #self.streamthread =StreamClientThread(self,
-            #                                      "http://88.53.197.250/axis-cgi/mjpg/video.cgi?resolution=320x240",
-            #                                      {'http': 'proxy.reksoft.ru:3128'})
-
-            self.streamthread =StreamClientThread(self, "http://192.168.1.134", None)
-
-
-            self.streamthread.start()
-
-            self.SetSize(self.imgSizer)
+            #self.SetSize(self.imgSizer)
             self.pnl.SetSizer(self.vbox)
             self.vbox.Fit(self)
             self.Show()
+                        #self.streamthread =StreamClientThread(self,
+            #                                      "http://88.53.197.250/axis-cgi/mjpg/video.cgi?resolution=320x240",
+            #                                      {'http': 'proxy.reksoft.ru:3128'})
 
+            self.streamthread0 = StreamClientThread(self.staticBit0, "http://192.168.1.134", None)
+            self.streamthread0.start()
+            self.streamthread1 = StreamClientThread(self.staticBit1, "http://192.168.1.134", None)
+            self.streamthread1.start()
             
     def OnEraseBackground(self, event):
         pass
-    """    
-    def onRedrawEvent(self, evt):
-        print("Rcv event")
-        self.streamthread.lock()
-        self.staticBit.SetBitmap(evt.bmp)
-        self.Refresh()
-        self.streamthread.unlock()
-
-    def OnPaint(self, event):
-        self.streamthread.lock()
-        self.Refresh()
-        self.streamthread.unlock()
-    """
     
 def main():
     app = wx.App()
