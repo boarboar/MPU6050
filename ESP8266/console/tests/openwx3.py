@@ -102,7 +102,12 @@ class viewWindow(wx.Frame):
             self.vbox.Add(self.staticBit0)
             self.vbox.Add(self.staticBit1)
 
+            self.SetBackgroundColour('black')
+            self.SetBackgroundStyle(wx.BG_STYLE_CUSTOM)
             self.Bind(wx.EVT_ERASE_BACKGROUND, self.OnEraseBackground)
+            #self.pnl.Bind(wx.EVT_ERASE_BACKGROUND, self.OnEraseBackground)
+            #self.staticBit0.Bind(wx.EVT_ERASE_BACKGROUND, self.OnEraseBackground)
+            #self.staticBit1.Bind(wx.EVT_ERASE_BACKGROUND, self.OnEraseBackground)
 
             #self.SetSize(self.imgSizer)
             self.pnl.SetSizer(self.vbox)
