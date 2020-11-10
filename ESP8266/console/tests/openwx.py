@@ -28,7 +28,7 @@ class StreamClientThread(threading.Thread):
         if self.stream is None : return None
         while True:
             try:
-                self.bytes+=self.stream.read(1024)
+                self.bytes+=str(self.stream.read(1024))
                 a = self.bytes.find('\xff\xd8')
                 b = self.bytes.find('\xff\xd9')
                 if a!=-1 and b!=-1:
@@ -97,6 +97,8 @@ class viewWindow(wx.Frame):
 
             #self.Bind(wx.EVT_PAINT, self.OnPaint)
             #self.Bind(EVT_RDR_EVENT, self.onRedrawEvent)
+            self.Bind(wx.EVT_ERASE_BACKGROUND, self.OnEraseBackground)
+            self.pnl.Bind(wx.EVT_ERASE_BACKGROUND, self.OnEraseBackground)
 
             #self.streamthread =StreamClientThread(self,
             #                                      "http://88.53.197.250/axis-cgi/mjpg/video.cgi?resolution=320x240",
@@ -112,19 +114,23 @@ class viewWindow(wx.Frame):
             self.vbox.Fit(self)
             self.Show()
 
-"""
     def onRedrawEvent(self, evt):
         #print("Rcv event")
-        self.streamthread.lock()
+        #self.streamthread.lock()
         #self.staticBit.SetBitmap(evt.bmp)
         #self.Refresh()
-        self.streamthread.unlock()
+        #self.streamthread.unlock()
+        pass
 
     def OnPaint(self, event):
-        self.streamthread.lock()
+        #self.streamthread.lock()
         #self.Refresh()
-        self.streamthread.unlock()
-"""
+        #self.streamthread.unlock()
+        pass
+        
+    def OnEraseBackground(self, event):
+        pass
+
 
 
 def main():

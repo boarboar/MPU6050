@@ -21,7 +21,7 @@ class StreamClientThread(threading.Thread):
         self.__proxysetting=proxysetting
         self.__stop = False
         self.stream=None
-        self.bytes=''
+        self.bytes=b''
         self.setDaemon(1)
     def stop(self) : self.__stop=True
     def lock(self) : self.__lock.acquire()
@@ -31,17 +31,22 @@ class StreamClientThread(threading.Thread):
         if self.stream is None : return None
         while True:
             try:
-                self.bytes+=self.stream.read(1024)
-                a = self.bytes.find('\xff\xd8')
-                b = self.bytes.find('\xff\xd9')
+                status = "read" 
+                self.bytes += self.stream.read(1024)
+                status = "find bord" 
+                a = self.bytes.find(b'\xff\xd8')
+                b = self.bytes.find(b'\xff\xd9')
                 if a!=-1 and b!=-1:
                     jpg = self.bytes[a:b+2]
-                    self.bytes= self.bytes[b+2:]
+                    self.bytes = self.bytes[b+2:]       
+                    status = "convert"         
                     i = cv2.imdecode(np.fromstring(jpg, dtype=np.uint8),cv2.IMREAD_COLOR)
+                    i = cv2.cvtColor(i, cv2.COLOR_BGR2RGB)
+                    print("read frame")
                     return i
                     
             except Exception as e:
-                print('failed to read')
+                print('failed to', status, ' with ', e)
                 return None
                 
     def run (self):
@@ -51,7 +56,7 @@ class StreamClientThread(threading.Thread):
             urllib.request.install_opener(opener)
 
         while not self.__stop:
-            time.sleep(5.0)
+            time.sleep(1.0)
             print('opening stream...')
             self.stream=None
             try:
@@ -72,15 +77,13 @@ class StreamClientThread(threading.Thread):
                 continue
 
             while not self.__stop and self.frame is not None:
-                #self.frame = self.loadimg()
-                #if self.frame is not None:
-                self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
-                self.lock()
+                #self.lock()
                 self.bmp.CopyFromBuffer(self.frame)
-                self.unlock()
-                print("Fire event")
-                event = RedrawEvent(bmp=self.bmp)
-                wx.PostEvent(self.wnd, event)
+                self.wnd.staticBit.SetBitmap(self.bmp)
+                #self.unlock()
+                #print("Fire event")
+                #event = RedrawEvent(bmp=self.bmp)
+                #wx.PostEvent(self.wnd, event)
                 self.frame = self.loadimg()
 
 class viewWindow(wx.Frame):
@@ -98,8 +101,9 @@ class viewWindow(wx.Frame):
 
             self.vbox.Add(self.staticBit)
 
-            self.Bind(wx.EVT_PAINT, self.OnPaint)
-            self.Bind(EVT_RDR_EVENT, self.onRedrawEvent)
+            #self.Bind(wx.EVT_PAINT, self.OnPaint)
+            #self.Bind(EVT_RDR_EVENT, self.onRedrawEvent)
+            self.Bind(wx.EVT_ERASE_BACKGROUND, self.OnEraseBackground)
 
             #self.streamthread =StreamClientThread(self,
             #                                      "http://88.53.197.250/axis-cgi/mjpg/video.cgi?resolution=320x240",
@@ -115,7 +119,10 @@ class viewWindow(wx.Frame):
             self.vbox.Fit(self)
             self.Show()
 
-
+            
+    def OnEraseBackground(self, event):
+        pass
+    """    
     def onRedrawEvent(self, evt):
         print("Rcv event")
         self.streamthread.lock()
@@ -127,7 +134,8 @@ class viewWindow(wx.Frame):
         self.streamthread.lock()
         self.Refresh()
         self.streamthread.unlock()
-
+    """
+    
 def main():
     app = wx.App()
     frame = viewWindow(None)
