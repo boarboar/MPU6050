@@ -13,13 +13,14 @@ import time
 #RedrawEvent, EVT_RDR_EVENT = wx.lib.newevent.NewEvent()
 
 class StreamClientThread(threading.Thread):
-    def __init__(self, wnd, url, proxysetting):
+    def __init__(self, idx, wnd, url, proxysetting):
         threading.Thread.__init__(self)
         self.__lock=threading.Lock()
         self.wnd=wnd
         self.__url = url
         self.__proxysetting=proxysetting
         self.__stop = False
+        self.__idx = idx
         self.stream=None
         self.bytes=b''
         self.setDaemon(1)
@@ -78,6 +79,7 @@ class StreamClientThread(threading.Thread):
                 continue
 
             while not self.__stop and self.frame is not None:
+                cv2.putText(self.frame, "L" if self.__idx == 0 else "R", (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (23, 230, 210), 1)
                 self.bmp.CopyFromBuffer(self.frame)
                 self.wnd.SetBitmap(self.bmp)
                 self.frame = self.loadimg()
@@ -117,9 +119,9 @@ class viewWindow(wx.Frame):
             #                                      "http://88.53.197.250/axis-cgi/mjpg/video.cgi?resolution=320x240",
             #                                      {'http': 'proxy.reksoft.ru:3128'})
 
-            self.streamthread0 = StreamClientThread(self.staticBit0, "http://192.168.1.134", None)
+            self.streamthread0 = StreamClientThread(0, self.staticBit0, "http://192.168.1.134", None)
             self.streamthread0.start()
-            self.streamthread1 = StreamClientThread(self.staticBit1, "http://192.168.1.134", None)
+            self.streamthread1 = StreamClientThread(1, self.staticBit1, "http://192.168.1.134", None)
             self.streamthread1.start()
             
     def OnEraseBackground(self, event):
