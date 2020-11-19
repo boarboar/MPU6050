@@ -121,7 +121,7 @@ class viewWindow(wx.Frame):
 
             self.streamthread0 = StreamClientThread(0, self.staticBit0, "http://192.168.1.134", None)
             self.streamthread0.start()
-            self.streamthread1 = StreamClientThread(1, self.staticBit1, "http://192.168.1.134", None)
+            self.streamthread1 = StreamClientThread(1, self.staticBit1, "http://192.168.1.135", None)
             self.streamthread1.start()
             
     def OnEraseBackground(self, event):
